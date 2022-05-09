@@ -1,0 +1,486 @@
+#### Plotting ----
+
+# subject=NA;ylim=NULL; plot_acf=FALSE;acf_chain=1
+# layout=c(2,5)
+plotChains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
+    selection="alpha",filter="burn",thin=1,subfilter=NULL,                       
+    plot_acf=FALSE,acf_chain=1, verbose=TRUE) # ,use_par=NA 
+  # Plots chains or acfs (if alpha or LL can do individual subject, all by default)    
+{
+  if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
+    if (class(pmwg_mcmc)=="pmwgs") 
+      pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
+                           thin=thin,subfilter=subfilter) else
+      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                thin=thin,subfilter=subfilter)                        
+  }
+  auto.layout <- any(is.na(layout))
+  no_layout <- is.null(layout)
+  if (!auto.layout & !no_layout) par(mfrow=layout)
+  if (attr(pmwg_mcmc,"selection")=="alpha") {
+    if (any(is.na(subject))) subject <- names(pmwg_mcmc)
+    if (!all(subject %in% names(pmwg_mcmc)))
+      stop("Subject not present\n")
+    for (i in subject) {
+      if (!auto.layout & !no_layout) par(mfrow=layout)
+      if (plot_acf) for (j in dimnames(pmwg_mcmc[[i]])[[2]]) {
+        acf(pmwg_mcmc[[i]][,j],main=paste0("Chain ",acf_chain,": ","s",i,": ",j))    
+      } else {
+        if (!auto.layout & !no_layout) par(mfrow=layout) 
+        plot(pmwg_mcmc[[i]],auto.layout=auto.layout,density=FALSE,
+            xlab=paste0("Iterations ",i),ask=FALSE,trace=TRUE,
+            ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE,ylim=ylim)
+      }
+    }
+  } else if (attr(pmwg_mcmc,"selection")=="LL") {
+    if (any(is.na(subject))) subject <- names(pmwg_mcmc)
+    if (!all(subject %in% names(pmwg_mcmc)))
+      stop("Subject onot present\n")
+    for (i in subject) {
+      if (plot_acf) 
+        acf(pmwg_mcmc[[i]],main=paste0("Chain ",acf_chain,": ","LL ",i)) else
+      plot(pmwg_mcmc[[i]],auto.layout=auto.layout,density=FALSE,
+           xlab=paste0("Iterations ",i),ask=FALSE,trace=TRUE,
+           ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE,ylim=ylim)
+    }
+  } else {
+      if (plot_acf) for (j in dimnames(pmwg_mcmc)[[2]]) 
+        acf(pmwg_mcmc[,j],main=paste0("Chain ",acf_chain,": ",j)) else
+      plot(pmwg_mcmc,auto.layout=auto.layout,density=FALSE,
+           ask=FALSE,trace=TRUE,ylim=ylim,
+           ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE)
+  }
+}
+  
+plotACFs <- function(samples,layout=NULL,subject=1,
+                     selection="alpha",filter="burn",subfilter=1)
+  # Plots acf for all chains  
+{
+  if (class(samples)=="pmwgs") samples <- list(samples) 
+  if (selection=="alpha") {
+    snams <- names(samples[[1]]$data)
+    if (is.numeric(subject)) subject <- snams[subject]
+    if (!(subject %in% snams)) stop("Subject not present\n")
+    message("Plotting chains for subject ",subject)
+  }
+  for (i in 1:length(samples)) {
+    if (selection=="alpha") {
+      plotChains(samples[[i]],selection=selection,filter=filter,subfilter=subfilter,
+        layout=layout,plot_acf=TRUE,acf_chain=i,verbose=FALSE,subject=subject)
+    } else plotChains(samples[[i]],selection=selection,filter=filter,subfilter=subfilter,
+        layout=layout,plot_acf=TRUE,acf_chain=i,verbose=FALSE)
+  }
+}
+
+
+
+# show_chains=FALSE;do_plot=TRUE;subject=NA
+# pars=NULL;probs=c(.025,.5,.975);bw = "nrd0";adjust = 1
+# layout=c(2,4)
+# selection="mu";filter="sample";thin=1;subfilter=NULL
+# xlim=NULL; ylim=NULL
+# pmwg_mcmc=sPNAS_a;layout=c(2,6);selection="correlation";filter="sample";plot_prior=TRUE
+plotDensity <- function(pmwg_mcmc,layout=c(2,3),
+    selection="alpha",filter="burn",thin=1,subfilter=NULL,
+    plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
+    show_chains=FALSE,do_plot=TRUE,subject=NA,
+    pars=NULL,probs=c(.025,.5,.975),bw = "nrd0", adjust = 1) # ,use_par=NA
+  # Plots density (if alpha can do individual subject, all by default)
+  # If show_chains superimposes destinies for each chain on same plot
+  # invisibly returns tables of true and 95% CIs (for all chains combined
+  # no matter what show_chains is)
+{
+  
+  robust_density <- function(ps,r,bw,adjust,use_robust=FALSE) 
+  # density estimate over range r (to avoid outlier influence, used
+  # here for hyper co/variance which can have long tails)  
+  {
+    if (use_robust) {
+      # isin <- ps>r[1]*.9 & ps < r[2]*1.1
+      isin <- ps> 0 & ps < r[2]*1.1
+      p <- mean(isin)
+      psc <- ps[isin]
+      if (length(psc)<10) {
+        dens <- density(ps)
+        dens$y[1:length(dens$y)] <- 0
+      } else {
+        dens <- density(psc,bw=bw,adjust=adjust)
+        dens$y <- p*dens$y
+      }
+      dens
+    } else density(ps,bw=bw,adjust=adjust)
+  }
+  
+  if (show_chains & plot_prior) 
+    warning("Prior plots not implemented for show_chains=TRUE")
+  if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
+    if (plot_prior) psamples <- 
+        get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
+    if (is.null(psamples)) plot_prior <- FALSE
+    if (class(pmwg_mcmc)=="pmwgs")
+      pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
+                           thin=thin,subfilter=subfilter) else
+      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                thin=thin,subfilter=subfilter)
+  } else plot_prior <- FALSE
+  if (attr(pmwg_mcmc,"selection")=="LL")
+    stop("No density plots for LL\n")
+  no_layout <- any(is.na(layout)) | is.null(layout)
+  chains <- 0
+  if (attr(pmwg_mcmc,"selection") == "alpha") {
+    if (any(is.na(subject))) subject <- names(pmwg_mcmc)
+    if (!all(subject %in% names(pmwg_mcmc)))
+      stop("Subject not present\n")
+    if (!is.null(pars)) {
+      if (!is.null(dim(pars))) pars <- t(pars) else {
+        if (length(subject)!=1) reps <- length(subject) else reps <- 1
+        pars <- matrix(rep(pars,each=reps),ncol=1,dimnames=list(names(pars),subject) )
+      }
+    }
+    if (!is.null(pars) && !is.matrix(pars))
+      stop("pars must be a matrix for alpha")
+    if (class(pmwg_mcmc[[1]]) == "mcmc.list") {
+      selection <- attr(pmwg_mcmc,"selection")
+      pmwg_mcmc_combined <- lapply(pmwg_mcmc,function(x){do.call(rbind,x)})
+      attr(pmwg_mcmc_combined,"selection") <- selection
+      if (show_chains) chains <- length(pmwg_mcmc[[1]]) else
+        pmwg_mcmc <- pmwg_mcmc_combined
+    } else pmwg_mcmc_combined <- pmwg_mcmc
+    tabs <- lapply(pmwg_mcmc_combined,function(x){apply(x,2,quantile,probs=probs)})
+    if (plot_prior) dimnames(psamples) <- list(NULL,colnames(pmwg_mcmc_combined[[1]]))
+    if (do_plot) for (i in subject) {
+      if (!no_layout) par(mfrow=layout)
+      for (j in colnames(pmwg_mcmc_combined[[i]])) {
+        if (chains>0) {
+          dens <- lapply(pmwg_mcmc[[i]],function(x){density(x[,j],bw=bw,adjust=adjust)})
+          if (!is.null(xlim)) {
+            if (!is.matrix(xlim)) xlimi <- xlim else xlimi <- xlim[j,] 
+          } else xlimi <- c(min(unlist(lapply(dens,function(x){min(x$x)}))),
+                    max(unlist(lapply(dens,function(x){max(x$x)}))))
+          if (!is.null(ylim)) {
+            if (!is.matrix(ylim)) ylimi <- ylim else ylimi <- ylim[j,]
+          } else ylimi <- c(0,max(unlist(lapply(dens,function(x){max(x$y)}))))
+          plot(dens[[1]],xlab=j,main=paste0(attr(pmwg_mcmc,"selection")," s",i),
+               col=1,xlim=xlimi,ylim=ylimi)
+          if (chains>1) for (k in 2:chains) lines(dens[[k]],col=k)
+        } else {
+          dens <- density(pmwg_mcmc[[i]][,j],bw=bw,adjust=adjust)
+          if (!is.null(xlim)) {
+            if (!is.matrix(xlim)) xlimi <- xlim else xlimi <- xlim[j,] 
+          } else xlimi <- c(min(dens$x),max(dens$x)) 
+          if (!is.null(ylim)) {
+            if (!is.matrix(ylim)) ylimi <- ylim else ylimi <- ylim[j,]
+          } else ylimi <- c(0,max(dens$y))
+          plot(dens,xlab=j,xlim=xlimi,ylim=ylimi,
+             main=paste0(attr(pmwg_mcmc,"selection")," s",i))
+          if (plot_prior) 
+            lines(density(psamples[,j],bw=bw,adjust=adjust),col="red")
+            # lines(robust_density(psamples[,j],range(pmwg_mcmc[[i]][,j]),
+            #   bw=bw,adjust=adjust,use_robust=FALSE),col="red")
+        }
+        if (!is.null(pars)) abline(v=pars[j,i])
+      }
+      if (!is.null(pars)) tabs[[i]] <- rbind(true=pars[,i],tabs[[i]])
+    }
+    tabs <- tabs[as.character(subject)]
+    attr(tabs,"mean") <- lapply(pmwg_mcmc_combined,function(x){apply(x,2,mean)})
+    invisible(tabs)
+  } else {
+    if (class(pmwg_mcmc) == "mcmc.list") {
+      selection <- attr(pmwg_mcmc,"selection")
+      pmwg_mcmc_combined <- do.call(rbind,pmwg_mcmc)
+      attr(pmwg_mcmc_combined,"selection") <- selection
+      if (show_chains) chains <- length(pmwg_mcmc) else
+        pmwg_mcmc <- pmwg_mcmc_combined
+    } else pmwg_mcmc_combined <- pmwg_mcmc
+    if (!is.null(pars)) {
+      if ( !is.vector(pars) ) {
+        if (attr(pmwg_mcmc,"selection") == "mu")
+          stop("pars must be a vector for mu")
+        if (!is.matrix(pars))
+          stop("pars must be a vector or matrix")
+        if (attr(pmwg_mcmc,"selection") == "variance")
+          pars <- diag(pars) else
+          pars <- pars[lower.tri(pars)]
+      }
+      if (length(pars) != dim(pmwg_mcmc_combined)[2])
+        stop("pars is wrong length")
+      names(pars) <- colnames(pmwg_mcmc_combined)
+    }
+    tabs <- rbind(true=pars,apply(pmwg_mcmc_combined,2,quantile,probs=probs))
+    attr(tabs,"mean") <- apply(pmwg_mcmc_combined,2,mean)
+    if (!no_layout) par(mfrow=layout)
+    if (plot_prior) dimnames(psamples) <- list(NULL,colnames(pmwg_mcmc_combined))
+    if (do_plot) for (j in colnames(pmwg_mcmc_combined)) {
+      if (chains > 0) {
+        dens <- lapply(pmwg_mcmc,function(x){density(x[,j],bw=bw,adjust=adjust)})
+        if (!is.null(xlim)) xlimi <- xlim else
+          xlimi <- c(min(unlist(lapply(dens,function(x){min(x$x)}))),
+                  max(unlist(lapply(dens,function(x){max(x$x)}))))
+        if (!is.null(ylim)) ylimi <- ylim else
+          ylimi <- c(0,max(unlist(lapply(dens,function(x){max(x$y)}))))
+        plot(dens[[1]],xlab=attr(pmwg_mcmc,"selection"),main=j,
+               col=1,xlim=xlimi,ylim=ylimi)
+        if (chains>1) for (k in 2:chains) lines(dens[[k]],col=k)
+      } else {
+        dens <- density(pmwg_mcmc[,j],bw=bw,adjust=adjust)
+        if (!is.null(xlim)) xlimi <- xlim else
+          xlimi <- c(min(dens$x),max(dens$x))
+        if (!is.null(ylim)) ylimi <- ylim else
+          ylimi <- c(0,max(dens$y))
+        plot(dens,xlim=xlimi,ylim=ylimi,xlab=attr(pmwg_mcmc,"selection"),main=j)
+        if (plot_prior) 
+          lines(robust_density(psamples[,j],range(pmwg_mcmc[,j]),
+            bw=bw,adjust=adjust,
+            use_robust=!(attr(pmwg_mcmc,"selection") %in% c("mu","correlation"))),
+            col="red")
+      }
+      if (!is.null(pars)) abline(v=pars[j])
+    }
+    invisible(tabs)
+  }
+}
+
+
+plotAlphaRecovery <- function(tabs,layout=c(2,3),
+                         do_ci = TRUE,ci_col="grey",cap=.05,
+                         do_rmse=TRUE,rmse_pos="topleft",rmse_digits=3,
+                         do_coverage=TRUE,coverage_pos="bottomright",coverage_digits=1) 
+  # Takes tables output by plotDensity with par and plots recovery  
+{
+  par(mfrow=layout)
+  pnams <- dimnames(tabs[[1]])[[2]]
+  if (!do_rmse) rmse <- NULL else
+    rmse <- setNames(numeric(length(pnams)),pnams)
+  if (do_coverage) coverage <- NULL else
+    coverage <- setNames(numeric(length(pnams)),pnams)
+  for (p in pnams) {
+    xy <- do.call(rbind,lapply(tabs,function(x){x[,p]}))
+    ylim <- c(min(xy),max(xy))
+    plot(xy[,"true"],xy[,"50%"],ylim=ylim,xlim=ylim,main=p,
+         xlab="Generating",ylab="Estimated")
+    abline(a=0,b=1,lty=3)
+    if (do_ci) for (i in 1:dim(xy)[1]) {
+      arrows(xy[i,"true"],xy[i,"50%"],xy[i,"true"],xy[i,"97.5%"],
+             col=ci_col,angle=90,length=cap)
+      arrows(xy[i,"true"],xy[i,"50%"],xy[i,"true"],xy[i,"2.5%"],
+             col=ci_col,angle=90,length=cap)
+    }
+    if (do_rmse) {
+      rmse[p] <- sqrt(mean((xy[,"true"] - xy[,"50%"])^2)) 
+      legend(rmse_pos,paste("RMSE = ",round(rmse[p],rmse_digits)),bty="n")
+    }
+    if (do_coverage) {
+     coverage[p] = 100*mean((xy[,"97.5%"] > xy[,"true"])  & (xy[,"2.5%"] < xy[,"true"]))
+     legend(coverage_pos,paste("95% Coverage = ",round(coverage[p],coverage_digits)),bty="n")
+    }
+  }
+  invisible(list(RMSE = rmse,COVERAGE = coverage))
+}
+
+profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="") {
+  x <- seq(p_min,p_max,length.out=n_point)  
+  ll <- numeric(n_point)
+  pi <- p
+  for (i in 1:n_point) {
+    pi[pname] <- x[i]
+    ll[i] <- attr(dadm,"model")$log_likelihood(pi,dadm)
+  }
+  plot(x,ll,type="l",xlab=pname,ylab="LL",main=main)
+  abline(v=p[pname])
+  c(true=p[pname],max=x[which.max(ll)],miss=p[pname]-x[which.max(ll)])
+}
+
+# subject=NULL;factors=NULL;layout=NULL;mfcol=TRUE;xlim=NULL;bw = "nrd0";adjust=1;
+# correct_fun=NULL;rt="top";accuracy="topright"
+# 
+# subject="I"; layout=c(2,4)
+plot_defective_density <- function(data,subject=NULL,factors=NULL,
+                                   layout=NULL,mfcol=TRUE,
+                                   xlim=NULL,bw = "nrd0",adjust=1,
+                                   correct_fun=NULL,rt="top",accuracy="topright")
+  # plots defective densities for each subject and cell in the full design (or 
+  # a particular subject and factors if specified) if correct_fun specified
+  # returns a vector of subject accuracy.
+{
+  if (!is.null(subject)) {
+    dat <- data[data$subjects==subject,]
+    fnams <- names(dat)[!(names(dat) %in% c("subjects","trials","R","rt"))]
+  } else {
+    dat <- data
+    fnams <- names(dat)[!(names(dat) %in% c("trials","R","rt"))]
+  }
+  if (!is.null(factors)) {
+    if (!all(factors %in% fnams))
+      stop("factors must name factors in data")
+    fnams <- factors
+  }
+  # Remove missing
+  dat <- dat[is.finite(dat$rt),]
+  cells <- dat[,fnams,drop=FALSE]
+  for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+  cells <- apply(cells,1,paste,collapse=" ")
+  if (!is.null(layout)) 
+    if (mfcol) par(mfcol=layout) else par(mfrow=layout) 
+  R <- levels(dat$R)
+  for (i in sort(unique(cells))) {
+    dati <- dat[cells==i,]
+    pR <- table(dati$R)/dim(dati)[1]
+    mrt <- tapply(dati$rt,dati$R,median)
+    dens <- setNames(vector(mode="list",length=length(R)),R)
+    for (j in R) if (length(dati$rt[dati$R==j])>1) {
+      dens[[j]] <- density(dati$rt[dati$R==j],bw=bw,adjust=adjust)
+      dens[[j]]$y <- dens[[j]]$y*pR[j]
+    } else dens[[j]] <- NULL
+    rx <- do.call(rbind,lapply(dens,function(x){range(x$x)}))
+    if (is.null(xlim)) xlimi <- c(min(rx[,1]),max(rx[,2])) else xlimi <- xlim
+    ylim <- c(0,max(unlist(lapply(dens,function(x){max(x$y)}))))
+    plot(dens[[1]],xlim=xlimi,ylim=ylim,lty=1,main=i,xlab="RT")
+    if (length(dens)>1) for (j in 2:length(dens))
+      lines(dens[[j]],lty=j)
+    if (!is.null(accuracy))
+      legend(accuracy,paste(names(pR),round(pR,2),sep="="),lty=1:length(pR),bty="n",title="p(R)")
+    if (!is.null(rt))
+      legend(rt,paste(names(pR),round(mrt,3),sep="="),bty="n",title="Med(RT)")
+  }
+  if (!is.null(correct_fun))
+    invisible(tapply(correct_fun(dat),dat$subjects,mean))
+}
+
+# subject=NULL;factors=NULL; do_plot=TRUE; fun=NULL
+# xlim=NULL;ylim=NULL;layout=NULL;probs=c(1:99)/100
+# data_lwd=2;fit_lwd=1; mfcol=TRUE
+# q_points=c(.1,.3,.5,.7,.9); qp_cex=1;pqp_cex=.5
+# ci=c(.025,.5,.975)
+# 
+# data=dat; pp=ppPNAS_a_ddm; layout=c(1,3); factors=c("E")
+# stat=pc; stat_name="Accuracy (%)"; xlim=c(70,95)
+plot_fit <- function(data,pp,subject=NULL,factors=NULL,
+                     stat=NULL,stat_name="",ci=c(.025,.5,.975),do_plot=TRUE,
+                     xlim=NULL,ylim=NULL,
+                     layout=NULL,mfcol=TRUE,
+                     probs=c(1:99)/100,
+                     data_lwd=2,fit_lwd=1,qp_cex=1,
+                     q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft")
+  # plots cdfs for data and fit.
+{
+  if (!is.null(subject)) {
+    dat <- data[data$subjects==subject,]
+    pp <- pp[pp$subjects==subject,]
+    fnams <- names(dat)[!(names(dat) %in% c("subjects","trials","R","rt"))]
+  } else {
+    dat <- data
+    fnams <- names(dat)[!(names(dat) %in% c("trials","R","rt"))]
+  }
+  if (!is.null(factors)) {
+    if (!all(factors %in% fnams))
+      stop("factors must name factors in data")
+    fnams <- factors
+  }
+  # pp <- pp[,c("postn",fnams,"R","rt")]
+  cells <- dat[,fnams,drop=FALSE]
+  for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+  cells <- apply(cells,1,paste,collapse=" ")
+  pp_cells <- pp[,fnams,drop=FALSE]
+  for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
+  pp_cells <- apply(pp_cells,1,paste,collapse=" ")
+  if (!is.null(layout)) 
+    if (mfcol) par(mfcol=layout) else par(mfrow=layout) 
+  if (!is.null(stat)) { # statistic 
+    postn <- unique(pp$postn)
+    ucells <- sort(unique(cells))
+    tab <- matrix(nrow=length(ucells),ncol=4,
+                  dimnames=list(ucells,c("Observed",names(quantile(1:5,ci)))))
+    for (i in ucells) {
+      obs <- stat(dat[cells==i,])
+      ppi <- pp[pp_cells==i,]
+      pred <- sapply(postn,function(x){stat(ppi[ppi$postn==x,])})
+      if (do_plot) {
+        dens <- density(pred)
+        if (!is.null(xlim)) xlimi <- xlim else  
+          xlimi <- c(pmin(obs,min(dens$x)),pmax(obs,max(dens$x)))
+        plot(dens,main=i,xlab=stat_name,xlim=xlimi)
+        abline(v=obs)
+      }
+      tab[i,] <- c(obs,quantile(pred,ci))
+    }
+    invisible(tab)
+  } else { # cdf
+    pok <- probs %in% q_points
+    R <- levels(dat$R)
+    if (is.null(ylim)) ylim <- c(0,1)
+    # set common xlim
+    if (is.null(xlim)) {
+      xlim <- c(Inf,-Inf)
+      for (i in sort(unique(cells))) {
+        dati <- dat[cells==i,]
+        ppi <- pp[pp_cells==i,]
+        pR <- table(dati$R)/dim(dati)[1]
+        pqs <- pq <- qs <- setNames(vector(mode="list",length=length(R)),R)
+        for (j in R) if (length(dati$rt[dati$R==j])>=length(q_points)) {
+          qs[[j]] <- quantile(dati$rt[dati$R==j],probs=probs)
+          pq[[j]] <- quantile(ppi$rt[ppi$R==j],probs=probs)
+          pqs[[j]] <- tapply(ppi$rt[ppi$R==j],ppi$postn[ppi$R==j],
+                             quantile,probs=probs[pok])
+        } else qs[[j]] <- pq[[j]] <- pqs[[j]] <- NA
+        rx <- cbind(do.call(rbind,lapply(qs,function(x){x[c(1,length(probs))]})),
+                    do.call(rbind,lapply(pq,function(x){x[c(1,length(probs))]})))
+        xlimi <- c(min(rx,na.rm=TRUE),max(rx,na.rm=TRUE))
+        if (!any(is.na(xlimi))) {
+          xlim[1] <- pmin(xlim[1],xlimi[1])
+          xlim[2] <- pmax(xlim[2],xlimi[2])
+        }
+      }
+    }
+    for (i in sort(unique(cells))) {
+      dati <- dat[cells==i,]
+      ppi <- pp[pp_cells==i,]
+      # R <- sort(unique(dati$R))
+      pR <- table(dati$R)/dim(dati)[1]
+      pqs <- pq <- qs <- setNames(vector(mode="list",length=length(R)),R)
+      for (j in R) if (length(dati$rt[dati$R==j])>=length(q_points)) {
+        qs[[j]] <- quantile(dati$rt[dati$R==j],probs=probs)
+        pq[[j]] <- quantile(ppi$rt[ppi$R==j],probs=probs)
+        pqs[[j]] <- tapply(ppi$rt[ppi$R==j],ppi$postn[ppi$R==j],
+                           quantile,probs=probs[pok])
+      } else qs[[j]] <- pq[[j]] <- pqs[[j]] <- NA
+      if ( !any(is.na(pq[[1]])) ) {
+        plot(pq[[1]],probs*pR[1],xlim=xlim,ylim=ylim,main=i,xlab="RT",type="l",
+             lwd=fit_lwd,ylab="p(R)",lty=1)
+        tmp=lapply(pqs[[1]],function(x){
+          points(x,probs[pok]*pR[1],col="grey",pch=16,cex=pqp_cex)})
+        points(pq[[1]][pok],probs[pok]*pR[1],cex=pqp_cex*3,pch=16,col="grey")
+        lines(qs[[1]],probs*pR[1],lwd=data_lwd,lty=1)
+        points(qs[[1]][pok],probs[pok]*pR[1],cex=qp_cex,pch=16)
+        do_plot=FALSE
+      } else do_plot=TRUE
+      if (length(qs)>1) {
+        for (j in 2:length(qs)) if (!any(is.na(pq[[j]]))) {
+          if (do_plot) {
+            plot(pq[[j]],probs*pR[j],xlim=xlim,ylim=ylim,main=i,xlab="RT",type="l",
+                 lwd=fit_lwd,ylab="p(R)",lty=j)
+            do_plot <- FALSE
+          } else lines(pq[[j]],probs*pR[j],lwd=fit_lwd,lty=j)
+          tmp=lapply(pqs[[j]],function(x){
+            points(x,probs[pok]*pR[j],col="grey",pch=16,cex=pqp_cex)})
+          points(pq[[j]][pok],probs[pok]*pR[j],cex=pqp_cex*3,pch=16,col="grey")
+          lines(qs[[j]],probs*pR[j],lwd=data_lwd,lty=j)
+          points(qs[[j]][pok],probs[pok]*pR[j],cex=qp_cex,pch=16)
+        }
+      }
+      legend(lpos,as.character(R),lty=1:length(R),bty="n",title="Response")
+    }
+  }
+}
+
+plot_fits <- function(data,pp,factors=NULL,
+                      stat=NULL,stat_name="",ci=c(.025,.5,.975),do_plot=TRUE,
+                      xlim=NULL,ylim=NULL,
+                      layout=NULL,mfcol=TRUE,
+                      probs=c(1:99)/100,
+                      data_lwd=2,fit_lwd=1,qp_cex=1,
+                      q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft")
+  # as for plot_fits but does it per subject.
+  for (i in levels(data$subjects)) 
+    plot_fit(data,pp,subject=i,factors,stat,stat_name,ci,do_plot,xlim,ylim,layout,mfcol,
+             probs,data_lwd,fit_lwd,qp_cex,q_points,pqp_cex,lpos)
