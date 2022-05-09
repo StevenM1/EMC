@@ -19,7 +19,7 @@ pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL, ...) {
   
   # Storage for the samples.
   subjects <- as.numeric(unique(dadm$subjects))
-  samples <- sample_store(pars, subjects, ...)
+  samples <- variant_funs$sample_store(dadm, pars, ...)
   sampler <- list(
     data = dadm_list,
     par_names = pars,
@@ -31,7 +31,7 @@ pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL, ...) {
     init = FALSE
   )
   class(sampler) <- "pmwgs"
-  sampler <- add_info(sampler, prior, ...)
+  sampler <- variant_funs$add_info(sampler, prior, ...)
   return(sampler)
 }
 
@@ -381,7 +381,7 @@ extend_obj <- function(obj, n_extend){
   if(is.null(old_dim) | n_dimensions == 1) return(obj)
   if(n_dimensions == 2){
     if(isSymmetric(round(obj, 5))) return(obj) #Don't extend priors and theta_mu_var_inv
-    
+  }  
   new_dim <- c(rep(0, (n_dimensions -1)), n_extend)
   extended <- array(NA_real_, dim = old_dim +  new_dim, dimnames = dimnames(obj))
   extended[slice.index(extended,n_dimensions) <= old_dim[n_dimensions]] <- obj
