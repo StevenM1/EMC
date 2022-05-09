@@ -57,7 +57,7 @@ sample_store <- function(par_names, subject_ids, iters = 1, stage = "init", ...)
 }
 
 init <- function(pmwgs, start_mu = NULL, start_var = NULL,
-                        verbose = FALSE, particles = 1000, n_cores = 1, epsilon = NULL) {
+                 verbose = FALSE, particles = 1000, n_cores = 1, epsilon = NULL) {
   # Create and fill initial random effects for each subject
   likelihoods <- array(NA_real_, dim = c(pmwgs$n_subjects))
   if(n_cores > 1){
@@ -90,29 +90,40 @@ start_proposals <- function(s, start_mu, start_var, n_particles, pmwgs){
   return(list(proposal = proposals[idx,], ll = lw[idx]))
 }
 
-new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, mean_samples, var_samples, mix_proportion = c(0.05, 0.95), 
+new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, mean_samples,
+                                 eff_mu = NULL, eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
                                  likelihood_func = NULL, epsilon = NULL, subjects) 
 {
+  eff_mu <- eff_mu[, s]
+  eff_var <- eff_var[,,s]
   subj_mu <- mean_samples[,s]
-  subj_var <- var_samples[,,s]
   particle_numbers <- numbers_from_proportion(mix_proportion, num_particles)
   cumuNumbers <- cumsum(particle_numbers)
-  
-  particle_numbers[2] <- num_particles - particle_numbers[1]
   pop_particles <- particle_draws(particle_numbers[1], prior_mu, 
                                   prior_var)
   ind_particles <- particle_draws(particle_numbers[2], subj_mu, 
-                                  subj_var * epsilon[s]^2)
-  proposals <- rbind(pop_particles, ind_particles)
+                                  prior_var * epsilon[s]^2)
+  if(mix_proportion[3] == 0){
+    eff_particles <- NULL
+  } else{
+    eff_particles <- particle_draws(particle_numbers[3], eff_mu, eff_var)
+  }
+  proposals <- rbind(pop_particles, ind_particles, eff_particles)
   colnames(proposals) <- names(subj_mu)
   proposals[1, ] <- subj_mu
   lw <- apply(proposals, 1, likelihood_func, dadm = data[[which(subjects == s)]])
-  lp <- dmvnorm(x = proposals, mean = prior_mu, sigma = prior_var, 
-                log = TRUE)
-  prop_density <- dmvnorm(x = proposals, mean = subj_mu, 
-                          sigma = subj_var * (epsilon[s]^2))
-  
-  lm <- log(mix_proportion[1] * exp(lp) + (mix_proportion[2] * prop_density))
+  lp <- mvtnorm::dmvnorm(x = proposals, mean = prior_mu, sigma = prior_var, 
+                         log = TRUE)
+  prop_density <- mvtnorm::dmvnorm(x = proposals, mean = subj_mu, 
+                                   sigma = prior_var * (epsilon[s]^2))
+  if (mix_proportion[3] == 0) {
+    eff_density <- 0
+  }
+  else {
+    eff_density <- mvtnorm::dmvnorm(x = proposals, mean = eff_mu, sigma = eff_var)
+  }
+  lm <- log(mix_proportion[1] * exp(lp) + (mix_proportion[2] * 
+                                             prop_density) + (mix_proportion[3] * eff_density))
   l <- lw + lp - lm
   weights <- exp(l - max(l))
   idx <- sample(x = num_particles, size = 1, prob = weights)
@@ -121,30 +132,22 @@ new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, me
 }
 
 run_stage <- function(pmwgs,
-                             stage,
-                             iter = 1000,
-                             particles = 1000,
-                             verbose = TRUE,
-                             n_cores = 1,
-                             n_window = 50,
-                             epsilon = NULL,
-                             pstar = NULL,
-                             epsilon_upper_bound = 5,
-                             mix = NULL, ...) {
+                      stage,
+                      iter = 1000,
+                      particles = 1000,
+                      verbose = TRUE,
+                      n_cores = 1,
+                      epsilon = NULL,
+                      pstar = NULL,
+                      n_window = 50,
+                      epsilon_upper_bound = 20,
+                      mix = NULL, 
+                      ...) {
   # Set defaults for NULL values
-  if(is.null(mix)) mix <- c(0.05, 0.95)
+  if(is.null(mix)) mix <- set_mix(stage, verbose)
   # Set stable (fixed) new_sample argument for this run
   n_pars <- length(pmwgs$par_names)
   # Display stage to screen
-  if(verbose){
-    msgs <- list(
-      burn = "Phase 1: Burn in\n",
-      adapt = "Phase 2: Adaptation\n",
-      sample = "Phase 3: Sampling\n"
-    )
-    cat(msgs[[stage]])
-  }
-
   
   alphaStar=-qnorm(pstar/2) #Idk about this one
   n0=round(5/(pstar*(1-pstar))) #Also not questioning this math for now
@@ -168,24 +171,29 @@ run_stage <- function(pmwgs,
   data <- pmwgs$data
   subjects <- pmwgs$subjects
   n_subjects <- pmwgs$n_subjects
-  
-  var_samples <- replicate(n_subjects, prior_var)
-  mean_samples <- replicate(n_subjects, prior_mu)
+  eff_mu <- NULL
+  eff_var <- NULL
+  if(stage == "sample") eff_var <- replicate(n_subjects, prior_var)
   # Main iteration loop
   for (i in 1:iter) {
     if (verbose) {
       update_progress_bar(pb, i, extra = mean(accept_rate(pmwgs)))
     }
     j <- start_iter + i
-    mean_samples <- pmwgs$samples$alpha[,,j-1]
-    if(n_cores > 1){
-      proposals=mclapply(X=1:pmwgs$n_subjects,FUN = new_particle_single, data, particles, prior_mu, prior_var,
-                         mean_samples, var_samples, mix, pmwgs$ll_func, epsilon, subjects, mc.cores = n_cores)
-    } else{
-      proposals=lapply(X=1:pmwgs$n_subjects,FUN = new_particle_single, data, particles, prior_mu, prior_var,
-                       mean_samples, var_samples, mix, pmwgs$ll_func, epsilon, subjects)
+    
+    if(stage == "sample" & (i %% 10 == 0 || i == 1)){
+      for(k in 1:n_subjects){
+        # I outline quicker ways to do this below, but for now this is easier for testing
+        eff_var[,,k] <- cov(t(pmwgs$samples$alpha[,k,(j-1-n_window):(j-1)]))
+      }
+      eff_mu <- apply(pmwgs$samples$alpha[,,(j-1-n_window):(j-1)], 1:2, mean)
     }
-    proposals <- array(unlist(proposals), dim = c(n_pars + 2, pmwgs$n_subjects))
+    
+    mean_samples <- matrix(pmwgs$samples$alpha[,,j-1], nrow = n_pars, ncol = n_subjects)
+    rownames(mean_samples) <- pmwgs$par_names
+    proposals=lapply(X=1:pmwgs$n_subjects,FUN = new_particle_single, data, particles, prior_mu, prior_var,
+                     mean_samples, eff_mu, eff_var, mix, pmwgs$ll_func, epsilon, subjects)
+    proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
     alpha <- matrix(proposals[1:n_pars,], nrow = n_pars, ncol = n_subjects)
     ll <- proposals[n_pars + 1,]
     origin <- proposals[n_pars + 2,]
@@ -199,14 +207,6 @@ run_stage <- function(pmwgs,
       if(j > (n_window + n0)){
         acc <-  pmwgs$samples$alpha[1,,j] != pmwgs$samples$alpha[1,,(j-1)]
         epsilon<-pmin(update.epsilon(epsilon^2, acc, pstar, j, pmwgs$n_pars, alphaStar), epsilon_upper_bound)
-      }
-    }
-    
-    if(j > n_window){
-      for(k in 1:n_subjects){
-        #There are quicker ways to do this by keeping track of the sum
-        var_samples[,,k] <- cov(t(pmwgs$samples$alpha[,k,(j-n_window):j]))
-        # mean_samples <- apply(pmwgs$samples$alpha[,,(j-n_window):j], 1:2, mean)
       }
     }
     
@@ -230,6 +230,15 @@ update.epsilon<- function(epsilon2, acc, p, i, d, alpha) {
   return(exp(Theta))
 }
 
+set_mix <- function(stage, verbose) {
+  if (stage == "sample") {
+    mix <- c(0.1, 0.2, 0.7)
+  } else {
+    mix <- c(0.1, 0.9, 0)
+  }
+  if(verbose) message(sprintf("mix has been set to c(%s) based on the stage being run",  paste(mix, collapse = ", ")))
+  return(mix)
+}
 
 set_epsilon <- function(n_pars, verbose) {
   if (n_pars > 15) {
@@ -245,7 +254,12 @@ set_epsilon <- function(n_pars, verbose) {
 
 numbers_from_proportion <- function(mix_proportion, num_particles = 1000) {
   numbers <- stats::rbinom(n = 2, size = num_particles, prob = mix_proportion)
-  numbers[2] <- num_particles - numbers[1]
+  if (mix_proportion[3] == 0) {
+    numbers[3] <- 0
+    numbers[2] <- num_particles - numbers[1]
+  } else {
+    numbers[3] <- num_particles - sum(numbers)
+  }
   return(numbers)
 }
 
@@ -261,7 +275,7 @@ extend_sampler <- function(sampler, n_samples, stage) {
   for(obj_name in names(sampler$samples)){
     obj <- sampler$samples[[obj_name]]
     dimensions <- length(dim(obj))
-    if(dimensions > 1 & !obj_name %in% c("last_theta_var_inv")){ #Ok not the cleanest
+    if(dimensions > 1 & !obj_name %in% c("sum_samples")){ #Ok not the cleanest
       new_dim <- c(rep(0, (dimensions -1)), n_samples)
       extension <- array(NA_real_, dim = dim(obj) +  new_dim, dimnames = dimnames(obj))
       if(dimensions == 2){ #There must be a cleaner way to to do this
@@ -275,4 +289,3 @@ extend_sampler <- function(sampler, n_samples, stage) {
   sampler$samples$stage <- c(old$stage, rep(stage, n_samples))
   sampler
 }
-
