@@ -91,8 +91,8 @@ start_proposals <- function(s, start_mu, start_var, n_particles, pmwgs){
 }
 
 new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, mean_samples,
-                                 eff_mu = NULL, eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
-                                 likelihood_func = NULL, epsilon = NULL, subjects) 
+                          eff_mu = NULL, eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
+                          likelihood_func = NULL, epsilon = NULL, subjects) 
 {
   eff_mu <- eff_mu[, s]
   eff_var <- eff_var[,,s]
@@ -147,7 +147,7 @@ run_stage <- function(pmwgs,
   if(is.null(mix)) mix <- set_mix(stage, verbose)
   # Set stable (fixed) new_sample argument for this run
   n_pars <- length(pmwgs$par_names)
-  # Display stage to screen
+    # Display stage to screen
   
   alphaStar=-qnorm(pstar/2) #Idk about this one
   n0=round(5/(pstar*(1-pstar))) #Also not questioning this math for now
@@ -192,7 +192,7 @@ run_stage <- function(pmwgs,
     mean_samples <- matrix(pmwgs$samples$alpha[,,j-1], nrow = n_pars, ncol = n_subjects)
     rownames(mean_samples) <- pmwgs$par_names
     proposals=lapply(X=1:pmwgs$n_subjects,FUN = new_particle_single, data, particles, prior_mu, prior_var,
-                     mean_samples, eff_mu, eff_var, mix, pmwgs$ll_func, epsilon, subjects)
+                       mean_samples, eff_mu, eff_var, mix, pmwgs$ll_func, epsilon, subjects)
     proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
     alpha <- matrix(proposals[1:n_pars,], nrow = n_pars, ncol = n_subjects)
     ll <- proposals[n_pars + 1,]

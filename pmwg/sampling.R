@@ -1,11 +1,11 @@
-library(Matrix)
-library(MASS) ## For matrix inverse.
-library(MCMCpack) #For inverse wishart
-library(lme4)
-library(parallel)
-library(mvtnorm) ## For the multivariate normal.
-library(condMVNorm)
-library(magic)
+require(MASS) ## For matrix inverse.
+require(MCMCpack) #For inverse wishart
+require(lme4)
+require(parallel)
+require(mvtnorm) ## For the multivariate normal.
+require(condMVNorm)
+require(magic)
+require(abind)
 
 source("pmwg/messaging.R")
 
@@ -36,43 +36,31 @@ pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL, ...) {
 }
 
 init <- function(pmwgs, start_mu = NULL, start_var = NULL,
-         verbose = FALSE, particles = 1000, n_cores = 1, epsilon = NULL) {
+                 verbose = FALSE, particles = 1000, n_cores = 1, epsilon = NULL) {
   # Gets starting points for the mcmc process
   # If no starting point for group mean just use zeros
-  startpoints <- get_startpoints(pmwgs, start_mu, start_var)
+  startpoints <- variant_funs$get_startpoints(pmwgs, start_mu, start_var)
   if(n_cores > 1){
-    proposals <- mclapply(X=1:pmwgs$n_subjects,FUN=start_proposals,start_mu = startpoints$tmu, 
-                        start_var = startpoints$tvar, n_particles = particles, pmwgs = pmwgs, mc.cores = n_cores)
+    proposals <- mclapply(X=1:pmwgs$n_subjects,FUN=start_proposals, parameters = startpoints, n_particles = particles, pmwgs = pmwgs, mc.cores = n_cores)
   } else{
-    proposals <- lapply(X=1:pmwgs$n_subjects,FUN=start_proposals,start_mu = startpoints$tmu, 
-               start_var = startpoints$tvar, n_particles = particles, pmwgs = pmwgs)
+    proposals <- lapply(X=1:pmwgs$n_subjects,FUN=start_proposals, parameters = startpoints, n_particles = particles, pmwgs = pmwgs)
   }
   proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
   
   # Sample the mixture variables' initial values.
   if(is.null(epsilon)) epsilon <- rep(set_epsilon(pmwgs$n_pars, verbose), pmwgs$n_subjects)
   if(length(epsilon) == 1) epsilon <- rep(epsilon, pmwgs$n_subjects)
-  pmwgs$samples <- fill_samples(samples = pmwgs$samples, group_level = startpoints, proposals = proposals,
+  pmwgs$samples <- variant_funs$fill_samples(samples = pmwgs$samples, group_level = startpoints, proposals = proposals,
                                 epsilon = epsilon, j = 1, n_pars = pmwgs$n_pars)
   pmwgs$init <- TRUE
   return(pmwgs)
 }
 
-fill_samples_base <- function(samples, group_level, proposals, epsilon, j = 1, n_pars){
-  samples$theta_mu[, j] <- group_level$tmu
-  samples$theta_var[, , j] <- group_level$tvar
-  samples$alpha[, , j] <- proposals[1:n_pars,]
-  samples$subj_ll[, j] <- proposals[n_pars + 1,]
-  samples$origin[,j] <- proposals[n_pars + 2,]
-  samples$idx <- j
-  samples$epsilon[,j] <- epsilon
-  return(samples)
-}
 
-
-start_proposals <- function(s, start_mu, start_var, n_particles, pmwgs){
+start_proposals <- function(s, parameters, n_particles, pmwgs){
   #Draw the first start point
-  proposals <- particle_draws(n_particles, start_mu, start_var)
+  group_pars <- variant_funs$get_group_level(parameters, s)
+  proposals <- particle_draws(n_particles, group_pars$mu, group_pars$var)
   colnames(proposals) <- rownames(pmwgs$samples$theta_mu) # preserve par names
   lw <- apply(proposals,1,pmwgs$ll_func,dadm = pmwgs$data[[which(pmwgs$subjects == s)]])
   weight <- exp(lw - max(lw))
@@ -86,8 +74,9 @@ new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL,
 {
   eff_mu <- eff_mu[, s]
   eff_var <- eff_var[, , s]
-  mu <- parameters$tmu
-  var <- parameters$tvar
+  group_pars <- variant_funs$get_group_level(parameters, s)
+  mu <- group_pars$mu
+  var <- group_pars$var
   subj_mu <- parameters$alpha[, s]
   particle_numbers <- numbers_from_proportion(mix_proportion, num_particles)
   cumuNumbers <- cumsum(particle_numbers)
@@ -104,15 +93,15 @@ new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL,
   colnames(proposals) <- names(mu)
   proposals[1, ] <- subj_mu
   lw <- apply(proposals, 1, likelihood_func, dadm = data[[which(subjects == s)]])
-  lp <- dmvnorm(x = proposals, mean = mu, sigma = var, 
-                         log = TRUE)
-  prop_density <- dmvnorm(x = proposals, mean = subj_mu, 
-                                   sigma = var * (epsilon[s]^2))
+  lp <- mvtnorm::dmvnorm(x = proposals, mean = mu, sigma = var, 
+                log = TRUE)
+  prop_density <- mvtnorm::dmvnorm(x = proposals, mean = subj_mu, 
+                          sigma = var * (epsilon[s]^2))
   if (mix_proportion[3] == 0) {
     eff_density <- 0
   }
   else {
-    eff_density <- dmvnorm(x = proposals, mean = eff_mu, sigma = eff_var)
+    eff_density <- mvtnorm::dmvnorm(x = proposals, mean = eff_mu, sigma = eff_var)
   }
   lm <- log(mix_proportion[1] * exp(lp) + (mix_proportion[2] * 
                                              prop_density) + (mix_proportion[3] * eff_density))
@@ -189,43 +178,33 @@ run_stage <- function(pmwgs,
     # Create/update efficient proposal distribution if we are in sampling phase.
     if(stage == "sample" & (i %% pdist_update_n == 0 || i == 1)){
       test_samples <- extract_samples(pmwgs, stage = c("adapt", "sample"), thin, i, thin_eff_only)
-      if(n_cores_conditional > 1){
-        conditionals=mclapply(X = 1:pmwgs$n_subjects,FUN = get_conditionals,samples = test_samples, n_pars, mc.cores = n_cores_conditional)
-      } else{
-        conditionals=lapply(X = 1:pmwgs$n_subjects,FUN = get_conditionals,samples = test_samples, n_pars)
-      }
+      conditionals=mclapply(X = 1:pmwgs$n_subjects,FUN = variant_funs$get_conditionals,samples = test_samples, n_pars, mc.cores = n_cores_conditional)
       conditionals <- array(unlist(conditionals), dim = c(pmwgs$n_pars, pmwgs$n_pars + 1, pmwgs$n_subjects))
       eff_mu <- conditionals[,1,] #First column is the means
       eff_var <- conditionals[,2:(n_pars+1),] #Other columns are the variances
     }
-    
-    pars <- gibbs_step(pmwgs)
-    if(n_cores > 1){
-      proposals=mclapply(X=1:pmwgs$n_subjects,FUN = new_particle, data, particles, pars, eff_mu, 
-                   eff_var, mix, pmwgs$ll_func, epsilon, subjects, mc.cores =n_cores)
-    } else{
-      proposals=lapply(X=1:pmwgs$n_subjects, FUN = new_particle, data, particles, pars, eff_mu, 
-                 eff_var, mix, pmwgs$ll_func, epsilon, subjects)
-    }
-    proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
-
-
-
-    #Fill samples
     j <- start_iter + i
-    pmwgs$samples <- fill_samples(samples = pmwgs$samples, group_level = pars,
-                            proposals = proposals, epsilon = epsilon, j = j, n_pars = pmwgs$n_pars)
+    # Gibbs step
+    pars <- variant_funs$gibbs_step(pmwgs, pmwgs$samples$alpha[,,j-1])
+    # Particle step
+    proposals=mclapply(X=1:pmwgs$n_subjects,FUN = new_particle, data, particles, pars, eff_mu, 
+                         eff_var, mix, pmwgs$ll_func, epsilon, subjects, mc.cores =n_cores)
+    proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
     
-    #Update epsilon
+    #Fill samples
+    pmwgs$samples <- variant_funs$fill_samples(samples = pmwgs$samples, group_level = pars,
+                                  proposals = proposals, epsilon = epsilon, j = j, n_pars = pmwgs$n_pars)
+    
+    # Update epsilon
     if(!is.null(pstar)){
       if(j > n0){
         acc <-  pmwgs$samples$alpha[1,,j] != pmwgs$samples$alpha[1,,(j-1)]
         epsilon<-pmin(update.epsilon(epsilon^2, acc, pstar, j, pmwgs$n_pars, alphaStar), epsilon_upper_bound)
       }
     }
-    
+    # Test whether we can finish adaptation
     if (stage == "adapt") {
-      res <- test_sampler_adapted(pmwgs, n_unique, i, n_cores_conditional, get_conditionals, verbose, thin, thin_eff_only)
+      res <- test_sampler_adapted(pmwgs, n_unique, i, n_cores_conditional, variant_funs$get_conditionals, verbose, thin, thin_eff_only)
       if (res == "success") {
         break
       } else if (res == "increase") {
@@ -249,7 +228,6 @@ run_stage <- function(pmwgs,
   if(!is.null(thin) & !thin_eff_only){
     pmwgs <- thin_objects(pmwgs, thin, i)
   }
-  
   return(pmwgs)
 }
 
@@ -273,11 +251,8 @@ test_sampler_adapted <- function(pmwgs, n_unique, i, n_cores_conditional, condit
       message("Testing proposal distribution creation")
     }
     attempt <- tryCatch({
-      if(n_cores_conditional > 1){
-        mclapply(X = 1:pmwgs$n_subjects,FUN = conditionals_func,samples = test_samples, n_pars, mc.cores = n_cores_conditional)
-      } else{
-        lapply(X = 1:pmwgs$n_subjects,FUN = conditionals_func,samples = test_samples, n_pars)
-      }
+      mclapply(X = 1:pmwgs$n_subjects,FUN = conditionals_func,samples = test_samples, 
+               n_pars, mc.cores = n_cores_conditional)
     },error=function(e) e, warning=function(w) w)
     if (any(class(attempt) %in% c("warning", "error", "try-error"))) {
       if(verbose){
@@ -293,11 +268,12 @@ test_sampler_adapted <- function(pmwgs, n_unique, i, n_cores_conditional, condit
   }
   return("continue")
 }
+
 particle_draws <- function(n, mu, covar) {
   if (n <= 0) {
     return(NULL)
   }
-  return(rmvnorm(n, mu, covar))
+  return(mvtnorm::rmvnorm(n, mu, covar))
 }
 
 update.epsilon<- function(epsilon2, acc, p, i, d, alpha) {
@@ -344,17 +320,19 @@ extract_samples <- function(sampler, stage = c("adapt", "sample"), thin, i, thin
   samples <- sampler$samples
   stage_filter <- which(samples$stage %in% stage)
   if(!is.null(thin)){
-    if(i > thin){
-      if(thin_eff_only){
-        # Assume there's no thinning done on the actual samples, just for the eff
-        thin <- seq(thin, samples$idx, by = thin)
-        full_filter <- intersect(thin, stage_filter)
-      } else{
-        # There has been thinning on prev samples, do it for current ones as well
-        old_idx <- 1:(samples$idx - i - 1)
-        old_filter <- intersect(old_idx, stage_filter)
+    if(thin_eff_only){
+      # Assume there's no thinning done on the actual samples, just for the eff
+      thin <- seq(thin, samples$idx, by = thin)
+      full_filter <- intersect(thin, stage_filter)
+    } else{
+      # There has been thinning on prev samples, do it for current ones as well
+      old_idx <- 1:(samples$idx - i - 1)
+      old_filter <- intersect(old_idx, stage_filter)
+      if(i > thin){ # make sure we have enough
         new_filter <- samples$idx - i + seq(thin,i,by=thin)
         full_filter <- c(old_filter, new_filter)
+      } else{
+        full_filter <- old_filter
       }
     }
   } else{
@@ -362,57 +340,81 @@ extract_samples <- function(sampler, stage = c("adapt", "sample"), thin, i, thin
     sampled_filter <- which(seq_along(samples$stage) <= samples$idx)
     full_filter <- intersect(stage_filter, sampled_filter)
   }
-  out <- list(
-    theta_mu = samples$theta_mu[, full_filter],
-    theta_var = samples$theta_var[, , full_filter],
-    alpha = samples$alpha[, , full_filter],
-    iteration = length(full_filter)
-  )
+  out <- variant_funs$filtered_samples(sampler, full_filter)
   return(out)
+}
+
+sample_store_base <- function(data, par_names, iters = 1, stage = "init") {
+  subject_ids <- unique(data$subject)
+  n_pars <- length(par_names)
+  n_subjects <- length(subject_ids)
+  samples <- list(
+    epsilon = array(NA_real_,dim = c(n_subjects, iters),dimnames = list(subject_ids, NULL)),
+    origin = array(NA_real_,dim = c(n_subjects, iters),dimnames = list(subject_ids, NULL)),
+    alpha = array(NA_real_,dim = c(n_pars, n_subjects, iters),dimnames = list(par_names, subject_ids, NULL)),
+    stage = array(stage, iters),
+    subj_ll = array(NA_real_,dim = c(n_subjects, iters),dimnames = list(subject_ids, NULL))
+  )
+}
+
+fill_samples_base <- function(samples, group_level, proposals, epsilon, j = 1, n_pars){
+  # Fill samples both group level and random effects
+  samples$theta_mu[, j] <- group_level$tmu
+  samples$theta_var[, , j] <- group_level$tvar
+  if(!is.null(proposals)) samples <- fill_samples_RE(samples, proposals, epsilon,j, n_pars)
+  return(samples)
+}
+
+fill_samples_RE <- function(samples, proposals, epsilon, j = 1, n_pars){
+  # Only for random effects, separated because group level sometimes differs.
+  samples$alpha[, , j] <- proposals[1:n_pars,]
+  samples$subj_ll[, j] <- proposals[n_pars + 1,]
+  samples$origin[,j] <- proposals[n_pars + 2,]
+  samples$idx <- j
+  samples$epsilon[,j] <- epsilon
+  return(samples)
+}
+
+extend_obj <- function(obj, n_extend){
+  old_dim <- dim(obj)
+  n_dimensions <- length(old_dim)
+  if(is.null(old_dim) | n_dimensions == 1) return(obj)
+  if(n_dimensions == 2){
+    if(isSymmetric(round(obj, 5))) return(obj) #Don't extend priors and theta_mu_var_inv
+    
+  new_dim <- c(rep(0, (n_dimensions -1)), n_extend)
+  extended <- array(NA_real_, dim = old_dim +  new_dim, dimnames = dimnames(obj))
+  extended[slice.index(extended,n_dimensions) <= old_dim[n_dimensions]] <- obj
+  return(extended)
+}
+
+filter_obj <- function(obj, idx){
+  dims <- dim(obj)
+  dim_names <- dimnames(obj)
+  if(is.null(dims)) return(obj)
+  if(length(dims) == 2){
+    if(isSymmetric(round(obj, 5))) return(obj) #Don't extend priors and theta_mu_var_inv
+  } 
+  obj <- obj[slice.index(obj, length(dims)) %in% idx]
+  dims[length(dims)] <- length(idx)
+  dim(obj) <- dims
+  dimnames(obj) <- dim_names # Give back to the community
+  return(obj)
 }
 
 extend_sampler <- function(sampler, n_samples, stage) {
   # This function takes the sampler and extends it along the intended number of
   # iterations, to ensure that we're not constantly increasing our sampled object
-  # by 1. 
-  old <- sampler$samples
-  par_names <- sampler$par_names
-  subject_ids <- sampler$subjects
-  start <- old$idx + 1
-  end <- old$idx + n_samples
-  for(obj_name in names(sampler$samples)){
-    obj <- sampler$samples[[obj_name]]
-    dimensions <- length(dim(obj))
-    if(dimensions > 1 & !obj_name %in% c("last_theta_var_inv")){ #Ok not the cleanest
-      new_dim <- c(rep(0, (dimensions -1)), n_samples)
-      extension <- array(NA_real_, dim = dim(obj) +  new_dim, dimnames = dimnames(obj))
-      if(dimensions == 2){ #There must be a cleaner way to to do this
-        extension[, -(start:end)] <- obj
-      } else{
-        extension[,, -(start:end)] <- obj
-      }
-      sampler$samples[[obj_name]] <- extension
-    }
-  }
-  sampler$samples$stage <- c(old$stage, rep(stage, n_samples))
-  sampler
+  # by 1. Big shout out to the rapply function
+  sampler$samples$stage <- c(sampler$samples$stage, rep(stage, n_samples))
+  sampler$samples <- base::rapply(sampler$samples, f = function(x) extend_obj(x, n_samples), how = "replace")
+  return(sampler)
 }
 
 trim_na <- function(sampler) {
-  idx <- sampler$samples$idx
-  sampler$samples$stage <- sampler$samples$stage[1:idx]
-  for(obj_name in names(sampler$samples)){
-    obj <- sampler$samples[[obj_name]]
-    dimensions <- length(dim(obj))
-    if(dimensions > 1 & obj_name != "last_theta_var_inv"){ #Ok not the cleanest
-      if(dimensions == 2){ #There must be a cleaner way to to do this
-        obj <- obj[,1:idx, drop = F]
-      } else{
-        obj <- obj[,,1:idx, drop = F]
-      }
-      sampler$samples[[obj_name]] <- obj
-    }
-  }
+  idx <- 1:sampler$samples$idx
+  sampler$samples$stage <- sampler$samples$stage[idx]
+  sampler$samples <- base::rapply(sampler$samples, f = function(x) filter_obj(x, idx), how = "replace")
   return(sampler)
 }
 
@@ -422,17 +424,6 @@ thin_objects <- function(sampler, thin, i){
   nmc_thin <- c(old_idx, new_idx)
   sampler$samples$stage <- sampler$samples$stage[nmc_thin]
   sampler$samples$idx <- length(sampler$samples$stage)
-  for(obj_name in names(sampler$samples)){
-    obj <- sampler$samples[[obj_name]]
-    dimensions <- length(dim(obj))
-    if(dimensions > 1 & obj_name != "last_theta_var_inv"){ #Ok not the cleanest
-      if(dimensions == 2){ #There must be a cleaner way to to do this
-        obj <- obj[,nmc_thin, drop = F]
-      } else{
-        obj <- obj[,,nmc_thin, drop = F]
-      }
-      sampler$samples[[obj_name]] <- obj
-    }
-  }
+  sampler$samples <- base::rapply(sampler$samples, f = function(x) filter_obj(x, nmc_thin), how = "replace")
   return(sampler)
 }
