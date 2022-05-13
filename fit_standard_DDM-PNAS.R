@@ -6,6 +6,7 @@ source("DDM/ddmTZD.R")
 load("Data/PNAS.RData")
 # Note that this data was censored at 0.25s and 1.5s
 
+
 dat <- data[,c("s","E","S","R","RT")]
 names(dat)[c(1,5)] <- c("subjects","rt")
 levels(dat$R) <- levels(dat$S)
