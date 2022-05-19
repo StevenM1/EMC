@@ -22,7 +22,7 @@ lnrMS <- list(
   },
   # mapped parameter transform
   Mtransform = function(pars) 
-    # transform parameters except v back to real line 
+    # transform parameters except m back to real line 
     # pars is a matrix output by map_p_vector  
   {
     lnrMS$Ntransform(pars)
