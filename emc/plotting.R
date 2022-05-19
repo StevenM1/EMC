@@ -338,7 +338,7 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
     plot(dens[[1]],xlim=xlimi,ylim=ylim,lty=1,main=i,xlab="RT")
     if (length(dens)>1) for (j in 2:length(dens))
       lines(dens[[j]],lty=j)
-    if (!is.null(accuracy))
+    if (!is.null(accuracy) && length(R) > 1)
       legend(accuracy,paste(names(pR),round(pR,2),sep="="),lty=1:length(pR),bty="n",title="p(R)")
     if (!is.null(rt))
       legend(rt,paste(names(pR),round(mrt,3),sep="="),bty="n",title="Med(RT)")
