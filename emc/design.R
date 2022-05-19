@@ -251,7 +251,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   
   if (add_acc)
     da <- add_accumulators(data,design$matchfun,type=model$type) else da <- data
-  da <- da[order(da$subjects),] # fixes different sort in add_accumulators depnding on subject type 
+  da <- da[order(da$subjects),] # fixes different sort in add_accumulators depending on subject type 
   # Add dummy content for covariates in sampled_p_vector calls
   da[!(names(da) %in% c("R","rt"))] <- 
     data.frame(lapply(da[!(names(da) %in% c("R","rt"))],function(x){
