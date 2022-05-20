@@ -1,4 +1,4 @@
-# Lognromal race
+# Normal race
 
 #### distribution functions
 
