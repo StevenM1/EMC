@@ -40,7 +40,7 @@ get_prior_samples <- function(samples,selection,filter,thin,subfilter,n_prior)
 {
   if (class(samples)=="pmwgs") samps <- samples else samps <- samples[[1]]
   if (selection=="alpha") {
-    if (samps$source !="pmwg/variants/single.R") {
+    if (samps$source !="samplers/pmwg/variants/single.R") {
       if (class(samples)=="pmwgs") {
         theta_mu <- as_Mcmc(samples,selection="mu",filter=filter,
                          thin=thin,subfilter=subfilter)
@@ -55,7 +55,7 @@ get_prior_samples <- function(samples,selection,filter,thin,subfilter,n_prior)
       psamples <- prior_samples_alpha(theta_mu,theta_var,n_prior)
     } else return(prior_samples(samps,"mu",n_prior)) 
   } else {
-    if (samps$source!="pmwg/variants/standard.R") {
+    if (samps$source!="samplers/pmwg/variants/standard.R") {
       warnings("Prior plot not yet implemented for this type")
       return(NULL)  
     } else psamples <- prior_samples(samps,selection,n_prior)

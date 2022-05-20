@@ -7,7 +7,7 @@ require(condMVNorm)
 require(magic)
 require(abind)
 
-source("pmwg/messaging.R")
+source("samplers/pmwg/messaging.R")
 
 pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL, ...) {
   if(is.data.frame(dadm)) dadm <- list(dadm)

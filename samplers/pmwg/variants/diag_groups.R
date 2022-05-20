@@ -1,4 +1,4 @@
-source("pmwg/variants/diag.R")
+source("samplers/pmwg/variants/diag.R")
 
 add_info_diag_groups <- function(sampler, prior = NULL, ...){
   # Checking and default priors

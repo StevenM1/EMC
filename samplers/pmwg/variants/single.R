@@ -4,7 +4,7 @@ library(MCMCpack) #For inverse wishart
 library(lme4)
 library(parallel)
 
-source("pmwg/messaging.R")
+source("samplers/pmwg/messaging.R")
 
 pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL) {
   ###Gets/sets priors, creates pmwgs object and stores essentials

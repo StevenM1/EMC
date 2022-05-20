@@ -282,7 +282,7 @@ auto_burn <- function(samplers,
       discard_message <- paste("(first ",ndiscard," then removed)")
     message("Getting initial ",ndiscard + nstart," samples ",discard_message)
     run_try <- 0
-    if (samplers[[1]]$source=="pmwg/variants/single.R") start_mix <- single_start_mix
+    if (samplers[[1]]$source=="samplers/pmwg/variants/single.R") start_mix <- single_start_mix
     if (ndiscard>0) {
       repeat {
         samplers_new <- mclapply(samplers,run_stages,iter=c(ndiscard,NA,NA),

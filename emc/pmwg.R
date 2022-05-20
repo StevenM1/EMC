@@ -183,34 +183,34 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
       model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
   }
   if (type == "standard") {
-    source("pmwg/variants/standard.R")
+    source("samplers/pmwg/variants/standard.R")
     out <- pmwgs(dadm_list)
-    out$source <- "pmwg/variants/standard.R"
+    out$source <- "samplers/pmwg/variants/standard.R"
   } else if(type == "diagonal"){
-    source("pmwg/variants/diag.R")
+    source("samplers/pmwg/variants/diag.R")
     out <- pmwgs(dadm_list)
-    out$source <- "pmwg/variants/diag.R"
+    out$source <- "samplers/pmwg/variants/diag.R"
   } else if (type == "blocked") {
     if (is.null(par_groups)) stop("Must specify par_groups for blocked type")
-    source("pmwg/variants/blocked.R")
+    source("samplers/pmwg/variants/blocked.R")
     out <- pmwgs(dadm_list,par_groups=par_groups)
-    out$source <- "pmwg/variants/blocked.R"
+    out$source <- "samplers/pmwg/variants/blocked.R"
   } else if (type=="factor") {
     if (is.null(n_factors)) stop("Must specify n_factors for factor type")
-    source("pmwg/variants/factor.R") 
+    source("samplers/pmwg/variants/factor.R") 
     out <- pmwgs(dadm_list,n_factors=n_factors,constraintMat=constraintMat)
-    out$source <- "pmwg/variants/factor.R"
+    out$source <- "samplers/pmwg/variants/factor.R"
   } else if (type=="factorRegression") {
     if (is.null(n_factors)) stop("Must specify n_factors for factorRegression type")
     if (is.null(covariates)) stop("Must specify covariates for factorRegression type")
-    source("pmwg/variants/factorRegr.R")
+    source("samplers/pmwg/variants/factorRegr.R")
     out <- pmwgs(dadm_list,n_factors=n_factors,constraintMat=constraintMat,
                  covariates=covariates)
-    out$source <- "pmwg/variants/factorRegr.R"
+    out$source <- "samplers/pmwg/variants/factorRegr.R"
   } else if (type == "single") {
-    source("pmwg/variants/single.R")
+    source("samplers/pmwg/variants/single.R")
     out <- pmwgs(dadm_list)
-    out$source <- "pmwg/variants/single.R"
+    out$source <- "samplers/pmwg/variants/single.R"
   }
   # replicate chains
   dadm_lists <- rep(list(out),n_chains)

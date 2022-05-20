@@ -1,4 +1,4 @@
-source("pmwg/sampling.R")
+source("samplers/pmwg/sampling.R")
 
 sample_store_nested <- function(data, par_names, iters = 1, stage = "init", integrate = T,...) {
   args <- list(...)

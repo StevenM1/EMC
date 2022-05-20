@@ -1,5 +1,5 @@
-source("pmwg/sampling.R")
-source("pmwg/variants/standard.R")
+source("samplers/pmwg/sampling.R")
+source("samplers/pmwg/variants/standard.R")
 
 add_info_diag <- function(sampler, prior = NULL, ...){
   # Checking and default priors

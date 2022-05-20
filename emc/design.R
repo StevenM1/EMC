@@ -1,4 +1,4 @@
-#### Make deesign matrices ----
+#### Make design matrices ----
 
 add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE") 
   # Augments data for use in race model likelihood calculation or simulation.

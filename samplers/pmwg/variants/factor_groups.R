@@ -1,95 +1,56 @@
-source("pmwg/sampling.R")
-source("pmwg/variants/standard.R")
+source("samplers/pmwg/variants/factor.R")
 
-add_info_factor <- function(sampler, prior = NULL, ...){
+add_info_factor_groups <- function(sampler, prior = NULL, ...){
   # Checking and default priors
-  args <- list(...)
-  n_factors <- args$n_factors
-  constraintMat <- args$constraintMat
-  n_pars <- sampler$n_pars
-  if (is.null(prior)) {
-    prior <- list(theta_mu_mean = rep(0, n_pars), 
-                  theta_mu_var = rep(1, n_pars),
-                  theta_lambda_var = 1)
-  }
-  # Things I save rather than re-compute inside the loops.
-  # Things I save rather than re-compute inside the loops.
-  prior$theta_mu_invar <- diag(1/prior$theta_mu_var) 
-  prior$theta_lambda_invar <-1/prior$theta_lambda_var
-  
-  if(is.null(constraintMat)){
-    constraintMat <- matrix(1, nrow = n_pars, ncol = n_factors)
-    constraintMat[upper.tri(constraintMat, diag = T)] <- 0 #Now you can't fix one of the diagonal values to 0
-  }
-  signFix <- F
-  constraintMat <- constraintMat != 0 #For indexing
-  if(any(diag(constraintMat) != 0)) signFix <- T
-  
-  #Hyper parameters
-  attr(sampler, "al") <- 1
-  attr(sampler, "bl") <- 1/2
-  attr(sampler, "nu") <- 2
-  attr(sampler, "s2") <- 1/2
-  attr(sampler, "signFix") <- signFix
-  attr(sampler, "constraintMat") <- constraintMat
-  
-  sampler$prior <- prior
-  sampler$n_factors <- n_factors
+  sampler <- add_info_factor(sampler, prior, ...)
+  sampler$par_idx <- list(...)$par_idx
+  sampler$parGroups <- unique(as.vector(par_idx))
+  sampler$group_idx <- aggregate(group ~ subject, sampler$data, mean)[,2]
   return(sampler)
 }
 
-sample_store_factor <- function(data, par_names, iters = 1, stage = "init", integrate = T, ...) {
-  n_factors <- list(...)$n_factors
-  subject_ids <- unique(data$subject)
+sample_store_factor_groups <- function(data, par_names, iters = 1, stage = "init", integrate = T, ...) {
   n_pars <- length(par_names)
-  n_subjects <- length(subject_ids)
-  base_samples <- sample_store_base(data, par_names, iters, stage)
-  samples <- list(
-    theta_mu = array(NA_real_,dim = c(n_pars, iters), dimnames = list(par_names, NULL)),
-    theta_var = array(NA_real_,dim = c(n_pars, n_pars, iters),dimnames = list(par_names, par_names, NULL)),
-    theta_lambda = array(NA_real_,dim = c(n_pars, n_factors, iters),dimnames = list(par_names, NULL, NULL)),
-    lambda_untransf = array(NA_real_,dim = c(n_pars, n_factors, iters),dimnames = list(par_names, NULL, NULL)),
-    theta_sig_err_inv = array(NA_real_,dim = c(n_pars, n_pars, iters),dimnames = list(par_names, par_names, NULL)),
-    theta_psi_inv = array(NA_real_, dim = c(n_factors, n_factors, iters), dimnames = list(NULL, NULL, NULL)),
-    theta_eta = array(NA_real_, dim = c(n_subjects, n_factors, iters), dimnames = list(subject_ids, NULL, NULL))
-  )
-  if(integrate) samples <- c(samples, base_samples)
+  groups <- unique(data$group)
+  n_groups <- length(groups)
+  samples <- sample_store_factor(data, par_names, iters, stage, integrate, ...)
+  samples$theta_mu = array(NA_real_,dim = c(n_pars, n_groups, iters), dimnames = list(par_names, groups, NULL))
   return(samples)
 }
 
-get_startpoints_factor<- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, sd = 1)
-  # If no starting point for group var just sample some
-  if (is.null(start_var)) start_var <- riwish(pmwgs$n_pars * 3,diag(pmwgs$n_pars))
-  start_psi_inv <- diag(1, pmwgs$n_factors)
-  start_sig_err_inv <- diag(1, pmwgs$n_pars)
-  start_lambda <- matrix(0, nrow = pmwgs$n_pars, ncol = pmwgs$n_factors)
-  start_lambda[1:pmwgs$n_factors, 1:pmwgs$n_factors] <- diag(1, pmwgs$n_factors)
-  start_eta <- matrix(0, nrow = pmwgs$n_subjects, ncol = pmwgs$n_factors)
-  return(list(tmu = start_mu, tvar = start_var, lambda = start_lambda, lambda_untransf = start_lambda,
-              sig_err_inv = start_sig_err_inv, psi_inv = start_psi_inv,
-              eta = start_eta))
+get_startpoints_factor_groups<- function(pmwgs, start_mu, start_var){
+  startpoints <- get_startpoints_factor(pmwgs, start_mu, start_var)
+  startpoints$tmu <- replicate(max(pmwgs$group_idx), startpoints$tmu)
+  startpoints$group_idx <- pmwgs$group_idx
+  return(startpoints)
 }
 
-fill_samples_factor <- function(samples, group_level, proposals, epsilon, j = 1, n_pars){
+fill_samples_factor_groups <- function(samples, group_level, proposals, epsilon, j = 1, n_pars){
+  # Factor side
   samples$theta_lambda[,,j] <- group_level$lambda
   samples$lambda_untransf[,,j] <- group_level$lambda_untransf
   samples$theta_sig_err_inv[,,j] <- group_level$sig_err_inv
   samples$theta_psi_inv[,,j] <- group_level$psi_inv
   samples$theta_eta[,,j] <- group_level$eta
-  samples <- fill_samples_base(samples, group_level, proposals, epsilon, j = j, n_pars)
+  
+  # group level mean and implied variance
+  samples$theta_mu[,, j] <- group_level$tmu
+  samples$theta_var[, , j] <- group_level$tvar
+  
+  # Random effects
+  samples <- fill_samples_RE(samples, proposals, epsilon,j, n_pars)
   return(samples)
 }
 
-gibbs_step_factor <- function(sampler, alpha){
-  # Gibbs step for group means with parameter expanded factor analysis from Ghosh & Dunson 2009
+gibbs_step_factor_groups <- function(sampler, alpha){
+  # Gibbs step for group level with multiple means, 
+  # based on parameter expanded factor analysis from Ghosh & Dunson 2009
   # mu = theta_mu, var = theta_var
-  last <- last_sample_factor(sampler$samples)
+  last <- last_sample_factor_groups(sampler$samples)
   hyper <- attributes(sampler)
   prior <- sampler$prior
   
   #extract previous values (for ease of reading)
-  
   alpha <- t(alpha)
   n_subjects <- sampler$n_subjects
   n_pars <- sampler$n_pars
@@ -101,14 +62,23 @@ gibbs_step_factor <- function(sampler, alpha){
   sig_err_inv <- last$sig_err_inv
   lambda <- matrix(last$lambda, n_pars, n_factors)
   mu <- last$mu
-  
+  alphatilde <- alpha
   #Update mu
-  mu_sig <- solve(n_subjects * sig_err_inv + prior$theta_mu_invar)
-  mu_mu <- mu_sig %*% (sig_err_inv %*% colSums(alpha - eta %*% t(lambda)) + prior$theta_mu_invar%*% prior$theta_mu_mean)
-  mu <- rmvnorm(1, mu_mu, mu_sig)
-  colnames(mu) <- colnames(alpha)
-  # calculate mean-centered observations
-  alphatilde <- sweep(alpha, 2, mu)
+  for(parGroup in sampler$parGroups){
+    par_idx <- unique(which(sampler$par_idx == parGroup, arr.ind = T)[,1])
+    parGroup_num <- as.numeric(strsplit(parGroup,",")[[1]])
+    group_idx <- which(sampler$group_idx %in% parGroup_num)
+    mu_sig <- solve(length(group_idx) * sig_err_inv[par_idx, par_idx, drop = F] + prior$theta_mu_invar[par_idx, par_idx, drop = F])
+    mu_mu <- mu_sig %*% (sig_err_inv[par_idx, par_idx, drop = F] %*% colSums(alpha[group_idx,par_idx, drop = F]
+                                                                             - eta[group_idx,,drop = F] %*% t(lambda[par_idx,, drop = F])) 
+                         + prior$theta_mu_invar[par_idx, par_idx,drop = F] %*% prior$theta_mu_mean[par_idx])
+    mu[par_idx,parGroup_num] <- rmvnorm(1, mu_mu, mu_sig)
+  }
+  for (group in unique(sampler$group_idx)){
+    group_idx <- which(sampler$group_idx == group)
+    alphatilde[group_idx,] <- sweep(alphatilde[group_idx,], 2, mu[,group]) # This will break if groups != 1:length(groups)
+  }
+  
   
   #Update eta, I do this one first since I don't want to save eta
   eta_sig <- solve(psi_inv + t(lambda) %*% sig_err_inv %*% lambda)
@@ -144,33 +114,40 @@ gibbs_step_factor <- function(sampler, alpha){
   var <- lambda_orig %*% solve(psi_inv) %*% t(lambda_orig) + diag(1/diag((sig_err_inv)))
   lambda_orig <- lambda_orig %*% matrix(diag(sqrt(1/diag(psi_inv)), n_factors), nrow = n_factors)
   return(list(tmu = mu, tvar = var, lambda_untransf = lambda, lambda = lambda_orig, eta = eta, 
-              sig_err_inv = sig_err_inv, psi_inv = psi_inv, alpha = t(alpha)))
+              sig_err_inv = sig_err_inv, psi_inv = psi_inv, alpha = t(alpha), group_idx = sampler$group_idx))
 }
 
-last_sample_factor <- function(store) {
+last_sample_factor_groups <- function(store) {
   list(
-    mu = store$theta_mu[, store$idx],
+    mu = store$theta_mu[,, store$idx],
     eta = store$theta_eta[,,store$idx],
-    lambda = store$lambda_untransf[,,store$idx],
+    lambda = store$lambda_untransf[, , store$idx],
     psi_inv = store$theta_psi_inv[,,store$idx],
     sig_err_inv = store$theta_sig_err_inv[,,store$idx]
   )
 }
 
+get_group_level_factor_groups <- function(parameters, s){
+  mu <- parameters$tmu[,parameters$group_idx[s]]
+  var <- parameters$tvar
+  return(list(mu = mu, var = var))
+}
+
 get_conditionals_factor <- function(s, samples, n_pars){
+  groups <- samples$groups
   iteration <- samples$iteration
   sig_err <- log(apply(samples$theta_sig_err_inv,3,diag))
   psi <- log(apply(samples$theta_psi_inv,3,diag))
   eta <- matrix(samples$theta_eta[s,,], nrow = samples$n_factors)
   lambda <- apply(samples$lambda_untransf, 3, unwind_lambda, samples$constraintMat, samples$n_factors)
-  theta_mu <- samples$theta_mu 
+  theta_mu <- samples$theta_mu[,groups[s],] 
   all_samples <- rbind(samples$alpha[, s,],theta_mu, eta, sig_err, psi, lambda)#, sig_err, psi, lambda)
   mu_tilde <- rowMeans(all_samples)
   var_tilde <- cov(t(all_samples))
   condmvn <- condMVN(mean = mu_tilde, sigma = var_tilde,
                      dependent.ind = 1:n_pars, given.ind = (n_pars + 1):length(mu_tilde),
                      X.given = c(theta_mu[,iteration],
-                                 samples$theta_eta[s,,iteration],
+                                 samples$theta_mu[,groups[s],iteration],
                                  log(diag(samples$theta_sig_err_inv[,, iteration])),
                                  log(apply(samples$theta_psi_inv[,,iteration, drop = F], 3, diag)),
                                  unwind_lambda(samples$lambda_untransf[,, iteration], samples$constraintMat, samples$n_factors)))
@@ -187,6 +164,19 @@ unwind_lambda <- function(lambda, constraintMat, n_factors, reverse = F){
   return(out)
 }
 
+get_conditionals_factor_groups <- function(s, samples, n_pars){
+  groups <- samples$groups
+  iteration <- samples$iteration
+  pts2_unwound <- apply(samples$theta_var,3,unwind)
+  all_samples <- rbind(samples$alpha[, s,],samples$theta_mu[,groups[s],],pts2_unwound)
+  mu_tilde <- apply(all_samples, 1, mean)
+  var_tilde <- stats::var(t(all_samples))
+  condmvn <- condMVNorm::condMVN(mean = mu_tilde, sigma = var_tilde,
+                                 dependent.ind = 1:n_pars, given.ind = (n_pars + 1):length(mu_tilde),
+                                 X.given = c(samples$theta_mu[,groups[s],iteration], unwind(samples$theta_var[,,iteration])))
+  return(list(eff_mu = condmvn$condMean, eff_var = condmvn$condVar))
+}
+
 filtered_samples_factor <- function(sampler, filter){
   out <- list(
     theta_mu = sampler$samples$theta_mu[, filter],
@@ -198,18 +188,18 @@ filtered_samples_factor <- function(sampler, filter){
     alpha = sampler$samples$alpha[, , filter],
     constraintMat = attributes(sampler)$constraintMat,
     n_factors = sampler$n_factors,
-    iteration = length(filter)
+    iteration = length(filter),
+    group = sampler$group_idx
   )
 }
 
 variant_funs <- list(
-  sample_store = sample_store_factor,
-  add_info = add_info_factor,
-  get_startpoints = get_startpoints_factor,
-  fill_samples = fill_samples_factor,
-  gibbs_step = gibbs_step_factor,
-  get_group_level = get_group_level_standard,
-  get_conditionals = get_conditionals_factor,
-  filtered_samples = filtered_samples_factor
+  sample_store = sample_store_factor_groups,
+  add_info = add_info_factor_groups,
+  get_startpoints = get_startpoints_factor_groups,
+  fill_samples = fill_samples_factor_groups,
+  gibbs_step = gibbs_step_factor_groups,
+  get_group_level = get_group_level_factor_groups,
+  get_conditionals = get_conditionals_factor_groups,
+  filtered_samples = filtered_samples_factor_groups
 )
-

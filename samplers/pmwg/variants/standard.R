@@ -1,6 +1,6 @@
 # Contains many of the functions required to fit standard pmwg, used in many other variants as well.
 library(Matrix)
-source("pmwg/sampling.R")
+source("samplers/pmwg/sampling.R")
 
 sample_store_standard <- function(data, par_names, iters = 1, stage = "init", integrate = T, ...) {
   subject_ids <- unique(data$subject)
