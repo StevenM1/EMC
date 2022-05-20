@@ -1,7 +1,7 @@
 rm(list=ls())
 library(mvtnorm)
 source("emc/emc.R")
-source("Normal/normal.R")
+source("models/Normal/normal.R")
 
 
 # Two choice normal

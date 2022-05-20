@@ -1,6 +1,6 @@
 # RDM_B parameterization with s=1 scaling (B = b-A done in rdm.R)
 
-source("RDM/rdm.R")
+source("models/RDM/rdm.R")
 
 rdmB <- list(
   type="RACE",

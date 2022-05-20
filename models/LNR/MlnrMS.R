@@ -1,6 +1,6 @@
 # LNR mu and sigma parameterization
 
-source("LNR/lnr.R")
+source("models/LNR/lnr.R")
 
 lnrMS <- list(
   type="RACE",

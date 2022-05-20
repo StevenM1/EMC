@@ -1,6 +1,6 @@
 # lba_B parameterization with sv=1 scaling
 
-source("LBA/lba.R")
+source("models/LBA/lba.R")
 
 lbaB <- list(
   type="RACE",

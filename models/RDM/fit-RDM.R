@@ -1,8 +1,8 @@
 rm(list=ls())
 library(mvtnorm)
 library(coda)
-source("dmc_pmwg.R")
-source("RDM/rdmB.R")
+source("emc/emc.R")
+source("models/RDM/rdmB.R")
 
 print( load("Data/PNAS.RData"))
 dat <- data[,c("s","E","S","R","RT")]

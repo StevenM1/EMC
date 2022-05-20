@@ -1,7 +1,7 @@
 rm(list=ls())
 library(coda)
-source("dmc/dmc.R")
-source("DDM/ddmTZD.R")
+source("emc/emc.R")
+source("models/DDM/ddmTZD.R")
 
 load("Data/PNAS.RData")
 # Note that this data was censored at 0.25s and 1.5s

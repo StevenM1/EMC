@@ -1,11 +1,11 @@
 #################
 rm(list=ls())
 library(mvtnorm)
-source("dmc_pmwg.R")
+source("emc/emc.R")
 
 # LBA Models
 
-source("LBA/lbaB.R")
+source("models/LBA/lbaB.R")
 # Define LBA "B" parameterization to use making available a list called lbaB
 # with elements 
 # 0) type" "RACE"
@@ -422,7 +422,7 @@ profile_pmwg(pname="t0_FA1",p=p_vector,p_min=log(.15),p_max=log(.25),dadm=dadm9)
 profile_pmwg(pname="t0_FA2",p=p_vector,p_min=log(.25),p_max=log(.35),dadm=dadm9)
 
 ################ DDM
-source("DDM/ddmTZD.R")
+source("models/DDM/ddmTZD.R")
 
 designDDM <- make_design(
   Flist=list(v~0+S, a~1,sv~1, t0~1, st0~1, s~1, Z~1, SZ~1, DP~1),
@@ -452,7 +452,7 @@ profile_pmwg(pname="SZ",p=p_vector,p_min=qnorm(.1),p_max=qnorm(.3),dadm=dadmDDM)
 profile_pmwg(pname="DP",p=p_vector,p_min=qnorm(.4),p_max=qnorm(.6),dadm=dadmDDM)
 
 ################ Three choice RDM
-source("RDM/rdmB.R")
+source("models/RDM/rdmB.R")
 
 # No constants as s=1 assumed in rdm.R SHOULD ADD IT LATER!
 designRDM <- make_design(Flist=list(v ~ lM, B ~ 1, A ~ 1, t0 ~ 1),
@@ -477,7 +477,7 @@ profile_pmwg(pname="A",p=p_vector,p_min=log(.25),p_max=log(.75),dadm=dadmRDM)
 profile_pmwg(pname="t0",p=p_vector,p_min=log(.2),p_max=log(.4),dadm=dadmRDM)
 
 ################ Three choice LNR
-source("LNR/lnrMS.R")
+source("models/LNR/lnrMS.R")
 
 #LNR intrinsically does not require scaling constant
 designLNR <- make_design(Flist=list(m ~ lM, s ~ 1, t0 ~ 1),
@@ -503,7 +503,7 @@ profile_pmwg(pname="t0",p=p_vector,p_min=log(.15),p_max=log(.35),dadm=dadmLNR)
 
 ##########  TRUNCATION AND CENSORING 
 
-source("LBA/MlbaB.R")
+source("models/LBA/MlbaB.R")
 
 ##########  Truncation, same as design 1
 

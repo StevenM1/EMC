@@ -2,7 +2,7 @@
 # with s=1 scaling
 
 
-source("DDM/ddm.R")
+source("models/DDM/ddm.R")
 
 
 ddmTZD <- list(

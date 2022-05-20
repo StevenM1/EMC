@@ -1,6 +1,6 @@
 # Normal, mu and log(sigma) parameterization
 
-source("NORMAL/norm.R")
+source("models/NORMAL/norm.R")
 
 normal <- list(
   type="RACE",
