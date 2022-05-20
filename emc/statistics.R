@@ -83,6 +83,72 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
 }
 
 
+iat_pmwg <- function(pmwg_mcmc,
+    print_summary=TRUE,digits_print=2,sort_print=TRUE,
+    selection="alpha",filter="burn",thin=1,subfilter=NULL) 
+  # Integrated autocorrelation time, prints multivariate summary returns each participant unless +
+  # multivariate as matrix unless !return_summary
+{
+  
+  IAT <- function (x,verbose=FALSE) 
+  # From LaplacesDemon
+  {
+    dt <- x
+    n <- length(x)
+    mu <- mean(dt)
+    s2 <- var(dt)
+    maxlag <- max(3, floor(n/2))
+    Ga <- rep(0, 2)
+    Ga[1] <- s2
+    lg <- 1
+    Ga[1] <- Ga[1] + sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
+    m <- 1
+    lg <- 2 * m
+    Ga[2] <- sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
+    lg <- 2 * m + 1
+    Ga[2] <- Ga[2] + sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
+    IAT <- Ga[1]/s2
+    while ((Ga[2] > 0) & (Ga[2] < Ga[1])) {
+      m <- m + 1
+      if (2 * m + 1 > maxlag) {
+        if (verbose) cat("Not enough data, maxlag=", maxlag, "\n")
+        break
+      }
+      Ga[1] <- Ga[2]
+      lg <- 2 * m
+      Ga[2] <- sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
+      lg <- 2 * m + 1
+      Ga[2] <- Ga[2] + sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
+        IAT <- IAT + Ga[1]/s2
+    }
+    IAT <- -1 + 2 * IAT
+    return(IAT)
+  }
+  
+  get_IAT <- function(mcs) {
+    if (class(mcs) != "mcmc.list") apply(mcs,2,IAT) else
+      apply(do.call(rbind,lapply(mcs,function(x){apply(x,2,IAT)})),2,mean)
+  }
+  
+  if (!(class(pmwg_mcmc[[1]]) %in% c("mcmc","mcmc.list"))) {
+    if (class(pmwg_mcmc)=="pmwgs") 
+      pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
+                           thin=thin,subfilter=subfilter) else
+      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                thin=thin,subfilter=subfilter)                        
+  }
+  if ( selection=="LL" ) stop("IAT not appropriate for LL") else
+  if (selection=="alpha") 
+    out <- do.call(rbind,lapply(pmwg_mcmc,get_IAT) ) else
+    out <- get_IAT(pmwg_mcmc)
+
+  if (sort_print & selection != "alpha") out <- sort(out)
+  if (print_summary) print(round(out,digits_print))
+  invisible(out)
+}
+
+#### Posterior parameter tests ----
+
 # y=NULL;natural=TRUE;x_name=NULL;y_name=NULL; c_vector=NULL
 # mu=0;alternative = c("less", "greater")[1];
 # probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
@@ -92,7 +158,6 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
 # x=ddmPNASa;p_name="a_Ea-n";x_selection = "mu";x_filter="sample"
 # c_vector=c(0,1,-1,0,1,-1)/4
 # x=andrew;p_name="t0_CIc-i";x_selection="alpha";x_filter="burn";x_name="D"
-
   
 p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
                    x_name=NULL,y_name=NULL,

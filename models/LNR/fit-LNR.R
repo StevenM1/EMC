@@ -54,7 +54,7 @@ attr(design,"p_vector")
 samplers <- make_samplers(dat,design,type="standard",rt_resolution=.02)
 # save(samplers,file="testLNR.RData")
 
-print(load("testLNR.RData"))
+print(load("BIG/runs/testLNR.RData"))
 
 
 # How many iterations
@@ -65,10 +65,14 @@ chain_n(samples)
 # [3,]  406    75    500
      
 filter <- c("burn","adapt","sample")[1]
-# filter <- c("burn","adapt","sample")[3]
+filter <- c("burn","adapt","sample")[3]
 
-gd <- gd_pmwg(as_mcmc.list(samples,selection="alpha",filter=filter))
+gd <- gd_pmwg(samples,selection="alpha",filter=filter)
 print(round(gd,2))
+
+iat_pmwg(samples,selection="alpha",filter=filter)
+iat_pmwg(samples,selection="mu",filter=filter)
+
 
 plotChains(as_mcmc.list(samples,selection="LL",filter=filter),layout=c(2,5))
 plotChains(as_mcmc.list(samples,selection="mu",filter=filter),layout=c(2,5))
