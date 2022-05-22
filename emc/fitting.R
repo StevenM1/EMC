@@ -113,7 +113,8 @@ run_chains <- function(samplers,iter=c(300,NA,NA),
 # p_accept=NULL;cores_per_chain=1;cores_for_chains=NA
 
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=FALSE,
-                   max_gd=1.1,thorough=TRUE, epsilon = NULL,pdist_update_n=50, 
+                   max_gd=1.1,thorough=TRUE, natural=FALSE,
+                   epsilon = NULL,pdist_update_n=50, 
                    particles=NA,particle_factor=100, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                    min_unique=200,epsilon_upper_bound=2,
@@ -196,7 +197,8 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=FALSE,
         if (run_try > 10)
           stop("Fail after 10 run_stage try errors, see saved samplers in fail_run_stage.RData")
       } else {
-        gd <- gd_pmwg(as_mcmc.list(samplers_new,filter=filter),!thorough,FALSE,filter=filter)
+        gd <- gd_pmwg(as_mcmc.list(samplers_new,filter=filter),!thorough,FALSE,
+                      filter=filter,natural=natural)
         if (is.finite(gd[[1]])) break else
           if (verbose) message("gelman diag try error", run_try)
       }
@@ -205,7 +207,8 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=FALSE,
     trys <- trys+1
     if (shorten) {
       samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter=filter)
-      gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter=filter),!thorough,FALSE,filter=filter)
+      gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter=filter),!thorough,FALSE,
+                          filter=filter,natural=natural)
       if (mean(gd_short) < mean(gd)) {
         gd <- gd_short
         samplers <- samplers_short
@@ -262,7 +265,8 @@ auto_burn <- function(samplers,
     start_mu = NULL, start_var = NULL,
     start_mix=NULL,single_start_mix=c(.5,.5),
     verbose=TRUE,verbose_run_stage=FALSE,
-    max_gd_trys=100,max_gd=1.1,thorough=TRUE,
+    max_gd_trys=100,max_gd=1.1,
+    thorough=TRUE,natural=FALSE,
     min_es=NULL,min_iter=NULL,max_iter=NULL,
     epsilon = NULL, epsilon_upper_bound=2, 
     particles=NA,particle_factor=100, sample_particle_factor=100, p_accept=0.7,
@@ -400,7 +404,7 @@ auto_burn <- function(samplers,
   message("Beginning iterations to achieve Rhat < ",max_gd)
   if (!burn) particle_factor <- sample_particle_factor
   run_gd(samplers,burn=burn,max_trys=max_gd_trys,verbose=verbose,
-          max_gd=max_gd,thorough=thorough, p_accept = p_accept,
+          max_gd=max_gd,thorough=thorough, ,natural=natural, p_accept = p_accept,
           pdist_update_n=pdist_update_n,min_unique=min_unique,
           epsilon=epsilon, particles=particles,particle_factor=particle_factor,
           min_es=min_es,min_iter=min_iter, max_iter=max_iter, mix=mix,
