@@ -234,8 +234,9 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
 
 as_mcmc.list <- function(samplers,
   selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-  filter="burn",thin=1,subfilter=NULL) 
+  filter="burn",thin=1,subfilter=NULL,natural=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
+  # natural = TRUE transform mu or alpha to natural scale
 {
   
   stages <- c("burn", "adapt", "sample")
@@ -253,6 +254,14 @@ as_mcmc.list <- function(samplers,
 
   mcmcList <- lapply(samplers,as_Mcmc,selection=selection,filter=filter,
                      thin=thin,subfilter=subfilter)
+  if (natural) {
+    if (selection == "alpha") 
+      mcmcList <- lapply(mcmcList,function(mcs){lapply(mcs,function(mc){
+          attributes(samplers)$design_list[[1]]$model$Ntransform(mc)  
+    })}) else if (selection=="mu") mcmcList <- 
+      lapply(mcmcList,attributes(samplers)$design_list[[1]]$model$Ntransform) else
+    warning("Can only transform alpha or mu to natural")
+  }
   if (selection=="LL")
     iter <- unlist(lapply(mcmcList,function(x){length(x[[1]])})) else 
     if (selection == "alpha") 

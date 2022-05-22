@@ -47,7 +47,7 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",
 # pmwg_mcmc=sVat0;selection="mu";filter="sample"
 gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
     digits_print=2,sort_print=TRUE,autoburnin=FALSE,transform=TRUE,
-    selection="alpha",filter="burn",thin=1,subfilter=NULL) 
+    selection="alpha",filter="burn",thin=1,subfilter=NULL,natural=FALSE) 
   # R hat, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
 {
@@ -58,14 +58,18 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
     if (class(gd)=="try-error") list(mpsrf=Inf,psrf=matrix(Inf)) else gd
   }
   
-  if (!(class(pmwg_mcmc[[1]]) %in% c("mcmc","mcmc.list"))) {
-    if (class(pmwg_mcmc)=="pmwgs") 
+  if ( selection=="LL" ) stop("Rhat not appropriate for LL") 
+  if (class(pmwg_mcmc[[1]]) %in% c("mcmc","mcmc.list")) {
+    if (natural) warning("Cannot transform to natural scale unless samples list provided")
+  } else {
+    if (class(pmwg_mcmc)=="pmwgs") {
+      if (natural) warning("Cannot transform to natural scale unless samples list provided")
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
-                           thin=thin,subfilter=subfilter) else
+                           thin=thin,subfilter=subfilter)   
+    } else
       pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                thin=thin,subfilter=subfilter)                        
-  }
-  if ( selection=="LL" ) stop("Rhat not appropriate for LL") else
+                                thin=thin,subfilter=subfilter,natural=natural)
+  } 
   if (selection=="alpha") {
     gd <- lapply(pmwg_mcmc,gelman_diag_robust,autoburnin = autoburnin, transform = transform) 
     out <- unlist(lapply(gd,function(x){x$mpsrf}))
