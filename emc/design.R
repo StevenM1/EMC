@@ -356,7 +356,7 @@ make_design <- function(Flist,Ffactors,Rlevels,
   if (!is.null(model)) {
     design$model <- model
     attr(design,"p_vector") <- sampled_p_vector(design,model)
-  }
+  } else warning("It is not adviseable to make a design without including a model.")
   design
 }
 

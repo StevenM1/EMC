@@ -404,7 +404,7 @@ auto_burn <- function(samplers,
   message("Beginning iterations to achieve Rhat < ",max_gd)
   if (!burn) particle_factor <- sample_particle_factor
   run_gd(samplers,burn=burn,max_trys=max_gd_trys,verbose=verbose,
-          max_gd=max_gd,thorough=thorough, ,natural=natural, p_accept = p_accept,
+          max_gd=max_gd,thorough=thorough, natural=natural, p_accept = p_accept,
           pdist_update_n=pdist_update_n,min_unique=min_unique,
           epsilon=epsilon, particles=particles,particle_factor=particle_factor,
           min_es=min_es,min_iter=min_iter, max_iter=max_iter, mix=mix,

@@ -255,7 +255,7 @@ as_mcmc.list <- function(samplers,
   mcmcList <- lapply(samplers,as_Mcmc,selection=selection,filter=filter,
                      thin=thin,subfilter=subfilter)
   if (natural) {
-    if (selection == "alpha") 
+    if (selection == "alpha")
       mcmcList <- lapply(mcmcList,function(mcs){lapply(mcs,function(mc){
           attributes(samplers)$design_list[[1]]$model$Ntransform(mc)  
     })}) else if (selection=="mu") mcmcList <- 
