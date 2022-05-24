@@ -8,7 +8,7 @@ get_pars <- function(p_vector,dadm)
     dadm))
 
 
-
+#### Race likelihoods ----
 
 log_likelihood_race <- function(p_vector,dadm,min_ll=log(1e-10))
   # Race model summed log likelihood
@@ -194,3 +194,28 @@ log_likelihood_ddm <- function(p_vector,dadm,min_ll=log(1e-10))
   sum(pmax(min_ll,log(like)))
 }
 
+
+#### Discrete choice likelihoods ----
+
+log_likelihood_dc <- function(p_vector,dadm,lb=-Inf,min_ll=log(1e-10))
+  # probability of ordered discrete choices based on integrals of a continuous
+  # distribution between thresholds, with fixed lower bound for first response
+  # lb. Upper bound for last response is a fixed value in threshold vector
+{
+
+  pars <- get_pars(p_vector,dadm)
+  # upper threshold sorted with response, for last response typically fixed
+  ut <- pars[dadm$winner,"c"] 
+  # lower threshold
+  lt <- numeric(length(ut))
+  # fixed at lb for first response 
+  r1 <- rt==1 
+  lt[r1] <- lb
+  # otherwise threshold of response before one made
+  li <- 
+  lt[!r1] <- pars[c(which(dadm$winner)-1)[!r1],"threshold"]
+  # log probability
+  ll <- log(attr(dadm,"model")$pfun(lt=lt,ut=ut,pars=pars[dadm$winner,]))
+  ll[is.na(ll)] <- 0
+  sum(pmax(min_ll,ll))
+}

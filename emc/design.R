@@ -1,5 +1,7 @@
 #### Make design matrices ----
 
+# matchfun=design$matchfun;simulate=TRUE;type=model$type
+
 add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE") 
   # Augments data for use in race model likelihood calculation or simulation.
   # Must have an R = response factor (levels give number of accumulators).
@@ -16,7 +18,7 @@ add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE")
 {
   if (!is.factor(data$R)) stop("data must have a factor R")
   factors <- names(data)[!names(data) %in% c("R","rt")]
-  if (type=="RACE") { 
+  if (type %in% c("RACE","SDT")) { 
     datar <- cbind(do.call(rbind,lapply(1:length(levels(data$R)),function(x){data})),
                    lR=factor(rep(levels(data$R),each=dim(data)[1])))
     if (!is.null(matchfun)) {
@@ -279,7 +281,10 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   }
   if (verbose & compress) message("Likelihood speedup factor: ",round(dim(da)[1]/dim(dadm)[1],1))
   p_names <-  unlist(lapply(out,function(x){dimnames(x)[[2]]}),use.names=FALSE)
+  
+  # Pick out constants
   sampled_p_names <- p_names[!(p_names %in% names(design$constants))]
+  
   if(!is.null(prior)){
     if(length(prior$theta_mu_mean) != length(sampled_p_names)) 
       stop("prior mu should be same length as estimated parameters (p_vector)")
@@ -338,25 +343,40 @@ map_p <- function(p,dadm)
     if ( !is.matrix(p) ) 
       pars[,i] <- (attr(dadm,"designs")[[i]][attr(attr(dadm,"designs")[[i]],"expand"),,drop=FALSE] %*% 
                      p[dimnames(attr(dadm,"designs")[[i]])[[2]]]) else
-                       pars[,i] <- apply(p[,dimnames(attr(dadm,"designs")[[i]])[[2]],drop=FALSE] *
-                                           attr(dadm,"designs")[[i]][attr(attr(dadm,"designs")[[i]],"expand"),,drop=FALSE],1,sum)
+      pars[,i] <- apply(p[,dimnames(attr(dadm,"designs")[[i]])[[2]],drop=FALSE] *
+        attr(dadm,"designs")[[i]][attr(attr(dadm,"designs")[[i]],"expand"),,drop=FALSE],1,sum)
   }
   pars
 }
 
 
-make_design <- function(Flist,Ffactors,Rlevels,
-                        Clist=NULL,matchfun=NULL,constants=NULL,
-                        model=NULL) 
+make_design <- function(Flist,Ffactors,Rlevels,model,
+                        Clist=NULL,matchfun=NULL,constants=NULL) 
   # Binds together elements that make up a design a list  
 {
-  
+
+  contr.increasing <- function(n) 
+  # special contrast for SDT threshold factor
+  # first = intercept, cumsum other (positive) levels to force non-decreasing
+  {
+    contr <- matrix(0,nrow=n,ncol=n-1,dimnames=list(NULL,2:n))
+    contr[lower.tri(contr)] <- 1
+    contr
+  }
+
+  if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels))
   design <- list(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
-       Clist=Clist,matchfun=matchfun,constants=constants)
-  if (!is.null(model)) {
-    design$model <- model
-    attr(design,"p_vector") <- sampled_p_vector(design,model)
-  } else warning("It is not adviseable to make a design without including a model.")
+       Clist=Clist,matchfun=matchfun,constants=constants,model=model)
+  p_vector <- sampled_p_vector(design,design$model)
+  if (model$type=="SDT") {
+    tnams <- dimnames(attr(p_vector,"map")$threshold)[[2]]
+    max_threshold=paste0("lR",Rlevels[length(Rlevels)])
+    tnams <- tnams[grepl(max_threshold,tnams)] 
+    design$constants <- setNames(c(constants,rep(1e100,length(tnams))),
+                          c(names(constants),tnams))
+    p_vector <- sampled_p_vector(design,design$model)
+  }
+  attr(design,"p_vector") <- p_vector
   design
 }
 
@@ -383,7 +403,7 @@ sampled_p_vector <- function(design,model=NULL)
   out
 }
 
-mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=FALSE) 
+mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE) 
   # Show augmented data and corresponding mapped parameter  
 {
   if (is.null(model)) if (is.null(design$model)) 
@@ -392,7 +412,9 @@ mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=FALSE
   dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
                        rt_check=FALSE,compress=FALSE)
   ok <- !(names(dadm) %in% c("subjects","trials","R","rt","lR","lM","winner"))
-  cbind(dadm[,ok],round(get_pars(p_vector,dadm),digits))
+  out <- cbind(dadm[,ok],round(get_pars(p_vector,dadm),digits))
+  if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
+  out
 }
 
 

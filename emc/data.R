@@ -14,6 +14,8 @@ add_constants <- function(p,constants)
 
 
 
+# data=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
+# model=probit; design=designPROBIT; trials=10
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL)
@@ -105,8 +107,9 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   if ( is.null(model$p_types) ) stop("model$p_types must be specified")
   if ( is.null(model$transform) ) transform <- identity
   if ( is.null(model$Mtransform) ) Mtransform <- identity
-  data <- design_model(add_accumulators(data,design$matchfun,simulate=TRUE,
-    type=model$type),design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
+  data <- design_model(
+    add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
+    design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
     rt_check=FALSE)
   pars <- model$Mtransform(map_p(
     add_constants(model$transform(p_vector),design$constants),data

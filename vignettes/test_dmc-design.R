@@ -60,7 +60,7 @@ constants <- c(sv=log(1))
 # Clist is optional (default contr.treatment), matchfun is optional if Flist
 # does not use latent match factor, lM
 design <- make_design(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
-                      matchfun=matchfun,Clist=Clist,constants=constants)
+                      matchfun=matchfun,Clist=Clist,constants=constants,model=lbaB)
 
 # Make parameters
 
@@ -68,14 +68,14 @@ design <- make_design(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
 # Get an empty vector (names corresponding to linear models)
 p_vector <- sampled_p_vector(design,lbaB)
 # natural scale v intercept, stimulus effect, match effect and their interaction 
-p_vector[1:4] <- c(3,0)                # Match = 3, mismatch = 1              
+p_vector[1:2] <- c(3,0)                # Match = 3, mismatch = 1              
 p_vector[3:4] <- c(1,0)                # Natural scale match effect and stimulus effect
 p_vector[5:6] <- c(log(3),log(1.05))   # log scale B intercept and bias (B/1.05, B*1.05)
 p_vector[7:8] <- log(c(0.5,0.3))       # log scale A and t0 
 
 # Individual differences standard deviations 
 sd_vector <- p_vector
-sd_vector[1:length(sd_vector)] <- c(0.3,0.1,0.1,0.1,0.2, 0.15,0.1, 0.2, 0.2)[-5] 
+sd_vector[1:length(sd_vector)] <- c(0.3,0.1,0.1,0.1, 0.15,0.1, 0.2, 0.2) 
 
 # Independent variance-covariance matrix 
 sigma <- diag(sd_vector^2)
