@@ -204,18 +204,25 @@ log_likelihood_sdt <- function(p_vector,dadm,lb=-Inf,min_ll=log(1e-10))
 {
 
   pars <- get_pars(p_vector,dadm)
-  # upper threshold sorted with response, for last response typically fixed
-  ut <- pars[dadm$winner,"c"] 
-  # lower threshold
-  lt <- numeric(length(ut))
-  # fixed at lb for first response 
-  r1 <- rt==1 
-  lt[r1] <- lb
+  first <- dadm$lR==levels(dadm$lR)[1]
+  last <- dadm$lR==levels(dadm$lR)[length(levels(dadm$lR))] 
+  pars[last,"threshold"] <- Inf
+  # upper threshold 
+  ut <- pars[dadm$winner,"threshold"] 
+  # lower threshold fixed at lb for first response
+  pars[first &  dadm$winner,"threshold"] <- lb
   # otherwise threshold of response before one made
-  li <- 
-  lt[!r1] <- pars[c(which(dadm$winner)-1)[!r1],"threshold"]
+  notfirst <- !first &  dadm$winner
+  pars[notfirst,"threshold"] <- pars[which(notfirst)-1,"threshold"]
+  lt <- pars[dadm$winner,"threshold"]
   # log probability
-  ll <- log(attr(dadm,"model")$pfun(lt=lt,ut=ut,pars=pars[dadm$winner,]))
+  
+  nr <- length(levels(dadm$lR))
+  ne <- length(attr(dadm,"expand"))
+  
+  expand <- (attr(dadm,"expand")[(c(1:ne) %% nr)==0] + 1 ) %/% nr
+
+  ll <- log(attr(dadm,"model")$pfun(lt=lt,ut=ut,pars=pars[dadm$winner,]))[expand]
   ll[is.na(ll)] <- 0
   sum(pmax(min_ll,ll))
 }

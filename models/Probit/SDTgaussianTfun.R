@@ -40,8 +40,8 @@ probitTfun <- list(
   },
   # Random function for discrete choices
   rfun=function(lR,pars) rPROBIT(lR,pars),
-  # probability of choice given by rt (actually response)
-  pfun=function(rt,pars) pPROBIT(rt,pars),
+  # probability of choice between lower and upper thresholds (lt & ut)
+  pfun=function(lt,ut,pars) pPROBIT(lt,ut,pars),
   # quantile function, p = probability, used in making linear ROCs
   qfun=function(p) qnorm(p),
   # Likelihood, lb is lower bound threshold for first response 

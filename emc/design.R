@@ -87,12 +87,7 @@ make_dm <- function(form,da,Clist=NULL)
 }
 
 
-# prior = NULL;add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
-# 
-# data=data_list[[i]]; design=design_list[[i]]; model=model_list[[i]]
-# rt_resolution = rt_resolution[i];prior = prior_list[[i]]
-# data=dataNAM; design=designNAM
-# data=dataNUM; design=designNUM
+# model=NULL; prior = NULL;add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
 
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.001,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
@@ -153,17 +148,19 @@ design_model <- function(data,design,model=NULL,prior = NULL,
       levels=unique(cells_nortR)))[as.numeric(factor(cells,levels=unique(cells)))]
 
     # Lower censor
-    winner <- out$lR==levels(out$lR)[[1]]
-    ok <- out$rt[winner]==-Inf
-    if (any(ok)) {
-      ok[ok] <- 1:sum(ok)
-      attr(out,"expand_lc") <- ok[attr(out,"expand_winner")] + 1
-    }
-    # Upper censor
-    ok <- out$rt[winner]==Inf
-    if (any(ok)) {
-      ok[ok] <- 1:sum(ok)
-      attr(out,"expand_uc") <- ok[attr(out,"expand_winner")] + 1
+    if (!any(is.na(out$rt))) { # Not an choice only model
+      winner <- out$lR==levels(out$lR)[[1]]
+      ok <- out$rt[winner]==-Inf
+      if (any(ok)) {
+        ok[ok] <- 1:sum(ok)
+        attr(out,"expand_lc") <- ok[attr(out,"expand_winner")] + 1
+      }
+      # Upper censor
+      ok <- out$rt[winner]==Inf
+      if (any(ok)) {
+        ok[ok] <- 1:sum(ok)
+        attr(out,"expand_uc") <- ok[attr(out,"expand_winner")] + 1
+      }
     }
 
     out
@@ -190,6 +187,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
       stop("Model must be supplied if it has not been added to design")
     model <- design$model
   }
+  if (model$type=="SDT") rt_check <- FALSE
+  
   if (any(model$p_types %in% names(data)))
     stop("Data cannot have columns with the same names as model parameters")
   if (!is.factor(data$subjects)) {
