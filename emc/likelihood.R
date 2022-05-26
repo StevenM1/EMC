@@ -4,7 +4,7 @@
 get_pars <- function(p_vector,dadm)
   # Transform p_vector, map to design, and transform mapped parameters
   attr(dadm,"model")$Mtransform(map_p(
-    add_constants(attr(dadm,"model")$transform(p_vector),attr(dadm,"constants")),
+    attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
     dadm))
 
 
@@ -195,9 +195,9 @@ log_likelihood_ddm <- function(p_vector,dadm,min_ll=log(1e-10))
 }
 
 
-#### Discrete choice likelihoods ----
+#### sdt choice likelihoods ----
 
-log_likelihood_dc <- function(p_vector,dadm,lb=-Inf,min_ll=log(1e-10))
+log_likelihood_sdt <- function(p_vector,dadm,lb=-Inf,min_ll=log(1e-10))
   # probability of ordered discrete choices based on integrals of a continuous
   # distribution between thresholds, with fixed lower bound for first response
   # lb. Upper bound for last response is a fixed value in threshold vector

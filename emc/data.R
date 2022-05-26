@@ -112,7 +112,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
     rt_check=FALSE)
   pars <- model$Mtransform(map_p(
-    add_constants(model$transform(p_vector),design$constants),data
+    model$transform(add_constants(p_vector,design$constants)),data
   ))
   if (mapped_p) 
     return(cbind(data[,!(names(data) %in% c("R","rt"))],pars))

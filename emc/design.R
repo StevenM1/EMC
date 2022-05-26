@@ -371,10 +371,12 @@ make_design <- function(Flist,Ffactors,Rlevels,model,
   if (model$type=="SDT") {
     tnams <- dimnames(attr(p_vector,"map")$threshold)[[2]]
     max_threshold=paste0("lR",Rlevels[length(Rlevels)])
-    tnams <- tnams[grepl(max_threshold,tnams)] 
-    design$constants <- setNames(c(constants,rep(1e100,length(tnams))),
-                          c(names(constants),tnams))
-    p_vector <- sampled_p_vector(design,design$model)
+    tnams <- tnams[grepl(max_threshold,tnams)]
+    if (!(tnams %in% names(constants))) {
+      design$constants <- setNames(c(constants,rep(log(1e100),length(tnams))),
+                            c(names(constants),tnams))
+      p_vector <- sampled_p_vector(design,design$model)
+    }
   }
   attr(design,"p_vector") <- p_vector
   design

@@ -3,9 +3,9 @@
 
 source("models/Probit/probit.R")
 
-probit <- list(
+probitTfun <- list(
   type="SDT", # Discrete choice based on continuous latent, no RT
-  p_types=c("mean","sd","threshold"),
+  p_types=c("mean","sd","threshold","slope"),
   # Transform to natural scale
   Ntransform=function(x) {
 
@@ -34,7 +34,8 @@ probit <- list(
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
     
     nams <- get_p_types(names(x))
-    x[nams == "threshold"][-1] <- exp(x[nams == "threshold"][-1])
+    x[nams == "threshold"][-1] <- 
+      diff(c(x[nams == "threshold"][1] + x["slope"]*(x[nams == "threshold"][-1]),1e100))
     x
   },
   # Random function for discrete choices
