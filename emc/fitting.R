@@ -1,14 +1,14 @@
 #### Fitting automation
 require(parallel)
 
-# iter=c(300,NA,NA); verbose=FALSE;verbose_run_stage=FALSE;
+# iter=c(300,0,0); verbose=FALSE;verbose_run_stage=FALSE;
 #   max_adapt_trys=10;particles=NA;particle_factor=100; p_accept= NULL; n_cores=1;
 #   epsilon = NULL; start_mu = NULL; start_var = NULL; mix=NULL;
 #   pdist_update_n=50;min_unique=200;epsilon_upper_bound=2
 # 
 # iter=c(2,0,0)
 
-run_stages <- function(sampler,iter=c(300,NA,NA),
+run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
   max_adapt_trys=2,particles=NA,particle_factor=100, p_accept= NULL, n_cores=1,
   epsilon = NULL, start_mu = NULL, start_var = NULL, mix=NULL,  
@@ -26,15 +26,15 @@ run_stages <- function(sampler,iter=c(300,NA,NA),
       sampler <- init(sampler, n_cores = n_cores, particles = particles, 
         epsilon = epsilon, start_mu = start_mu, start_var = start_var) 
   }
-  if (all(is.na(iter))) return(sampler)
-  if ( !is.na(iter[1]) ) {
+  if (all(iter==0)) return(sampler)
+  if ( iter[1] != 0 ) {
     if (verbose) message("Running burn stage")
       sampler <- run_stage(sampler, stage = "burn",iter = iter[1], particles = particles, 
         n_cores = n_cores, pstar = p_accept, epsilon = epsilon, verbose = verbose_run_stage,
         min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound, mix=mix)
-    if (all(is.na(iter[2:3]))) return(sampler)
+    if (all(iter[2:3]==0)) return(sampler)
   }
-  if (!is.na(iter[2])) {
+  if (iter[2] != 0) {
     if (verbose) message("Running adapt stage")
     trys <- 1
     idx <- sampler$samples$idx
@@ -51,7 +51,7 @@ run_stages <- function(sampler,iter=c(300,NA,NA),
     if (trys > max_adapt_trys) 
       attr(sampler,"adapted") <- paste(" failed after",max_adapt_trys*iter[2],"iterations") else
       attr(sampler,"adapted") <- sum(sampler$samples$stage=="adapt")
-    if (is.na(iter[3])) return(sampler)
+    if (iter[3]==0) return(sampler)
   }
   if (verbose) message("Running sample stage")
   sampler <- run_stage(sampler, stage = "sample", iter = iter[3], epsilon = epsilon,
@@ -63,12 +63,13 @@ run_stages <- function(sampler,iter=c(300,NA,NA),
 
 
 
-# iter=c(NA,1000,500);verbose=FALSE;
+# iter=c(300,0,0);
+#   verbose=TRUE;verbose_run_stage=FALSE;mix=NULL;
 #   max_adapt_trys=10;particles=NA;particle_factor=100; p_accept= 0.7;
-#   cores_per_chain=1;cores_for_chains=NULL;
-#   epsilon = NULL; start_mu = NULL; start_var = NULL;
-#   pdist_update_n=50; epsilon_upper_bound=2
-run_chains <- function(samplers,iter=c(300,NA,NA),
+#   cores_per_chain=1;cores_for_chains=NULL;min_unique=200;epsilon_upper_bound=2;
+#   epsilon = NULL; start_mu = NULL; start_var = NULL;pdist_update_n=50
+# verbose=TRUE; iter=c(3,0,0)
+run_chains <- function(samplers,iter=c(300,0,0),
   verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
   max_adapt_trys=10,particles=NA,particle_factor=100, p_accept= 0.7, 
   cores_per_chain=1,cores_for_chains=NULL,min_unique=200,epsilon_upper_bound=2,
@@ -289,7 +290,7 @@ auto_burn <- function(samplers,
     if (samplers[[1]]$source=="samplers/pmwg/variants/single.R") start_mix <- single_start_mix
     if (ndiscard>0) {
       repeat {
-        samplers_new <- mclapply(samplers,run_stages,iter=c(ndiscard,NA,NA),
+        samplers_new <- mclapply(samplers,run_stages,iter=c(ndiscard,0,0),
           n_cores=cores_per_chain,p_accept = p_accept,
           epsilon_upper_bound=epsilon_upper_bound, mix=start_mix,
           particles=start_particles,particle_factor=particle_factor,epsilon=epsilon,
@@ -311,7 +312,7 @@ auto_burn <- function(samplers,
     }
     run_try <- 0
     repeat {
-      samplers_new <- mclapply(samplers,run_stages,iter=c(nstart,NA,NA),
+      samplers_new <- mclapply(samplers,run_stages,iter=c(nstart,0,0),
         n_cores=cores_per_chain,p_accept = p_accept,
         epsilon_upper_bound=epsilon_upper_bound, mix=mix,
         particles=particles,particle_factor=particle_factor,epsilon=epsilon,
@@ -340,7 +341,7 @@ auto_burn <- function(samplers,
       message("Running adapt stage")
       run_try <- 0
       repeat {
-        samplers_new <- mclapply(samplers,run_stages,iter=c(NA,nadapt,NA),
+        samplers_new <- mclapply(samplers,run_stages,iter=c(0,nadapt,0),
           n_cores=cores_per_chain,p_accept = p_accept,
           epsilon_upper_bound=epsilon_upper_bound, mix=mix,
           particles=particles,particle_factor=particle_factor,epsilon=epsilon,
@@ -370,7 +371,7 @@ auto_burn <- function(samplers,
         particle_factor <- sample_particle_factor
         run_try <- 0
         repeat {
-          samplers_new <- mclapply(samplers,run_stages,iter=c(NA,NA,nstart),
+          samplers_new <- mclapply(samplers,run_stages,iter=c(0,0,nstart),
             n_cores=cores_per_chain,p_accept = p_accept,
             epsilon_upper_bound=epsilon_upper_bound, mix=mix,
             particles=particles,particle_factor=particle_factor,epsilon=epsilon,
