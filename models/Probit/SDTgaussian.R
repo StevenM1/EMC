@@ -1,4 +1,5 @@
-# Normal, mu and log(sigma) parameterization
+# Normal, natural mu and log(sigma), increasing threshold (first natural,
+# others on log scale) parameterization
 
 source("models/Probit/probit.R")
 
@@ -46,8 +47,10 @@ probit <- list(
   },
   # Random function for discrete choices
   rfun=function(lR,pars) rPROBIT(lR,pars),
-  # probability of choice given by rt
+  # probability of choice given by rt (actually response)
   pfun=function(rt,pars) pPROBIT(rt,pars),
+  # quantile function, p = probability, used in making linear ROCs
+  qfun=function(p) qnorm(p),
   # Likelihood, lb is lower bound threshold for first response 
   log_likelihood=function(p_vector,dadm,min_ll=log(1e-10)) 
     log_likelihood_dc(p_vector=p_vector, dadm = dadm, min_ll = min_ll, lb=-Inf)

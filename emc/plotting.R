@@ -1,4 +1,5 @@
-#### Plotting ----
+#### Sampling plots----
+
 
 # subject=NA;ylim=NULL; plot_acf=FALSE;acf_chain=1
 # layout=c(2,5)
@@ -278,6 +279,7 @@ plotAlphaRecovery <- function(tabs,layout=c(2,3),
   invisible(list(RMSE = rmse,COVERAGE = coverage))
 }
 
+
 profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="") {
   x <- seq(p_min,p_max,length.out=n_point)  
   ll <- numeric(n_point)
@@ -290,6 +292,9 @@ profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="") {
   abline(v=p[pname])
   c(true=p[pname],max=x[which.max(ll)],miss=p[pname]-x[which.max(ll)])
 }
+
+
+#### Data plots ----
 
 # subject=NULL;factors=NULL;layout=NULL;mfcol=TRUE;xlim=NULL;bw = "nrd0";adjust=1;
 # correct_fun=NULL;rt="top";accuracy="topright"
@@ -346,6 +351,29 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
   if (!is.null(correct_fun))
     invisible(tapply(correct_fun(dat),dat$subjects,mean))
 }
+
+plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL) {
+  tab <- table(data$R,data$S)
+  ctab <- 1-apply(tab/apply(tab,2,sum),2,cumsum)[-dim(tab)[1],] # p(Signal)
+  if (!zROC) {
+    if (!is.null(lim)) {xlim <- lim; ylim <- lim} else
+                       {xlim <- c(0,1); ylim <- c(0,1)} 
+    plot(ctab[,1],ctab[,2],xlab="p(FA)",ylab="p(H)",xlim=xlim,ylim=ylim,
+         main=paste("ROC",main))
+    lines(ctab[,1],ctab[,2])
+    abline(a=0,b=1,lty=3)
+  } else {
+    ctab <- qfun(ctab)
+    if (is.null(lim)) lim <- c(min(ctab),max(ctab))
+    plot(ctab[,1],ctab[,2],main=paste("zROC",main),
+         xlab="z(FA)",ylab="z(H)",xlim=lim,ylim=lim)
+     lines(ctab[,1],ctab[,2])
+     abline(a=0,b=1,lty=3)
+  }
+}
+
+
+#### Fit plots ----
 
 # subject=NULL;factors=NULL; do_plot=TRUE; fun=NULL
 # xlim=NULL;ylim=NULL;layout=NULL;probs=c(1:99)/100
