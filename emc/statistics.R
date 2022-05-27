@@ -9,7 +9,9 @@ chain_n <- function(samplers)
 }
 
 
-check_adapt <- function(samplers,verbose=TRUE) {
+check_adapt <- function(samplers,verbose=TRUE) 
+  # Checks chains to see if adapted  
+{
   ok <- TRUE
   for (i in 1:length(samplers)) {
     res <- attr(samplers[[i]],"adapted")

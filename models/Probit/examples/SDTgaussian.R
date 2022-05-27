@@ -77,21 +77,42 @@ p_vector[4:7] <- log(rep(.5,4))
 mapped_par(p_vector,designPROBIT) 
 
 # Make some data and plot ROCs
-dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=10000)
+dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=100000)
 
 # 0.8 = 1/sd(signal) slope evident 
 par(mfrow=c(1,2))
 plot_roc(dataPROBIT)
 plot_roc(dataPROBIT,zROC=TRUE,qfun=qnorm)
 
-# profiles
+# profiles and sampling
 dadmPROBIT <- design_model(data=dataPROBIT,design=designPROBIT)
+
 par(mfrow=c(2,4))
 for (i in names(p_vector))
   print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.5,p_max=p_vector[i]+.5,dadm=dadmPROBIT))
 
+samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+save(samplers,file="probitIndividual.RData")
+# runSingleProbit.R to get 1000 samples
+print(load("probitIndividual.RData"))
 
-samplers <- make_samplers(dataPROBIT,designPROBIT,type="standard",rt_resolution=.001)
+plotChains(samples,subfilter=400) # Thoroughly converged by 400
+gd_pmwg(samples,subfilter=400)  # 1.01
+plotACFs(samples,subfilter=400,layout=c(2,4))
+round(100*es_pmwg(samples,subfilter=400)/1800) # ~50% yield
+#   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
+# 1      63    44        51            62            54            46            42
+iat_pmwg(samples,subfilter=400) # Consistent with IATs around 2
+#   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
+# 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
+
+# Excellent recovery, prior completely dominated
+tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
+#       mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
+# true    1.000 0.223    -0.500        -0.693        -0.693        -0.693        -0.693
+# 2.5%    1.002 0.216    -0.502        -0.714        -0.697        -0.712        -0.701
+# 50%     1.015 0.228    -0.494        -0.703        -0.685        -0.700        -0.687
+# 97.5%   1.030 0.238    -0.485        -0.690        -0.673        -0.686        -0.672
 
 ### Some further examples of more flexible designs ----
 

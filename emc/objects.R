@@ -1,6 +1,8 @@
 #### pmwg object functions ----
 
-thin_pmwg <- function(pmwg,thin=10) {
+thin_pmwg <- function(pmwg,thin=10) 
+  # removes samples from single pmwg object  
+{
   # mcmc creation functions allow thinning, but for cases where you want to 
   # reduce the size, this will thin the sample component of a pmwg object  
   if (class(pmwg) != "pmwgs") stop("Not a pmwgs object")
@@ -107,7 +109,9 @@ get_sigma <- function(samps,filter="samples",thin=thin,subfilter=NULL)
 
 ### pmwg object list functions ----
 
-chain_thin <- function(samplers,thin=5) {
+chain_thin <- function(samplers,thin=5) 
+  # thins a set of chains  
+{
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
