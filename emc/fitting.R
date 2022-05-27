@@ -6,7 +6,7 @@ require(parallel)
 #   epsilon = NULL; start_mu = NULL; start_var = NULL; mix=NULL;
 #   pdist_update_n=50;min_unique=200;epsilon_upper_bound=2
 # 
-# iter=c(2,0,0)
+# n_cores=cores_per_chain
 
 run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
@@ -63,7 +63,7 @@ run_stages <- function(sampler,iter=c(300,0,0),
 
 
 
-# iter=c(300,0,0);
+# iter=c(500,0,0);
 #   verbose=TRUE;verbose_run_stage=FALSE;mix=NULL;
 #   max_adapt_trys=10;particles=NA;particle_factor=100; p_accept= 0.7;
 #   cores_per_chain=1;cores_for_chains=NULL;min_unique=200;epsilon_upper_bound=2;
@@ -106,7 +106,6 @@ run_chains <- function(samplers,iter=c(300,0,0),
   attr(samplers,"model_list") <- model_list
   samplers
 }
-
 
 
 # iter=NA;max_trys=50;verbose=FALSE;burn=FALSE
