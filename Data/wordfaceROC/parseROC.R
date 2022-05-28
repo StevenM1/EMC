@@ -138,5 +138,6 @@ round(sort(dp[,"faces"]),2)
 wordfaceROC <- WordFace[,c(1,3:5,2)]
 names(wordfaceROC) <- c("subjects","FW","S","R","rt")
 wordfaceROC$subjects <- factor(wordfaceROC$subjects)
+wordfaceROC$R <- factor(wordfaceROC$R)
 wordfaceROC$S <- factor(wordfaceROC$S,labels=c("new","old"))
 save(wordfaceROC,file="Data/wordfaceROC.RData")
