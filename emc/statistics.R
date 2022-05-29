@@ -24,7 +24,7 @@ check_adapt <- function(samplers,verbose=TRUE)
   ok
 }
 
-es_pmwg <- function(pmwg_mcmc,selection="alpha",
+es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
                     filter="burn",thin=1,subfilter=NULL)
   # Effective size 
 {
@@ -38,8 +38,10 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",
   if (attr(pmwg_mcmc,"selection")=="LL") 
     stop("Effective size not sensible for LL\n")
   out <- do.call(rbind,lapply(pmwg_mcmc,effectiveSize))
-  if (attr(pmwg_mcmc,"selection")=="alpha") out else
-    apply(out,2,sum) 
+  if (attr(pmwg_mcmc,"selection")=="alpha") {
+    if (!is.null(summary_alpha)) out <- apply(out,2,summary_alpha)
+    out 
+  } else apply(out,2,sum) 
 }
   
 
@@ -90,7 +92,7 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
 
 
 iat_pmwg <- function(pmwg_mcmc,
-    print_summary=TRUE,digits_print=2,sort_print=TRUE,
+    print_summary=TRUE,digits_print=2,sort_print=TRUE,summary_alpha=mean,
     selection="alpha",filter="burn",thin=1,subfilter=NULL) 
   # Integrated autocorrelation time, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
@@ -144,10 +146,10 @@ iat_pmwg <- function(pmwg_mcmc,
                                 thin=thin,subfilter=subfilter)                        
   }
   if ( selection=="LL" ) stop("IAT not appropriate for LL") else
-  if (selection=="alpha") 
-    out <- do.call(rbind,lapply(pmwg_mcmc,get_IAT) ) else
-    out <- get_IAT(pmwg_mcmc)
-
+  if (selection=="alpha") {
+    out <- do.call(rbind,lapply(pmwg_mcmc,get_IAT) ) 
+    if (!is.null(summary_alpha)) out <- apply(out,2,summary_alpha)
+  } else out <- get_IAT(pmwg_mcmc)
   if (sort_print & selection != "alpha") out <- sort(out)
   if (print_summary) print(round(out,digits_print))
   invisible(out)
