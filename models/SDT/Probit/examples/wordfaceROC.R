@@ -84,7 +84,7 @@ samplers <- make_samplers(wordfaceROC,designFW,type="standard")
 
 
 print(load("probitFW.RData")) 
-# All converged, 
+# All converged 
 plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
 plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
 plotChains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
@@ -106,6 +106,24 @@ gd_pmwg(samples,filter="sample",selection=selection)
 iat_pmwg(samples,filter="sample",selection=selection,summary_alpha=max) 
 round(es_pmwg(samples,filter="sample",selection=selection,summary_alpha=min))
 tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection)
+
+# Fit
+ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
+save(ppWordFace,file="ppWordFace.RData")
+
+# For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
+# whose first level is noise and second level is signal in order to construct an 
+# ROC. Where there this 2 level structure does not apply (e.g., different types 
+# of signal) subset the factor. 
+
+# Average fit
+par(mfrow=c(2,2))
+plot_fit(wordfaceROC,pp,factors=c("FW","S"))
+plot_fit(wordfaceROC,pp,factors=c("FW","S"),zROC=TRUE,qfun=qnorm)
+
+# Individual fits
+par(mfrow=c(2,4))
+plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
 
 #### Parameter recovery study ----
 print(load("probitFW.RData")) 

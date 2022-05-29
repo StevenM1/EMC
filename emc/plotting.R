@@ -358,22 +358,23 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
 
 plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL) {
   tab <- table(data$R,data$S)
-  ctab <- 1-apply(tab/apply(tab,2,sum),2,cumsum)[-dim(tab)[1],] # p(Signal)
+  ctab <- 1-apply(t(tab)/apply(tab,2,sum),1,cumsum)[-dim(tab)[1],] # p(Signal)
   if (!zROC) {
     if (!is.null(lim)) {xlim <- lim; ylim <- lim} else
                        {xlim <- c(0,1); ylim <- c(0,1)} 
-    plot(ctab[,1],ctab[,2],xlab="p(FA)",ylab="p(H)",xlim=xlim,ylim=ylim,
-         main=paste("ROC",main))
+    plot(ctab[,1],ctab[,2],xlab="p(FA)",ylab="p(H)",xlim=xlim,ylim=ylim,main=main)
     lines(ctab[,1],ctab[,2])
     abline(a=0,b=1,lty=3)
   } else {
     ctab <- qfun(ctab)
+    ctab <- ctab[apply(ctab,1,function(x){all(is.finite(x))}),]
     if (is.null(lim)) lim <- c(min(ctab),max(ctab))
-    plot(ctab[,1],ctab[,2],main=paste("zROC",main),
+    plot(ctab[,1],ctab[,2],main=main,
          xlab="z(FA)",ylab="z(H)",xlim=lim,ylim=lim)
      lines(ctab[,1],ctab[,2])
      abline(a=0,b=1,lty=3)
   }
+  invisible(ctab)
 }
 
 
@@ -381,20 +382,28 @@ plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL) {
 
 # subject=NULL;factors=NULL; do_plot=TRUE; fun=NULL
 # xlim=NULL;ylim=NULL;layout=NULL;probs=c(1:99)/100
-# data_lwd=2;fit_lwd=1; mfcol=TRUE
+# data_lwd=2;fit_lwd=1; mfcol=TRUE; matchfun=NULL
 # q_points=c(.1,.3,.5,.7,.9); qp_cex=1;pqp_cex=.5
 # ci=c(.025,.5,.975)
+# signalFactor="S";zROC=FALSE;qfun=NULL;lim=NULL;rocfit_cex=.5
 # 
-# data=dat; pp=ppPNAS_a_ddm; layout=c(1,3); factors=c("E")
+# data=wordfaceROC; pp=ppWordFace; factors=c("FW","S"); zROC=TRUE; qfun=qnorm
+# data=wordfaceROC; pp=ppWordFace; factors=NULL; subject = "134"; zROC=TRUE; qfun=qnorm
+#
 # stat=pc; stat_name="Accuracy (%)"; xlim=c(70,95)
 plot_fit <- function(data,pp,subject=NULL,factors=NULL,
-                     stat=NULL,stat_name="",ci=c(.025,.5,.975),do_plot=TRUE,
+                     stat=NULL,stat_name="",
+                     ci=c(.025,.5,.975),do_plot=TRUE,
                      xlim=NULL,ylim=NULL,
                      layout=NULL,mfcol=TRUE,
                      probs=c(1:99)/100,
                      data_lwd=2,fit_lwd=1,qp_cex=1,
-                     q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft")
-  # plots cdfs for data and fit.
+                     q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft",
+                     matchfun=NULL,
+                     signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
+  # Plots data and fit or if stat supplied returns a table of statistics.
+  # If rt available plots cdf, if not plots ROC (but if only 2 levels of
+  # response factor returns an accuracy table).
 {
   if (!is.null(subject)) {
     dat <- data[data$subjects==subject,]
@@ -409,44 +418,98 @@ plot_fit <- function(data,pp,subject=NULL,factors=NULL,
       stop("factors must name factors in data")
     fnams <- factors
   }
-  # pp <- pp[,c("postn",fnams,"R","rt")]
-  cells <- dat[,fnams,drop=FALSE]
-  for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
-  cells <- apply(cells,1,paste,collapse=" ")
-  pp_cells <- pp[,fnams,drop=FALSE]
-  for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
-  pp_cells <- apply(pp_cells,1,paste,collapse=" ")
-  if (!is.null(layout)) 
-    if (mfcol) par(mfcol=layout) else par(mfrow=layout) 
-  if (!is.null(stat)) { # statistic 
+  if (!is.null(layout)) if (mfcol) par(mfcol=layout) else par(mfrow=layout)
+  if (all(is.na(data$rt)) & is.null(matchfun)) {  # type=SDT
+    if (length(levels(data$R))==2) 
+      stop("No plots for binary responses, provide matchfun for accuracy table.") 
+    if (!any(fnams==signalFactor))
+      stop("Data does not have a column specified in the signalFactor argument: ",signalFactor)
+    if (length(levels(data[[signalFactor]]))!=2)
+      stop("signalFactor must have exactly two levels for an ROC plot")
+    if (zROC & is.null(qfun))
+      stop("Must supply qfun for zROC")
+    fnams <- fnams[fnams != signalFactor]
+    cells <- dat[,fnams,drop=FALSE]
+    for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+    cells <- apply(cells,1,paste,collapse=" ")
+    pp_cells <- pp[,fnams,drop=FALSE]
+    for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
+    pp_cells <- apply(pp_cells,1,paste,collapse=" ")
     postn <- unique(pp$postn)
     ucells <- sort(unique(cells))
-    tab <- matrix(nrow=length(ucells),ncol=4,
-                  dimnames=list(ucells,c("Observed",names(quantile(1:5,ci)))))
     for (i in ucells) {
-      obs <- stat(dat[cells==i,])
-      ppi <- pp[pp_cells==i,]
-      pred <- sapply(postn,function(x){stat(ppi[ppi$postn==x,])})
-      if (do_plot) {
-        dens <- density(pred)
-        if (!is.null(xlim)) xlimi <- xlim else  
-          xlimi <- c(pmin(obs,min(dens$x)),pmax(obs,max(dens$x)))
-        plot(dens,main=i,xlab=stat_name,xlim=xlimi)
-        abline(v=obs)
-      }
-      tab[i,] <- c(obs,quantile(pred,ci))
+      dpts <- plot_roc(dat[cells==i,],zROC=zROC,qfun=qfun,lim=lim,main=i) 
+      tab <- table(pp[pp_cells==i,]$postn,pp[pp_cells==i,]$R,pp[pp_cells==i,][[signalFactor]])
+      ctab <- apply(tab,1,function(x){list(1-apply(t(x)/apply(x,2,sum),1,cumsum)[-dim(x)[1],])})
+      if (!zROC) lapply(ctab,function(x){
+        points(x[[1]][,1],x[[1]][,2],col="grey",pch=16,cex=rocfit_cex)
+      }) else ctab <- lapply(ctab,function(x){
+        x[[1]] <- qnorm(x[[1]])
+        points(x[[1]][row.names(dpts),1],x[[1]][row.names(dpts),2],col="grey",pch=16,cex=rocfit_cex)
+      })
+      points(dpts[,1],dpts[,2])
+      lines(dpts[,1],dpts[,2])
     }
-    invisible(tab)
-  } else { # cdf
-    pok <- probs %in% q_points
-    R <- levels(dat$R)
-    if (is.null(ylim)) ylim <- c(0,1)
-    # set common xlim
-    if (is.null(xlim)) {
-      xlim <- c(Inf,-Inf)
+  } else {
+    cells <- dat[,fnams,drop=FALSE]
+    for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+    cells <- apply(cells,1,paste,collapse=" ")
+    pp_cells <- pp[,fnams,drop=FALSE]
+    for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
+    pp_cells <- apply(pp_cells,1,paste,collapse=" ")
+    if (!is.null(matchfun)) {
+      
+    }
+    if (!is.null(stat)) { # statistic 
+      postn <- unique(pp$postn)
+      ucells <- sort(unique(cells))
+      tab <- matrix(nrow=length(ucells),ncol=4,
+                    dimnames=list(ucells,c("Observed",names(quantile(1:5,ci)))))
+      for (i in ucells) {
+        obs <- stat(dat[cells==i,])
+        ppi <- pp[pp_cells==i,]
+        pred <- sapply(postn,function(x){stat(ppi[ppi$postn==x,])})
+        if (do_plot) {
+          dens <- density(pred)
+          if (!is.null(xlim)) xlimi <- xlim else  
+            xlimi <- c(pmin(obs,min(dens$x)),pmax(obs,max(dens$x)))
+          plot(dens,main=i,xlab=stat_name,xlim=xlimi)
+          abline(v=obs)
+        }
+        tab[i,] <- c(obs,quantile(pred,ci))
+      }
+      invisible(tab)
+    } else { # cdf
+      pok <- probs %in% q_points
+      R <- levels(dat$R)
+      if (is.null(ylim)) ylim <- c(0,1)
+      # set common xlim
+      if (is.null(xlim)) {
+        xlim <- c(Inf,-Inf)
+        for (i in sort(unique(cells))) {
+          dati <- dat[cells==i,]
+          ppi <- pp[pp_cells==i,]
+          pR <- table(dati$R)/dim(dati)[1]
+          pqs <- pq <- qs <- setNames(vector(mode="list",length=length(R)),R)
+          for (j in R) if (length(dati$rt[dati$R==j])>=length(q_points)) {
+            qs[[j]] <- quantile(dati$rt[dati$R==j],probs=probs)
+            pq[[j]] <- quantile(ppi$rt[ppi$R==j],probs=probs)
+            pqs[[j]] <- tapply(ppi$rt[ppi$R==j],ppi$postn[ppi$R==j],
+                               quantile,probs=probs[pok])
+          } else qs[[j]] <- pq[[j]] <- pqs[[j]] <- NA
+          rx <- cbind(do.call(rbind,lapply(qs,function(x){x[c(1,length(probs))]})),
+                      do.call(rbind,lapply(pq,function(x){x[c(1,length(probs))]})))
+          xlimi <- c(min(rx,na.rm=TRUE),max(rx,na.rm=TRUE))
+          if (!any(is.na(xlimi))) {
+            xlim[1] <- pmin(xlim[1],xlimi[1])
+            xlim[2] <- pmax(xlim[2],xlimi[2])
+          }
+        }
+      }
       for (i in sort(unique(cells))) {
         dati <- dat[cells==i,]
         ppi <- pp[pp_cells==i,]
+        # R <- sort(unique(dati$R))
         pR <- table(dati$R)/dim(dati)[1]
         pqs <- pq <- qs <- setNames(vector(mode="list",length=length(R)),R)
         for (j in R) if (length(dati$rt[dati$R==j])>=length(q_points)) {
@@ -455,55 +518,36 @@ plot_fit <- function(data,pp,subject=NULL,factors=NULL,
           pqs[[j]] <- tapply(ppi$rt[ppi$R==j],ppi$postn[ppi$R==j],
                              quantile,probs=probs[pok])
         } else qs[[j]] <- pq[[j]] <- pqs[[j]] <- NA
-        rx <- cbind(do.call(rbind,lapply(qs,function(x){x[c(1,length(probs))]})),
-                    do.call(rbind,lapply(pq,function(x){x[c(1,length(probs))]})))
-        xlimi <- c(min(rx,na.rm=TRUE),max(rx,na.rm=TRUE))
-        if (!any(is.na(xlimi))) {
-          xlim[1] <- pmin(xlim[1],xlimi[1])
-          xlim[2] <- pmax(xlim[2],xlimi[2])
+        if ( !any(is.na(pq[[1]])) ) {
+          plot(pq[[1]],probs*pR[1],xlim=xlim,ylim=ylim,main=i,xlab="RT",type="l",
+               lwd=fit_lwd,ylab="p(R)",lty=1)
+          tmp=lapply(pqs[[1]],function(x){
+            points(x,probs[pok]*pR[1],col="grey",pch=16,cex=pqp_cex)})
+          points(pq[[1]][pok],probs[pok]*pR[1],cex=pqp_cex*3,pch=16,col="grey")
+          lines(qs[[1]],probs*pR[1],lwd=data_lwd,lty=1)
+          points(qs[[1]][pok],probs[pok]*pR[1],cex=qp_cex,pch=16)
+          do_plot=FALSE
+        } else do_plot=TRUE
+        if (length(qs)>1) {
+          for (j in 2:length(qs)) if (!any(is.na(pq[[j]]))) {
+            if (do_plot) {
+              plot(pq[[j]],probs*pR[j],xlim=xlim,ylim=ylim,main=i,xlab="RT",type="l",
+                   lwd=fit_lwd,ylab="p(R)",lty=j)
+              do_plot <- FALSE
+            } else lines(pq[[j]],probs*pR[j],lwd=fit_lwd,lty=j)
+            tmp=lapply(pqs[[j]],function(x){
+              points(x,probs[pok]*pR[j],col="grey",pch=16,cex=pqp_cex)})
+            points(pq[[j]][pok],probs[pok]*pR[j],cex=pqp_cex*3,pch=16,col="grey")
+            lines(qs[[j]],probs*pR[j],lwd=data_lwd,lty=j)
+            points(qs[[j]][pok],probs[pok]*pR[j],cex=qp_cex,pch=16)
+          }
         }
+        legend(lpos,as.character(R),lty=1:length(R),bty="n",title="Response")
       }
-    }
-    for (i in sort(unique(cells))) {
-      dati <- dat[cells==i,]
-      ppi <- pp[pp_cells==i,]
-      # R <- sort(unique(dati$R))
-      pR <- table(dati$R)/dim(dati)[1]
-      pqs <- pq <- qs <- setNames(vector(mode="list",length=length(R)),R)
-      for (j in R) if (length(dati$rt[dati$R==j])>=length(q_points)) {
-        qs[[j]] <- quantile(dati$rt[dati$R==j],probs=probs)
-        pq[[j]] <- quantile(ppi$rt[ppi$R==j],probs=probs)
-        pqs[[j]] <- tapply(ppi$rt[ppi$R==j],ppi$postn[ppi$R==j],
-                           quantile,probs=probs[pok])
-      } else qs[[j]] <- pq[[j]] <- pqs[[j]] <- NA
-      if ( !any(is.na(pq[[1]])) ) {
-        plot(pq[[1]],probs*pR[1],xlim=xlim,ylim=ylim,main=i,xlab="RT",type="l",
-             lwd=fit_lwd,ylab="p(R)",lty=1)
-        tmp=lapply(pqs[[1]],function(x){
-          points(x,probs[pok]*pR[1],col="grey",pch=16,cex=pqp_cex)})
-        points(pq[[1]][pok],probs[pok]*pR[1],cex=pqp_cex*3,pch=16,col="grey")
-        lines(qs[[1]],probs*pR[1],lwd=data_lwd,lty=1)
-        points(qs[[1]][pok],probs[pok]*pR[1],cex=qp_cex,pch=16)
-        do_plot=FALSE
-      } else do_plot=TRUE
-      if (length(qs)>1) {
-        for (j in 2:length(qs)) if (!any(is.na(pq[[j]]))) {
-          if (do_plot) {
-            plot(pq[[j]],probs*pR[j],xlim=xlim,ylim=ylim,main=i,xlab="RT",type="l",
-                 lwd=fit_lwd,ylab="p(R)",lty=j)
-            do_plot <- FALSE
-          } else lines(pq[[j]],probs*pR[j],lwd=fit_lwd,lty=j)
-          tmp=lapply(pqs[[j]],function(x){
-            points(x,probs[pok]*pR[j],col="grey",pch=16,cex=pqp_cex)})
-          points(pq[[j]][pok],probs[pok]*pR[j],cex=pqp_cex*3,pch=16,col="grey")
-          lines(qs[[j]],probs*pR[j],lwd=data_lwd,lty=j)
-          points(qs[[j]][pok],probs[pok]*pR[j],cex=qp_cex,pch=16)
-        }
-      }
-      legend(lpos,as.character(R),lty=1:length(R),bty="n",title="Response")
     }
   }
 }
+
 
 plot_fits <- function(data,pp,factors=NULL,
                       stat=NULL,stat_name="",ci=c(.025,.5,.975),do_plot=TRUE,
@@ -511,8 +555,10 @@ plot_fits <- function(data,pp,factors=NULL,
                       layout=NULL,mfcol=TRUE,
                       probs=c(1:99)/100,
                       data_lwd=2,fit_lwd=1,qp_cex=1,
-                      q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft")
+                      q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft",
+                      matchfun,signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
   # as for plot_fits but does it per subject.
   for (i in levels(data$subjects)) 
     plot_fit(data,pp,subject=i,factors,stat,stat_name,ci,do_plot,xlim,ylim,layout,mfcol,
-             probs,data_lwd,fit_lwd,qp_cex,q_points,pqp_cex,lpos)
+             probs,data_lwd,fit_lwd,qp_cex,q_points,pqp_cex,lpos,
+             matchfun,signalFactor,zROC=qfun,lim,rocfit_cex)
