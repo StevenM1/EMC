@@ -215,13 +215,12 @@ log_likelihood_sdt <- function(p_vector,dadm,lb=-Inf,min_ll=log(1e-10))
   notfirst <- !first &  dadm$winner
   pars[notfirst,"threshold"] <- pars[which(notfirst)-1,"threshold"]
   lt <- pars[dadm$winner,"threshold"]
-  # log probability
-  
-  nr <- length(levels(dadm$lR))
-  ne <- length(attr(dadm,"expand"))
-  
+  # fix race expand to suit SDT
+  nr <- length(levels(dadm$lR))      # number of responses
+  ne <- length(attr(dadm,"expand"))  # length of expand
+  # Shorten expand to only one per lR set
   expand <- (attr(dadm,"expand")[(c(1:ne) %% nr)==0] + 1 ) %/% nr
-
+  # log probability
   ll <- log(attr(dadm,"model")$pfun(lt=lt,ut=ut,pars=pars[dadm$winner,]))[expand]
   ll[is.na(ll)] <- 0
   sum(pmax(min_ll,ll))

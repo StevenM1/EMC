@@ -26,8 +26,9 @@ probitTfun <- list(
   },
   # p_vector transform
   transform = function(x) {
-    increasing <- grepl("threshold",names(x)) & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
-    x[increasing] <- diff(c(x[nams == "threshold"][1] + x["slope"]*(x[increasing]),1e100))
+    threshold <- grepl("threshold",names(x))
+    increasing <-  threshold & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
+    x[increasing] <- diff(c(x[threshold][1] + x[grepl("slope",names(x))]*(x[increasing]),1e100))
     x
   },
   # Random function for discrete choices

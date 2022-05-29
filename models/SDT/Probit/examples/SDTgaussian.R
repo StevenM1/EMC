@@ -1,6 +1,9 @@
 rm(list=ls())
 source("emc/emc.R")
 source("models/SDT/Probit/SDTgaussian.R")
+# This matchfun useful for SDT models, assumes binary noise/signal factor and 
+# an even number of confidence ratings
+matchfun <- function(d) as.numeric(d$S) == (as.numeric(d$lR)>length(levels(d$lR))/2)
 
 
 # Two choice probit
@@ -53,10 +56,6 @@ for (i in names(p_vector))
 
 ##### ROC example, 3 level confidence ----
 
-# This matchfun useful for SDT models, assumes binary noise/signal factor and 
-# an even number of confidence ratings
-matchfun <- function(d) as.numeric(d$S) == (1+as.numeric(d$lR)>2)
-
 
 
 designPROBIT <- make_design(Flist=list(mean ~ S, sd ~ S,threshold ~ lR),
@@ -98,10 +97,7 @@ print(load("probitIndividual.RData"))
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
 plotACFs(samples,subfilter=400,layout=c(2,4))
-round(100*es_pmwg(samples,subfilter=400)/1800) # ~50% yield
-#   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
-# 1      63    44        51            62            54            46            42
-iat_pmwg(samples,subfilter=400) # Consistent with IATs around 2
+iat_pmwg(samples,subfilter=400) # ~ 50% yield 
 #   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
 # 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
 
@@ -115,6 +111,49 @@ tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
 
 ### Some further examples of more flexible designs ----
 
+##### 3 level confidence, factor A increases d' in a mirror pattern ----
+
+designPROBIT <- make_design(Flist=list(mean ~ A*S, sd ~ S,threshold ~ lR),
+  Ffactors=list(subjects=1,S=c("new","old"),A=c("faces","words")),Rlevels=1:6, matchfun=matchfun,
+  constants=c(mean=0,sd=0),model=probit)
+
+p_vector <- sampled_p_vector(designPROBIT)
+p_vector[1:3] <- c(-.5,1,1)  # mirror effect A=1 0,1, A=2 -.5,1.5
+p_vector[4] <- log(1.25) # signal sd = 1.25 (treatment coding)
+p_vector[5] <- -1        # first threshold untransformed
+p_vector[6:9] <- log(rep(.5,4))  
+
+# shift in criterion by 0.5 evident
+mapped_par(p_vector,designPROBIT) 
+
+
+dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=10000)
+par(mfrow=c(2,2))
+plot_roc(dataPROBIT[dataPROBIT$A=="faces",],main="A=faces")
+plot_roc(dataPROBIT[dataPROBIT$A=="faces",],zROC=TRUE,qfun=qnorm,main="A=faces",lim=c(-1.5,2))
+plot_roc(dataPROBIT[dataPROBIT$A=="words",],main="A=words")
+plot_roc(dataPROBIT[dataPROBIT$A=="words",],zROC=TRUE,qfun=qnorm,main="A=words",lim=c(-1.5,2))
+
+# profiles
+dadmPROBIT <- design_model(data=dataPROBIT,design=designPROBIT)
+par(mfrow=c(2,5))
+for (i in names(p_vector))
+  print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.25,p_max=p_vector[i]+.25,dadm=dadmPROBIT))
+
+
+samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+save(samplers,file="probitIndividualM.RData")
+# runSingleProbitM.R to get 1000 samples
+print(load("probitIndividualM.RData"))
+
+plotChains(samples,subfilter=400) # Thoroughly converged by 400
+gd_pmwg(samples,subfilter=400)  # 1.01
+plotACFs(samples,subfilter=400,layout=c(2,4))
+iat_pmwg(samples,subfilter=400) # ~ 50% yield 
+# Excellent recovery, prior completely dominated
+tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
+
+
 ##### 3 level confidence, factor A shifts threshold up ----
 
 designPROBIT <- make_design(Flist=list(mean ~ S, sd ~ S,threshold ~ A+lR),
@@ -123,15 +162,15 @@ designPROBIT <- make_design(Flist=list(mean ~ S, sd ~ S,threshold ~ A+lR),
 
 p_vector <- sampled_p_vector(designPROBIT)
 p_vector[1] <- 1         # signal mean
-p_vector[2] <- log(1)    # signal sd = 1.25 (treatment coding)
+p_vector[2] <- log(1.25) # signal sd = 1.25 (treatment coding)
 p_vector[3] <- -1        # first threshold untransformed
-p_vector[4] <- log(.5)   # A2 shift up
-# other thresholds exponentiated so > 0 then added to previous
-# this is done in p_vector transform function
+p_vector[4] <- .5        # A2 shift up
 p_vector[5:8] <- log(rep(.5,4))  
 
 # shift in criterion by 0.5 evident
 mapped_par(p_vector,designPROBIT) 
+
+
 dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=10000)
 par(mfrow=c(2,2))
 plot_roc(dataPROBIT[dataPROBIT$A==1,],main="A=1")
@@ -146,9 +185,73 @@ for (i in names(p_vector))
   print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.5,p_max=p_vector[i]+.5,dadm=dadmPROBIT))
 
 
+samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+save(samplers,file="probitIndividualA.RData")
+# runSingleProbitA.R to get 1000 samples
+print(load("probitIndividualA.RData"))
+
+plotChains(samples,subfilter=400) # Thoroughly converged by 400
+gd_pmwg(samples,subfilter=400)  # 1.01
+plotACFs(samples,subfilter=400,layout=c(2,4))
+iat_pmwg(samples,subfilter=400) # ~ 50% yield 
+#   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
+# 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
+
+# Excellent recovery, prior completely dominated
+tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
+
+
 # NB: The real data example shows how to set arbitrarily different (but still 
 #     increasing) thresholds for different levels of a factor or factors by
 #     by "nesting" lR within those factors.
+
+##### Combine last two ----
+
+# Because of shift in threshold with A and mean, must also fix mean of new A=2
+# for identifiable
+
+designPROBIT <- make_design(Flist=list(mean ~ A*S, sd ~ S,threshold ~ A+lR),
+  Ffactors=list(subjects=1,S=1:2,A=1:2),Rlevels=1:6, matchfun=matchfun,
+  constants=c(mean=0,mean_A2=0,sd=0),model=probit)
+
+p_vector <- sampled_p_vector(designPROBIT)
+p_vector[1:2] <- c(1,1)  # mirror effect A=1 0,1, A=2 -.5,1.5
+p_vector[3] <- log(1.25) # signal sd = 1.25 (treatment coding)
+p_vector[4] <- -1        # first threshold untransformed
+p_vector[5] <- .5        # A2 shift up
+p_vector[6:9] <- log(rep(.5,4))  
+
+# shift in criterion by 0.5 evident
+mapped_par(p_vector,designPROBIT) 
+
+
+dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=10000)
+par(mfrow=c(2,2))
+plot_roc(dataPROBIT[dataPROBIT$A==1,],main="A=1")
+plot_roc(dataPROBIT[dataPROBIT$A==1,],zROC=TRUE,qfun=qnorm,main="A=1",lim=c(-1.5,2))
+plot_roc(dataPROBIT[dataPROBIT$A==2,],main="A=2")
+plot_roc(dataPROBIT[dataPROBIT$A==2,],zROC=TRUE,qfun=qnorm,main="A=2",lim=c(-1.5,2))
+
+# profiles
+dadmPROBIT <- design_model(data=dataPROBIT,design=designPROBIT)
+par(mfrow=c(2,5))
+for (i in names(p_vector))
+  print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.25,p_max=p_vector[i]+.25,dadm=dadmPROBIT))
+
+
+samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+# save(samplers,file="probitIndividualMA.RData")
+# runSingleProbitMA.R to get 1000 samples
+print(load("probitIndividualMA.RData"))
+
+plotChains(samples,subfilter=400) # Thoroughly converged by 400
+gd_pmwg(samples,subfilter=400)  # 1.01
+plotACFs(samples,subfilter=400,layout=c(2,5))
+iat_pmwg(samples,subfilter=400) # ~ 30-40% yield 
+# Excellent recovery, prior completely dominated
+tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
+
+
 
 #### Set thresholds as an increasing linear function ----
 
@@ -189,6 +292,18 @@ dadmPROBIT <- design_model(data=dataPROBIT,design=designPROBIT)
 par(mfrow=c(2,2))
 for (i in names(p_vector))
   print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.25,p_max=p_vector[i]+.25,dadm=dadmPROBIT))
+
+samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+# save(samplers,file="probitIndividualS.RData")
+# runSingleProbitS.R to get 1000 samples
+print(load("probitIndividualS.RData"))
+
+plotChains(samples,subfilter=400) # Thoroughly converged by 400
+gd_pmwg(samples,subfilter=400)  # 1.01
+plotACFs(samples,subfilter=400,layout=c(2,5))
+iat_pmwg(samples,subfilter=400) # ~ 30-40% yield 
+# Excellent recovery, prior completely dominated
+tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
 
 
 
