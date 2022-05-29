@@ -53,12 +53,14 @@ get_prior_samples <- function(samples,selection,filter,thin,subfilter,n_prior)
                          thin=thin,subfilter=subfilter) 
       }
       psamples <- prior_samples_alpha(theta_mu,theta_var,n_prior)
+      colnames(psamples) <- colnames(theta_mu)
+      return(psamples)
     } else return(prior_samples(samps,"mu",n_prior)) 
   } else {
     if (samps$source!="samplers/pmwg/variants/standard.R") {
       warnings("Prior plot not yet implemented for this type")
       return(NULL)  
-    } else psamples <- prior_samples(samps,selection,n_prior)
+    } else return(prior_samples(samps,selection,n_prior))
   }
 }
 

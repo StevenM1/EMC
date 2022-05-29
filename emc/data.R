@@ -137,17 +137,22 @@ post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
   # expand=1 gives exact data design, larger values replicate whole design
   # filter/subfilter/thin as for as_mcmc.list
   # hyper=FALSE draws from alphas (participant level)
-  # hyper=TRUE draws from hyper (not yet implemented)
+  # hyper=TRUE draws from hyper 
 {
   
   # Will need update for joint
   data <- attr(samples,"data_list")[[1]]
   design <- attr(samples,"design_list")[[1]]
   model <- attr(samples,"model_list")[[1]]
+  subjects <- levels(data$subjects)
   if (hyper) {
-    stop("hyper not implemented!")
+    pars <- vector(mode="list",length=n_post) 
+    for (i in 1:n_post) {
+      pars[[i]] <- get_prior_samples(samples,selection="alpha",
+        filter=filter,thin=thin,subfilter=subfilter,n_prior=length(subjects))
+      row.names(pars[[i]]) <- subjects   
+    }
   } else {
-    subjects <- levels(data$subjects)
     samps <- lapply(as_mcmc.list(samples,selection="alpha",
       filter=filter,subfilter=subfilter,thin=thin),function(x){do.call(rbind,x)})
     if (use_par != "random") {
@@ -161,24 +166,23 @@ post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
         row.names(pars[[i]]) <- subjects
       }
     }
-    if (n_cores==1) {
-      simDat <- vector(mode="list",length=n_post)
-      for (i in 1:n_post) {
-        cat(".")
-        simDat[[i]] <- make_data(pars[[i]],design=design,model=model,data=data,expand=expand)
-      }
-      cat("\n")
-    } else {
-      simDat <- mclapply(1:n_post,function(i){
-        make_data(pars[[i]],design=design,model=model,data=data,expand=expand)
-      },mc.cores=n_cores)
-    }
-    out <- cbind(postn=rep(1:n_post,each=dim(simDat[[1]])[1]),do.call(rbind,simDat)) 
-    if (use_par != "random") 
-      attr(out,"pars") <- p else
-      attr(out,"pars") <- pars 
-    out
   }
+  if (n_cores==1) {
+    simDat <- vector(mode="list",length=n_post)
+    for (i in 1:n_post) {
+      cat(".")
+      simDat[[i]] <- make_data(pars[[i]],design=design,model=model,data=data,expand=expand)
+    }
+    cat("\n")
+  } else {
+    simDat <- mclapply(1:n_post,function(i){
+      make_data(pars[[i]],design=design,model=model,data=data,expand=expand)
+    },mc.cores=n_cores)
+  }
+  out <- cbind(postn=rep(1:n_post,each=dim(simDat[[1]])[1]),do.call(rbind,simDat))
+  if (n_post==1) pars <- pars[[1]]
+  attr(out,"pars") <- pars 
+  out
 }
 
 
