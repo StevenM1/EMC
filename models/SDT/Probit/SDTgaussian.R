@@ -26,9 +26,16 @@ probit <- list(
   },
   # p_vector transform
   transform = function(x) {
-    increasing <- grepl("threshold",names(x)) & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
-    x[increasing] <- exp(x[increasing])
-    x
+    if (!is.matrix(x)) {
+      increasing <- grepl("threshold",names(x)) & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
+      x[increasing] <- exp(x[increasing])
+      x
+    } else {
+      increasing <- grepl("threshold",dimnames(x)[[2]]) & grepl(":lR",dimnames(x)[[2]]) | 
+        grepl("threshold_lR",dimnames(x)[[2]]) 
+      x[,increasing] <- exp(x[,increasing])
+      x
+    }
   },
   # Random function for discrete choices
   rfun=function(lR,pars) rPROBIT(lR,pars),

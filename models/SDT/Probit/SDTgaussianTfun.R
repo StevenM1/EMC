@@ -26,10 +26,16 @@ probitTfun <- list(
   },
   # p_vector transform
   transform = function(x) {
-    threshold <- grepl("threshold",names(x))
-    increasing <-  threshold & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
-    x[increasing] <- diff(c(x[threshold][1] + x[grepl("slope",names(x))]*(x[increasing]),1e100))
-    x
+    if (!is.matrix(x)) {
+      increasing <- grepl("threshold",names(x)) & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
+      x[increasing] <- exp(x[increasing])
+      x
+    } else {
+      increasing <- grepl("threshold",dimnames(x)[[2]]) & grepl(":lR",dimnames(x)[[2]]) | 
+        grepl("threshold_lR",dimnames(x)[[2]]) 
+      x[,increasing] <- exp(x[,increasing])
+      x
+    }
   },
   # Random function for discrete choices
   rfun=function(lR,pars) rPROBIT(lR,pars),
