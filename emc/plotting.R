@@ -168,18 +168,19 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
           if (chains>1) for (k in 2:chains) lines(dens[[k]],col=k)
         } else {
           dens <- density(pmwg_mcmc[[i]][,j],bw=bw,adjust=adjust)
+          if (plot_prior) pdens <- density(psamples[,j],bw=bw,adjust=adjust)
           if (!is.null(xlim)) {
             if (!is.matrix(xlim)) xlimi <- xlim else xlimi <- xlim[j,] 
           } else xlimi <- c(min(dens$x),max(dens$x)) 
           if (!is.null(ylim)) {
             if (!is.matrix(ylim)) ylimi <- ylim else ylimi <- ylim[j,]
-          } else ylimi <- c(0,max(dens$y))
+          } else {
+            ylimi <- c(0,max(dens$y))
+            if (plot_prior) ylimi[2] <- max(c(ylimi[2],pdens$y))
+          }
           plot(dens,xlab=j,xlim=xlimi,ylim=ylimi,
              main=paste0(attr(pmwg_mcmc,"selection")," s",i))
-          if (plot_prior) 
-            lines(density(psamples[,j],bw=bw,adjust=adjust),col="red")
-            # lines(robust_density(psamples[,j],range(pmwg_mcmc[[i]][,j]),
-            #   bw=bw,adjust=adjust,use_robust=FALSE),col="red")
+          if (plot_prior) lines(pdens,col="red")
         }
         if (!is.null(pars)) abline(v=pars[j,i])
       }
@@ -227,16 +228,17 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
         if (chains>1) for (k in 2:chains) lines(dens[[k]],col=k)
       } else {
         dens <- density(pmwg_mcmc[,j],bw=bw,adjust=adjust)
+        if (plot_prior)  pdens <- robust_density(psamples[,j],range(pmwg_mcmc[,j]),
+            bw=bw,adjust=adjust,
+            use_robust=!(attr(pmwg_mcmc,"selection") %in% c("mu","correlation")))
         if (!is.null(xlim)) xlimi <- xlim else
           xlimi <- c(min(dens$x),max(dens$x))
-        if (!is.null(ylim)) ylimi <- ylim else
+        if (!is.null(ylim)) ylimi <- ylim else {
           ylimi <- c(0,max(dens$y))
+          if (plot_prior) ylimi[2] <- max(c(ylimi[2],pdens$y))
+        }
         plot(dens,xlim=xlimi,ylim=ylimi,xlab=attr(pmwg_mcmc,"selection"),main=j)
-        if (plot_prior) 
-          lines(robust_density(psamples[,j],range(pmwg_mcmc[,j]),
-            bw=bw,adjust=adjust,
-            use_robust=!(attr(pmwg_mcmc,"selection") %in% c("mu","correlation"))),
-            col="red")
+        if (plot_prior) lines(pdens,col="red")
       }
       if (!is.null(pars)) abline(v=pars[j])
     }
