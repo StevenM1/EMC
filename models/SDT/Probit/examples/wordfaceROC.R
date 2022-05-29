@@ -70,7 +70,7 @@ plotACFs(samples,subfilter=100,layout=c(4,4)) # Quite autocorrelated
 iat_pmwg(samples,subfilter=100) 
 tabs <- plotDensity(samples,subfilter=100,layout=c(4,4)) # prior domination ok
 
-#### Fit fill data set ----
+#### Fit full data set ----
 
 designFW <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
   Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),
@@ -103,6 +103,38 @@ plotChains(samples,filter="sample",layout=c(3,5),selection="alpha",thin=10)
 selection="mu"; selection="variance"; selection="alpha"; layout=c(3,5)
 selection="correlation"; layout=c(4,7)
 gd_pmwg(samples,filter="sample",selection=selection)
-iat_pmwg(samples,filter="sample",selection=selection) 
-round(es_pmwg(samples,filter="sample",selection=selection))
-tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection) 
+iat_pmwg(samples,filter="sample",selection=selection,summary_alpha=max) 
+round(es_pmwg(samples,filter="sample",selection=selection,summary_alpha=min))
+tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection)
+
+#### Parameter recovery study ----
+print(load("probitFW.RData")) 
+
+# Create a single simulated data set.
+
+# Can make up new data using the mean of the alphas (median or random also possible) 
+new_dat <- post_predict(samples,use_par="mean",n_post=1)
+# Or by sampling a parameter vector from the hyper
+new_dat_hyper <- post_predict(samples,hyper=TRUE,n_post=1)
+
+# An attribute keeps the pars used to create
+round(attr(new_dat,"pars"),2)
+round(attr(new_dat_hyper,"pars"),2)
+
+# can we recover these?
+samplers <- make_samplers(new_dat,design,type="standard")
+# save(samplers,file="RecoveryProbitFixed.RData")
+
+samplers <- make_samplers(new_dat_hyper,design,type="standard")
+# save(samplers,file="RecoveryProbitRandom.RData")
+
+
+print(load("RecoveryProbitFixed.RData"))
+
+# After some checking of samples as above all looks good without trimming
+pars <- attributes(attr(samples,"data_list")[[1]])$pars
+tabs <- plotDensity(as_mcmc.list(samples,selection="alpha",filter="burn"),
+                    layout=c(2,5),pars=pars)
+# Some shrinkage but not bad
+plotAlphaRecovery(tabs,layout=c(2,5))
+
