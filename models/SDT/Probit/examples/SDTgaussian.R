@@ -301,7 +301,7 @@ print(load("probitIndividualS.RData"))
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
 plotACFs(samples,subfilter=400,layout=c(2,5))
-iat_pmwg(samples,subfilter=400) # ~ 30-40% yield 
+iat_pmwg(samples,subfilter=400) # ~ 10% yield 
 # Excellent recovery, prior completely dominated
 tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
 

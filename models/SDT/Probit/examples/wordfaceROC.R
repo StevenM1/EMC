@@ -22,7 +22,7 @@ designFW1 <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
 
 p_vector <- sampled_p_vector(designFW1)
 # constant mean new face = 0 
-p_vector[1:2] <- c(1,1) # new words, old faces, old words 
+p_vector[1:2] <- c(1,1) # old faces, old words 
 # constant new face sd = 1
 p_vector[3:4] <- log(c(1.25,1)) # old sd = 1.25, no item effect on sd 
 p_vector[5:6] <- c(-0.5,-0.5)  # first threshold for faces, shift down by 0.5 for words
@@ -118,12 +118,23 @@ save(ppWordFace,file="ppWordFace.RData")
 
 # Average fit
 par(mfrow=c(2,2))
-plot_fit(wordfaceROC,pp,factors=c("FW","S"))
-plot_fit(wordfaceROC,pp,factors=c("FW","S"),zROC=TRUE,qfun=qnorm)
+plot_fit(wordfaceROC,ppWordFace,factors=c("FW","S"))
+plot_fit(wordfaceROC,ppWordFace,factors=c("FW","S"),zROC=TRUE,qfun=qnorm,lim=c(-1.5,1.25))
 
 # Individual fits
 par(mfrow=c(2,4))
 plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
+
+tab_mu <- plotDensity(samples,filter="sample",do_plot=FALSE,selection="mu")
+mp <- mapped_par(tab_mu[2,],designFW)
+mpl <- mapped_par(tab_mu[1,],designFW)
+mph <- mapped_par(tab_mu[3,],designFW)
+
+cbind(mpl[c(1,7,13,19),c("S","FW")],'2.5%'=mpl[c(1,7,13,19),"mean"],'50%'=mp[c(1,7,13,19),"mean"],'97.5%'=mph[c(1,7,13,19),"mean"])
+cbind(mpl[c(1,7,13,19),c("S","FW")],'2.5%'=mpl[c(1,7,13,19),"sd"],'50%'=mp[c(1,7,13,19),"sd"],'97.5%'=mph[c(1,7,13,19),"sd"])
+cbind(mpl[1:10,c("S","FW")],'2.5%'=mpl[1:10,"threshold"],'50%'=mp[1:10,"threshold"],'97.5%'=mph[1:10,"threshold"])
+
+
 
 #### Parameter recovery study ----
 print(load("probitFW.RData")) 
