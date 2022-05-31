@@ -1,13 +1,6 @@
 #### Likelihoods ----
 
 
-get_pars <- function(p_vector,dadm)
-  # Transform p_vector, map to design, and transform mapped parameters
-  attr(dadm,"model")$Mtransform(map_p(
-    attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
-    dadm))
-
-
 #### Race likelihoods ----
 
 log_likelihood_race <- function(p_vector,dadm,min_ll=log(1e-10))

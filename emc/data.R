@@ -1,18 +1,5 @@
 # data generation 
 
-add_constants <- function(p,constants) 
-  # augments parameter matrix or vector p with constant parameters
-{
-  if (is.null(constants)) return(p)
-  if (is.matrix(p)) {
-    nams <- c(dimnames(p)[[2]],names(constants))
-    p <- cbind(p,matrix(rep(constants,each=dim(p)[1]),nrow=dim(p)[1]))
-    dimnames(p)[[2]] <- nams
-    p
-  } else c(p,constants)
-}
-
-
 
 # data=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
 # model=probit; design=designPROBIT; trials=10

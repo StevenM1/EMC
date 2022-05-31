@@ -236,42 +236,16 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
 }    
 
 
-map_mcmc <- function(mcmc,design,model) 
-  # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
-  # model parameterization 
-{
-  doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
 
-  if (!is.matrix(mcmc)) mcmc <- t(as.matrix(mcmc))
-  map <- attr(sampled_p_vector(design),"map")
-  constants <- attributes(samplers)$design_list[[1]]$constants
-  mp <- mapped_par(mcmc[1,],design)
-  pmat <- model$transform(add_constants(mcmc,constants))
-  plist <- lapply(map,doMap,pmat=pmat)
-  if (model$type=="SDT") {
-    ht <- apply(map$threshold[,grepl("lR",dimnames(map$threshold)[[2]]),drop=FALSE],1,sum)
-    plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
-  }
-  # Give mapped variables names and flag constant
-  for (i in 1:length(plist)) {
-    vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
-    uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
-    dimnames(plist[[i]])[[2]] <- 
-      paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
-    if (dim(plist[[i]])[1]==1) isConstant <- NULL else
-      isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
-  }
-  out <- as.mcmc(do.call(cbind,lapply(plist,model$Mtransform)))
-  attr(out,"isConstant") <- isConstant
-  out
-}
 
 
 as_mcmc.list <- function(samplers,
   selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-  filter="burn",thin=1,subfilter=NULL,mapped=FALSE) 
+  filter="burn",thin=1,subfilter=NULL,mapped=FALSE,add_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
-  # natural = TRUE transform mu or alpha to natural scale
+  # mapped = TRUE map mu or alpha to model parameters (constants indicated by
+  # attribute isConstant)
+  # add_constants= TRUE, if not mapped add in constants 
 {
   
   stages <- c("burn", "adapt", "sample")
@@ -296,6 +270,14 @@ as_mcmc.list <- function(samplers,
       mcmcList <- lapply(mcmcList,map_mcmc,
         design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
     } else warning("Can only map alpha or mu to model parameterization")
+  } else if (add_constants) {
+    if (selection == "alpha") {
+      mcmcList <- lapply(mcmcList,function(x){lapply(x,add_constants_mcmc,
+        constants=attr(samplers,"design_list")[[1]]$constants)})
+    } else if (selection=="mu") {
+      mcmcList <- lapply(mcmcList,add_constants_mcmc,
+        constants=attr(samplers,"design_list")[[1]]$constants)
+    }    
   }
   if (selection=="LL")
     iter <- unlist(lapply(mcmcList,function(x){length(x[[1]])})) else 

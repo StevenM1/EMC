@@ -132,11 +132,13 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
                                   thin=thin,subfilter=subfilter,mapped=mapped)
+        if (!is.null(attr(pmwg_mcmc,"isConstant"))) pars <-
+            pmwg_mcmc[,!attr(pmwg_mcmc,"isConstant"),drop=FALSE]
          if (mapped & !is.null(pars)) {
            pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
                             model=attr(pmwg_mcmc,"model_list")[[1]])[1,] 
-          # if (!is.null(attr(psamples,"isConstant"))) psamples <- 
-          #   psamples[,!attr(psamples,"isConstant"),drop=FALSE]
+          if (!is.null(attr(pars,"isConstant"))) pars <-
+            pars[,!attr(pars,"isConstant"),drop=FALSE]
          }
     }
   } else plot_prior <- FALSE
