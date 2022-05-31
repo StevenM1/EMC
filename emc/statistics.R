@@ -258,6 +258,100 @@ p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 }
 
 
+# y=NULL;p_name;mapped=TRUE;c_vector=NULL
+# x_name=NULL;y_name=NULL
+# mu=0;alternative = c("less", "greater")[1]
+# probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE
+# x_filter="sample";x_selection="alpha";x_subfilter=0
+# y_filter="sample";y_selection="alpha";y_subfilter=0
+# 
+# x=samples;p_name="sd_FWwords:Sold";x_selection = "mu";mapped=FALSE
+
+p_test <- function(x,y=NULL,p_name,mapped=TRUE,c_vector=NULL,
+                   x_name=NULL,y_name=NULL,
+                   mu=0,alternative = c("less", "greater")[1],
+                   probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
+                   x_filter="sample",x_selection="alpha",x_subfilter=0,
+                   y_filter="sample",y_selection="alpha",y_subfilter=0) {
+
+  
+
+  get_effect <- function(x,x_vector,x_name,p_name,c_vector=NULL) 
+    # Effect, must always be on mapped scale if c_vector supplied.
+  {
+    if (is.null(x_name)) 
+      x <- do.call(rbind,x) else
+      x <- do.call(rbind,x[[x_name]])
+    p_root <- strsplit(p_name,"_")[[1]]
+    if (!is.null(c_vector)) { 
+      design <- attr(c_vector,"design")
+      model <- design$model
+      design$Ffactors$subjects <- design$Ffactors$subjects[1]
+      dadm <- design_model(make_data(x[1,],design,model,trials=1),design,model,
+                           rt_check=FALSE,compress=FALSE)
+      cvals <- apply(x,1,function(x){get_pars(x,dadm)[,p_root[1]]})
+      return((c_vector %*% cvals)[1,])  
+    }
+    if (length(p_root)==1) { # intercept 
+      return(x[,p_root]) 
+    } else p_root <- p_root[1]
+    cv <- attr(x_vector,"map")[[p_root]][,p_name] # Contrast vector
+    cpos <- cv>0
+    if (!any(cpos)) cpos <- x[,p_root,drop=FALSE] else
+      cpos <- x[,p_root,drop=FALSE] + sum(cv[cpos])*x[,p_name,drop=FALSE]
+    cneg <- cv<0
+    if (!any(cneg)) cneg  <- x[,p_root,drop=FALSE] else
+      cneg <- x[,p_root,drop=FALSE] + sum(cv[cneg])*x[,p_name,drop=FALSE]
+    cpos - cneg
+  }
+
+
+  if (mapped & !(selection %in% c("mu","alpha")))
+    stop("Can only analyze mapped mu or alpha parameters")
+  if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects") 
+  design <- attr(x,"design_list")[[1]]
+  if (!is.null(c_vector)) attr(c_vector,"design") <- design
+  x_vector <- sampled_p_vector(design)
+  x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,
+                    subfilter=x_subfilter,mapped=mapped)
+  if (x_selection != "alpha") x_name <- NULL else
+    if (is.null(x_name)) x_name <- 1 else
+    if (!(x_name %in% names(x))) stop("Subject x_name not in x")
+  x <- get_effect(x,x_vector,x_name,p_name,c_vector)
+  if (is.null(y)) {
+    p <- mean(x<mu)
+    if (alternative=="greater") p <- 1-p
+    tab <- cbind(quantile(x,probs),c(NA,mu,NA))
+    attr(tab,alternative) <- p
+    dimnames(tab)[[2]] <- c(p_name,"mu")
+  } else {
+    if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects") 
+    y_vector <- sampled_p_vector(attr(y,"design_list")[[1]])
+    y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,
+                      subfilter=y_subfilter,mapped=mapped)
+    if (y_selection != "alpha") y_name <- NULL else
+      if (is.null(y_name)) y_name <- 1 else
+        if (!(y_name %in% names(y))) stop("Subject y_name not in y")
+    y <- get_effect(y,y_vector,y_name,p_name)
+    if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
+    d <- x-y
+    p <- mean(d<0)
+    if (alternative=="greater") p <- 1-p
+    tab <- cbind(quantile(x,probs),quantile(y,probs),quantile(d,probs))
+    attr(tab,alternative) <- p
+    dimnames(tab)[[2]] <- c(paste(p_name,c(x_name,y_name),sep="_"),
+                            paste(x_name,y_name,sep="-"))
+  }
+  if (print_table) {
+    ptab <- tab
+    ptab <- round(ptab,digits)
+    attr(ptab,alternative) <- round(attr(ptab,alternative),p_digits)
+    print(ptab)
+  }
+  invisible(tab)
+}
+
+
 # filter="burn";subfilter=0;use_best_fit=FALSE;print_summary=FALSE;digits=0
 # filter="sample"
 pmwg_IC <- function(samplers,filter="burn",subfilter=0,use_best_fit=FALSE,
