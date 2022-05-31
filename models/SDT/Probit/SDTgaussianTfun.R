@@ -10,10 +10,12 @@ probitTfun <- list(
   Ntransform=function(x) {
     if (!is.matrix(x)) {
       is_sd <- grepl("sd",names(x)) 
-      x[is_sd] <- exp(x[is_sd]) 
+      is_slope <- grepl("slope",names(x)) 
+      x[is_sd | is_slope] <- exp(x[is_sd | is_slope]) 
     } else {
       is_sd <- grepl("sd",dimnames(x)[[2]]) 
-      x[,is_sd] <- exp(x[,is_sd]) 
+      is_slope <- grepl("slope",dimnames(x)[[2]]) 
+      x[,is_sd | is_slope] <- exp(x[,is_sd | is_slope]) 
     }
     x
   },
@@ -26,14 +28,18 @@ probitTfun <- list(
   },
   # p_vector transform
   transform = function(x) {
+    
+    sdiff <- function(x){x[-1]-x[length(x)]}
+    
     if (!is.matrix(x)) {
-      increasing <- grepl("threshold",names(x)) & grepl(":lR",names(x)) | grepl("threshold_lR",names(x)) 
-      x[increasing] <- exp(x[increasing])
+      threshold <- grepl("threshold",names(x))
+      slope <- grepl("slope",names(x))
+      x[threshold][-1] <- diff(x[threshold][1]+c(0,x[slope]*x[threshold][-1]))
       x
     } else {
-      increasing <- grepl("threshold",dimnames(x)[[2]]) & grepl(":lR",dimnames(x)[[2]]) | 
-        grepl("threshold_lR",dimnames(x)[[2]]) 
-      x[,increasing] <- exp(x[,increasing])
+      threshold <- grepl("threshold",dimnames(x)[[2]])
+      slope <- grepl("slope",dimnames(x)[[2]])
+      x[,threshold][,-1] <- t(apply(cbind(x[,threshold][,1],x[,threshold][,1]+x[,slope]*x[,threshold][,-1]),1,sdiff))
       x
     }
   },
