@@ -82,7 +82,7 @@ plotACFs <- function(samples,layout=NULL,subject=1,
 # xlim=NULL; ylim=NULL
 # pmwg_mcmc=sPNAS_a;layout=c(2,6);selection="correlation";filter="sample";plot_prior=TRUE
 plotDensity <- function(pmwg_mcmc,layout=c(2,3),
-    selection="alpha",filter="burn",thin=1,subfilter=NULL,natural=FALSE,
+    selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
     show_chains=FALSE,do_plot=TRUE,subject=NA,
     pars=NULL,probs=c(.025,.5,.975),bw = "nrd0", adjust = 1) # ,use_par=NA
@@ -122,8 +122,10 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                  thin=thin,subfilter=subfilter,natural=natural)
-         if (natural & !is.null(pars)) stop("Have not implemented pars for natural")                    
+                                  thin=thin,subfilter=subfilter,mapped=mapped)
+         if (mapped & !is.null(pars)) pars <- map_mcmc(pars,
+           design=attr(pmwg_mcmc,"design_list")[[1]],
+           model=attr(pmwg_mcmc,"model_list")[[1]])[1,]                    
     }
   } else plot_prior <- FALSE
   if (attr(pmwg_mcmc,"selection")=="LL")
