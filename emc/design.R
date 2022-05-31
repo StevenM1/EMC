@@ -412,7 +412,8 @@ mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE)
   if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
   dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
                        rt_check=FALSE,compress=FALSE)
-  ok <- !(names(dadm) %in% c("subjects","trials","R","rt","lR","lM","winner"))
+  # ok <- !(names(dadm) %in% c("subjects","trials","R","rt","lR","lM","winner"))
+  ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
   out <- cbind(dadm[,ok],round(get_pars(p_vector,dadm),digits))
   if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
   out
