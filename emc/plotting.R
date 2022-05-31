@@ -3,10 +3,10 @@
 
 # subject=NA;ylim=NULL; plot_acf=FALSE;acf_chain=1
 # layout=c(2,5)
-plotChains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
+plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
     selection="alpha",filter="burn",thin=1,subfilter=NULL,                       
     plot_acf=FALSE,acf_chain=1, verbose=TRUE) # ,use_par=NA 
-  # Plots chains or acfs (if alpha or LL can do individual subject, all by default)    
+  # Plots chains  (if alpha or LL can do individual subject, all by default)    
 {
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (class(pmwg_mcmc)=="pmwgs") 
@@ -82,7 +82,7 @@ plotACFs <- function(samples,layout=NULL,subject=1,
 # xlim=NULL; ylim=NULL
 # plot_prior=TRUE; n_prior=1e3; mapped=FALSE
 # mapped=TRUE
-plotDensity <- function(pmwg_mcmc,layout=c(2,3),
+plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
     show_chains=FALSE,do_plot=TRUE,subject=NA,
@@ -119,8 +119,12 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
     if (plot_prior) {
       psamples <- 
         get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
-      if (mapped) psamples <- map_mcmc(psamples,
-        attr(pmwg_mcmc,"design_list")[[1]],attr(pmwg_mcmc,"model_list")[[1]])
+      if (mapped) {
+        psamples <- map_mcmc(psamples,
+          attr(pmwg_mcmc,"design_list")[[1]],attr(pmwg_mcmc,"model_list")[[1]])
+        if (!is.null(attr(psamples,"isConstant"))) psamples <- 
+            psamples[,!attr(psamples,"isConstant"),drop=FALSE]
+      }
     }
     if (is.null(psamples)) plot_prior <- FALSE
     if (class(pmwg_mcmc)=="pmwgs")
@@ -128,9 +132,12 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
                                   thin=thin,subfilter=subfilter,mapped=mapped)
-         if (mapped & !is.null(pars)) pars <- map_mcmc(pars,
-           design=attr(pmwg_mcmc,"design_list")[[1]],
-           model=attr(pmwg_mcmc,"model_list")[[1]])[1,]                    
+         if (mapped & !is.null(pars)) {
+           pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
+                            model=attr(pmwg_mcmc,"model_list")[[1]])[1,] 
+          # if (!is.null(attr(psamples,"isConstant"))) psamples <- 
+          #   psamples[,!attr(psamples,"isConstant"),drop=FALSE]
+         }
     }
   } else plot_prior <- FALSE
   if (attr(pmwg_mcmc,"selection")=="LL")
@@ -254,11 +261,11 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
 }
 
 
-plotAlphaRecovery <- function(tabs,layout=c(2,3),
+plot_alpha_recovery <- function(tabs,layout=c(2,3),
                          do_ci = TRUE,ci_col="grey",cap=.05,
                          do_rmse=TRUE,rmse_pos="topleft",rmse_digits=3,
                          do_coverage=TRUE,coverage_pos="bottomright",coverage_digits=1) 
-  # Takes tables output by plotDensity with par and plots recovery  
+  # Takes tables output by plot_density with par and plots recovery  
 {
   par(mfrow=layout)
   pnams <- dimnames(tabs[[1]])[[2]]
@@ -291,7 +298,9 @@ plotAlphaRecovery <- function(tabs,layout=c(2,3),
 }
 
 
-profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="") {
+profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="") 
+  
+{
   x <- seq(p_min,p_max,length.out=n_point)  
   ll <- numeric(n_point)
   pi <- p
@@ -363,7 +372,9 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
     invisible(tapply(correct_fun(dat),dat$subjects,mean))
 }
 
-plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL) {
+plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL) 
+  
+{
   tab <- table(data$R,data$S)
   ctab <- 1-apply(t(tab)/apply(tab,2,sum),1,cumsum)[-dim(tab)[1],] # p(Signal)
   if (!zROC) {

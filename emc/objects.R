@@ -107,7 +107,7 @@ get_sigma <- function(samps,filter="samples",thin=thin,subfilter=NULL)
 
 
 
-### pmwg object list functions ----
+#### pmwg object list functions ----
 
 chain_thin <- function(samplers,thin=5) 
   # thins a set of chains  
@@ -252,16 +252,18 @@ map_mcmc <- function(mcmc,design,model)
     ht <- apply(map$threshold[,grepl("lR",dimnames(map$threshold)[[2]]),drop=FALSE],1,sum)
     plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
   }
-  # Give mapped variables names and remove constant
+  # Give mapped variables names and flag constant
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
     uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
     dimnames(plist[[i]])[[2]] <- 
       paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
-    if (dim(plist[[i]])[1]>1)
-      plist[[i]] <- plist[[i]][,!apply(plist[[i]],2,function(x){all(x[1]==x[-1])}),drop=FALSE] 
+    if (dim(plist[[i]])[1]==1) isConstant <- NULL else
+      isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
   }
-  as.mcmc(do.call(cbind,lapply(plist,model$Mtransform)))
+  out <- as.mcmc(do.call(cbind,lapply(plist,model$Mtransform)))
+  attr(out,"isConstant") <- isConstant
+  out
 }
 
 
