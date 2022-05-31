@@ -107,10 +107,11 @@ iat_pmwg(samples,filter="sample",selection=selection,summary_alpha=max)
 round(es_pmwg(samples,filter="sample",selection=selection,summary_alpha=min))
 tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection)
 
-# Fit
-ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
-save(ppWordFace,file="ppWordFace.RData")
-
+#### Fit
+# ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
+# save(ppWordFace,file="ppWordFace.RData")
+load("ppWordFace.RData"
+     )
 # For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
 # whose first level is noise and second level is signal in order to construct an 
 # ROC. Where there this 2 level structure does not apply (e.g., different types 
@@ -125,15 +126,14 @@ plot_fit(wordfaceROC,ppWordFace,factors=c("FW","S"),zROC=TRUE,qfun=qnorm,lim=c(-
 par(mfrow=c(2,4))
 plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
 
-tab_mu <- plotDensity(samples,filter="sample",do_plot=FALSE,selection="mu")
-mp <- mapped_par(tab_mu[2,],designFW)
-mpl <- mapped_par(tab_mu[1,],designFW)
-mph <- mapped_par(tab_mu[3,],designFW)
 
-cbind(mpl[c(1,7,13,19),c("S","FW")],'2.5%'=mpl[c(1,7,13,19),"mean"],'50%'=mp[c(1,7,13,19),"mean"],'97.5%'=mph[c(1,7,13,19),"mean"])
-cbind(mpl[c(1,7,13,19),c("S","FW")],'2.5%'=mpl[c(1,7,13,19),"sd"],'50%'=mp[c(1,7,13,19),"sd"],'97.5%'=mph[c(1,7,13,19),"sd"])
-cbind(mpl[1:10,c("S","FW")],'2.5%'=mpl[1:10,"threshold"],'50%'=mp[1:10,"threshold"],'97.5%'=mph[1:10,"threshold"])
+### Look at mapped parameter estimates
 
+tab_mu <- plotDensity(samples,filter="sample",selection="mu",mapped=TRUE,layout=c(2,7))
+round(tab_mu[,],2)
+tab_alpha <- plotDensity(samples,filter="sample",selection="alpha",mapped=TRUE,layout=c(2,7))
+
+p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu",mapped=FALSE)
 
 
 #### Parameter recovery study ----
