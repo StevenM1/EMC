@@ -13,8 +13,10 @@ prior_samples <- function(samps,type=c("mu","variance","covariance","correlation
   # or for single at subject level (in which case type="mu")
 {
   if (type=="mu") {
-    return(rmvnorm(n, mean = samps$prior$theta_mu_mean,
-                      sigma = samps$prior$theta_mu_var)) 
+    out <- rmvnorm(n, mean = samps$prior$theta_mu_mean,
+                      sigma = samps$prior$theta_mu_var)
+    dimnames(out)[[2]] <- samps$par_names
+    return(out) 
    } else {
     var <- array(NA_real_, dim = c(samps$n_pars, samps$n_pars, n),
                  dimnames = list(samps$par_names, samps$par_names, NULL))
