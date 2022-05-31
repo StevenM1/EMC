@@ -80,7 +80,8 @@ plotACFs <- function(samples,layout=NULL,subject=1,
 # layout=c(2,4)
 # selection="mu";filter="sample";thin=1;subfilter=NULL
 # xlim=NULL; ylim=NULL
-# pmwg_mcmc=sPNAS_a;layout=c(2,6);selection="correlation";filter="sample";plot_prior=TRUE
+# plot_prior=TRUE; n_prior=1e3; mapped=FALSE
+# mapped=TRUE
 plotDensity <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
@@ -115,8 +116,12 @@ plotDensity <- function(pmwg_mcmc,layout=c(2,3),
   if (show_chains & plot_prior) 
     warning("Prior plots not implemented for show_chains=TRUE")
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
-    if (plot_prior) psamples <- 
+    if (plot_prior) {
+      psamples <- 
         get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
+      if (mapped) psamples <- map_mcmc(psamples,
+        attr(pmwg_mcmc,"design_list")[[1]],attr(pmwg_mcmc,"model_list")[[1]])
+    }
     if (is.null(psamples)) plot_prior <- FALSE
     if (class(pmwg_mcmc)=="pmwgs")
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
