@@ -85,20 +85,20 @@ samplers <- make_samplers(wordfaceROC,designFW,type="standard")
 
 print(load("probitFW.RData")) 
 # All converged 
-plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
-plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
-plotChains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
-plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="alpha") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="alpha") 
 check_adapt(samples)
 # Chain 1 adapted by iteration 292
 # Chain 2 adapted by iteration 299
 # Chain 3 adapted by iteration 301
 
 # Converged, some correlations and alphas look quite autocorrelated
-plotChains(samples,filter="sample",layout=c(3,5),selection="mu",thin=10) 
-plotChains(samples,filter="sample",layout=c(3,5),selection="variance",thin=10) 
-plotChains(samples,filter="sample",layout=c(4,4),selection="correlation",thin=10) 
-plotChains(samples,filter="sample",layout=c(3,5),selection="alpha",thin=10) 
+plot_chains(samples,filter="sample",layout=c(3,5),selection="mu",thin=10) 
+plot_chains(samples,filter="sample",layout=c(3,5),selection="variance",thin=10) 
+plot_chains(samples,filter="sample",layout=c(4,4),selection="correlation",thin=10) 
+plot_chains(samples,filter="sample",layout=c(3,5),selection="alpha",thin=10) 
 
 selection="mu"; selection="variance"; selection="alpha"; layout=c(3,5)
 selection="correlation"; layout=c(4,7)
