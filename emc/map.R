@@ -1,5 +1,20 @@
 # Parameter transformation and mapping
 
+p_names <- function(samples) 
+  # parameter names of a pmwg object or list of pmwg objects  
+{
+  if (mapped) {
+    design <- attr(samples,"design_list")[[1]]
+    p_vector <- attr(design,"p_vector")
+    mapped_par(p_vector,design)
+    map <- attr(p_vector,"map") 
+    
+  } else if (class(samples)=="pmwg")
+    dimnames(samples$samples$alpha)[[1]] else
+    dimnames(samples[[1]]$samples$alpha)[[1]]
+} 
+
+
 add_constants <- function(p,constants) 
   # augments parameter matrix or vector p with constant parameters (also used in data)
 {
@@ -22,6 +37,34 @@ get_pars <- function(p_vector,dadm)
 add_constants_mcmc <- function(p,constants) 
   mcmc(add_constants(p,constants))
 
+mapped_name_list <- function(design,model)
+  # makes a list, with entries for each parameter type, of names for mapped
+  # parameters
+{
+  doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
+
+  constants <- design$constants
+  p_vector <- attr(design,"p_vector")
+  mp <- mapped_par(mcmc[1,],design)
+  map <- attr(sampled_p_vector(design),"map")
+  pmat <- model$transform(add_constants(t(as.matrix(p_vector)),constants))
+  plist <- lapply(map,doMap,pmat=pmat)
+  if (model$type=="SDT") {
+    ht <- apply(map$threshold[,grepl("lR",dimnames(map$threshold)[[2]]),drop=FALSE],1,sum)
+    plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
+  }
+  # Give mapped variables names and flag constant
+  for (i in 1:length(plist)) {
+    vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
+    uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
+    dimnames(plist[[i]])[[2]] <- 
+      paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
+    if (dim(plist[[i]])[1]==1) isConstant <- NULL else
+      isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
+  }
+  lapply(plist,function(x){dimnames(x)[[2]]}) 
+}
+
 
 map_mcmc <- function(mcmc,design,model) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
@@ -31,7 +74,7 @@ map_mcmc <- function(mcmc,design,model)
 
   if (!is.matrix(mcmc)) mcmc <- t(as.matrix(mcmc))
   map <- attr(sampled_p_vector(design),"map")
-  constants <- attributes(samplers)$design_list[[1]]$constants
+  constants <- design$constants
   mp <- mapped_par(mcmc[1,],design)
   pmat <- model$transform(add_constants(mcmc,constants))
   plist <- lapply(map,doMap,pmat=pmat)
