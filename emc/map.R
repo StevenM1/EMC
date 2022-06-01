@@ -24,9 +24,9 @@ add_constants_mcmc <- function(p,constants)
   mcmc(add_constants(p,constants))
 
 
-mapped_name_list <- function(design,model)
+mapped_name_list <- function(design,model,save_design=FALSE)
   # makes a list, with entries for each parameter type, of names for mapped
-  # parameters
+  # parameters or with unique design columns
 {
   doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
 
@@ -44,12 +44,14 @@ mapped_name_list <- function(design,model)
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
     uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
-    dimnames(plist[[i]])[[2]] <- 
-      paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
-    if (dim(plist[[i]])[1]==1) isConstant <- NULL else
-      isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
+    if (save_design) plist[[i]] <- mp[uniq,vars[-1]] else {
+      dimnames(plist[[i]])[[2]] <- 
+        paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
+      if (dim(plist[[i]])[1]==1) isConstant <- NULL else
+        isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
+    }
   }
-  lapply(plist,function(x){dimnames(x)[[2]]}) 
+  if (save_design) plist else lapply(plist,function(x){dimnames(x)[[2]]}) 
 }
 
 
@@ -84,7 +86,8 @@ map_mcmc <- function(mcmc,design,model)
 }
 
 
-mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE) 
+mapped_par <- function(p_vector,design,model=NULL,
+                       digits=3,remove_subjects=TRUE) 
   # Show augmented data and corresponding mapped parameter  
 {
   if (is.null(model)) if (is.null(design$model)) 
@@ -99,14 +102,33 @@ mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE)
   out
 }
 
+mapped_designs <- function(samples,remove_subjects=TRUE) 
+  # Show augmented data and corresponding mapped parameter  
+{
+  design <- attr(samples,"design_list")[[1]]
+  p_vector <- attr(design,"p_vector")
+  model <- attr(samples,"model_list")[[1]]
+  if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
+  dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
+                       rt_check=FALSE,compress=FALSE)
+  ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
+  out <- dadm[,ok]
+  if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
+  out
+}
 
-p_names <- function(samples,mapped=FALSE) 
+
+get_map <- function(samples) {
+  attr(attr(attr(samples,"design_list")[[1]],"p_vector"),"map")
+}
+
+p_names <- function(samples,mapped=FALSE,design=FALSE) 
   # parameter names of a pmwg object or list of pmwg objects or if mapped=TRUE
   # gets a list of names for mapped parameters of each type
 {
   
   sp <- mp <- mapped_name_list(attr(samples,"design_list")[[1]],
-                     attr(samples,"model_list")[[1]])
+                     attr(samples,"model_list")[[1]],design)
   if (mapped) return(mp)
   if (class(samples)=="pmwg")
     tmp <- dimnames(samples$samples$alpha)[[1]] else
