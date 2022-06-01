@@ -1,19 +1,5 @@
 # Parameter transformation and mapping
 
-p_names <- function(samples) 
-  # parameter names of a pmwg object or list of pmwg objects  
-{
-  if (mapped) {
-    design <- attr(samples,"design_list")[[1]]
-    p_vector <- attr(design,"p_vector")
-    mapped_par(p_vector,design)
-    map <- attr(p_vector,"map") 
-    
-  } else if (class(samples)=="pmwg")
-    dimnames(samples$samples$alpha)[[1]] else
-    dimnames(samples[[1]]$samples$alpha)[[1]]
-} 
-
 
 add_constants <- function(p,constants) 
   # augments parameter matrix or vector p with constant parameters (also used in data)
@@ -36,6 +22,7 @@ get_pars <- function(p_vector,dadm)
 
 add_constants_mcmc <- function(p,constants) 
   mcmc(add_constants(p,constants))
+
 
 mapped_name_list <- function(design,model)
   # makes a list, with entries for each parameter type, of names for mapped
@@ -111,6 +98,19 @@ mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE)
   if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
   out
 }
+
+
+p_names <- function(samples,mapped=FALSE) 
+  # parameter names of a pmwg object or list of pmwg objects or if mapped=TRUE
+  # gets a list of names for mapped parameters of each type
+{
+  if (mapped) {
+    mapped_name_list(attr(samples,"design_list")[[1]],
+                     attr(samples,"model_list")[[1]])
+  } else if (class(samples)=="pmwg")
+    dimnames(samples$samples$alpha)[[1]] else
+    dimnames(samples[[1]]$samples$alpha)[[1]]
+} 
 
 
 

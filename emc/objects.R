@@ -135,14 +135,6 @@ chain_shorten <- function(samplers,n)
   samplers
 }
   
-p_names <- function(samplers) 
-  # parameter names of a pmwg object or list of pmwg objects  
-{
-  if (class(samplers)=="pmwg")
-    dimnames(samplers$samples$alpha)[[1]] else
-    dimnames(samplers[[1]]$samples$alpha)[[1]]
-} 
-
 get_sigma_chains <- function(samples,filter="samples",thin=thin,subfilter=NULL)
   # Get sigma matrix samples for chains and put in one array  
 {
