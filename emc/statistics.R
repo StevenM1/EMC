@@ -258,16 +258,16 @@ p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 }
 
 
-# y=NULL;p_name;mapped=TRUE;c_vector=NULL
-# x_name=NULL;y_name=NULL
-# mu=0;alternative = c("less", "greater")[1]
-# probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE
-# x_filter="sample";x_selection="alpha";x_subfilter=0
-# y_filter="sample";y_selection="alpha";y_subfilter=0
+# y=NULL;p_name;mapped=FALSE;c_vector=NULL;
+#                    x_name=NULL;y_name=NULL;
+#                    mu=0;alternative = c("less", "greater")[1];
+#                    probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
+#                    x_filter="sample";x_selection="alpha";x_subfilter=0;
+#                    y_filter="sample";y_selection="alpha";y_subfilter=0
 # 
-# x=samples;p_name="sd_FWwords:Sold";x_selection = "mu";mapped=FALSE
+# x=samples; p_name="mean_FWwords:Sold";x_selection = "mu"
 
-p_test <- function(x,y=NULL,p_name,mapped=TRUE,c_vector=NULL,
+p_test <- function(x,y=NULL,p_name,mapped=FALSE,c_vector=NULL,
                    x_name=NULL,y_name=NULL,
                    mu=0,alternative = c("less", "greater")[1],
                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
@@ -313,10 +313,13 @@ p_test <- function(x,y=NULL,p_name,mapped=TRUE,c_vector=NULL,
   if (!is.null(c_vector)) attr(c_vector,"design") <- design
   x_vector <- sampled_p_vector(design)
   x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,
-                    subfilter=x_subfilter,mapped=mapped)
+                    subfilter=x_subfilter,mapped=mapped,add_constants=TRUE)
   if (x_selection != "alpha") x_name <- NULL else
-    if (is.null(x_name)) x_name <- 1 else
+    if (is.null(x_name)) x_name <- names(x)[1] 
+  if (!is.null(x_name)) {
     if (!(x_name %in% names(x))) stop("Subject x_name not in x")
+    message("Testing x subject ",x_name)
+  }
   x <- get_effect(x,x_vector,x_name,p_name,c_vector)
   if (is.null(y)) {
     p <- mean(x<mu)
@@ -330,8 +333,11 @@ p_test <- function(x,y=NULL,p_name,mapped=TRUE,c_vector=NULL,
     y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,
                       subfilter=y_subfilter,mapped=mapped)
     if (y_selection != "alpha") y_name <- NULL else
-      if (is.null(y_name)) y_name <- 1 else
-        if (!(y_name %in% names(y))) stop("Subject y_name not in y")
+      if (is.null(y_name)) y_name <- names(y)[1]
+    if (!is.null(y_name)) {
+      if (!(y_name %in% names(y))) stop("Subject y_name not in y")
+      message("Testing y subject ",y_name)  
+    }
     y <- get_effect(y,y_vector,y_name,p_name)
     if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
     d <- x-y

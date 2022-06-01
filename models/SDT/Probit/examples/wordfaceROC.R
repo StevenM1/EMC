@@ -110,8 +110,7 @@ tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection)
 #### Fit
 # ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
 # save(ppWordFace,file="ppWordFace.RData")
-load("ppWordFace.RData"
-     )
+load("ppWordFace.RData")
 # For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
 # whose first level is noise and second level is signal in order to construct an 
 # ROC. Where there this 2 level structure does not apply (e.g., different types 
@@ -127,13 +126,64 @@ par(mfrow=c(2,4))
 plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
 
 
-### Look at mapped parameter estimates
+### Look at parameter estimates
 
-tab_mu <- plotDensity(samples,filter="sample",selection="mu",mapped=TRUE,layout=c(2,7))
-round(tab_mu[,],2)
+# Sampled parameters.
+
+# At hyper level moderately strong domination of prior
+tab_mu <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7))
+# Start by looking at mean and sd parameters
+round(tab_mu[,1:4],2)
+
+# To understand these, look at names and mapping print p_vector attribute 
+# saved with the design, and recall that mean for new faces and words (mean & 
+# mean_FWwords) are set to zero and corresponding sd (sd sd_FWwords) set to 1
+# so as sd is sampled on log scale sampled values are zero.
+p_vector <- attr(designFW,"p_vector")
+names(p_vector)
+
+# Because we did not specify contrasts R's default treatment code was used.
+# Hence, mean_Sold is the study effect for faces (0.69) and mean_FWwords:Sold is  
+# extra study effect for words relative to faces (1.05).
+attr(p_vector,"map")$mean
+# The same is true for sd (0.18 and 0.22 respectiely), but recall the effect is 
+# on the log scale.
+attr(p_vector,"map")$sd
+
+# Hence mean_FWwords:Sold > 0 :Sold tests if d'(words) > d'(faces). 
+# Similarly for sd_FWwords:Sold. We can see this is the case from tab_mu above, 
+# as the 95% CI is well away from zero, but we can also see the same thing by 
+# running a single sample test, which by default compares to mu=0.
+p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu")
+# Can also compare to another values, say 1 for the mean effect.
+p_test(samples,p_name="mean_FWwords:Sold",x_selection = "mu",mu=1)
+
+# We can also plot and test individual subjects. If the subject argument is 
+# omitted all subjects are plotted, whereas for the test the first subject is selected  
+plot_density(samples,filter="sample",selection="alpha",layout=c(2,7),subject="104")
+p_test(samples,p_name="sd_FWwords:Sold",x_selection = "alpha",x_name="104")
+
+# Turning to thresholds we get estimates for the first face and word threshold
+round(tab_mu[,5:6],2)
+
+# To test if they credibly differ:
+p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu")
+
+
+# We could also look at variances. Again focusing on 
+var_tab <- plot_density(samples,filter="sample",selection="variance",layout=c(2,7))
+round(var_tab[,1:4],2)
+# Sometimes interest focuses on the "mapped" parameters
+tab_mu_mapped <- plotDensity(samples,filter="sample",selection="mu",mapped=TRUE,layout=c(2,7))
+round(tab_mu_mapped[,1:4],2)
+
+
 tab_alpha <- plotDensity(samples,filter="sample",selection="alpha",mapped=TRUE,layout=c(2,7))
 
 p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu",mapped=FALSE)
+
+
+get_design(samples)
 
 
 #### Parameter recovery study ----
