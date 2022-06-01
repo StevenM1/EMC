@@ -104,12 +104,16 @@ p_names <- function(samples,mapped=FALSE)
   # parameter names of a pmwg object or list of pmwg objects or if mapped=TRUE
   # gets a list of names for mapped parameters of each type
 {
-  if (mapped) {
-    mapped_name_list(attr(samples,"design_list")[[1]],
+  
+  sp <- mp <- mapped_name_list(attr(samples,"design_list")[[1]],
                      attr(samples,"model_list")[[1]])
-  } else if (class(samples)=="pmwg")
-    dimnames(samples$samples$alpha)[[1]] else
-    dimnames(samples[[1]]$samples$alpha)[[1]]
+  if (mapped) return(mp)
+  if (class(samples)=="pmwg")
+    tmp <- dimnames(samples$samples$alpha)[[1]] else
+    tmp <- dimnames(samples[[1]]$samples$alpha)[[1]]
+  type <- unlist(lapply(strsplit(tmp,"_"),function(x){x[[1]]}))
+  for (i in names(sp)) sp[[i]] <- tmp[type==i]
+  sp
 } 
 
 
