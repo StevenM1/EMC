@@ -76,12 +76,8 @@ remove_iterations <- function(pmwg,select,remove=TRUE,last_select=FALSE,filter=N
     stop("select specifies iterations not present")
   ok <- 1:pmwg$samples$idx %in% select
   if (remove) ok <- !ok
-  pmwg$samples$alpha <- pmwg$samples$alpha[,,ok,drop=FALSE]
-  pmwg$samples$theta_mu <- pmwg$samples$theta_mu[,ok,drop=FALSE]
-  pmwg$samples$theta_var <- pmwg$samples$theta_var[,,ok,drop=FALSE]
-  pmwg$samples$subj_ll <- pmwg$samples$subj_ll[,ok,drop=FALSE]
-  pmwg$samples$a_half <- pmwg$samples$a_half[,ok,drop=FALSE]
-  pmwg$samples$origin <- pmwg$samples$origin[,ok,drop=FALSE] 
+  filter_idx <- which(ok)
+  pmwg$samples <- base::rapply(pmwg$samples, f = function(x) filter_obj(x, filter_idx), how = "replace")
   pmwg$samples$stage <- pmwg$samples$stage[ok]
   pmwg$samples$idx <- sum(ok)
   pmwg
