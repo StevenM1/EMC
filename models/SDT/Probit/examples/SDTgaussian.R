@@ -94,7 +94,7 @@ save(samplers,file="probitIndividual.RData")
 # runSingleProbit.R to get 1000 samples
 print(load("probitIndividual.RData"))
 
-plotChains(samples,subfilter=400) # Thoroughly converged by 400
+plot_chains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
 plotACFs(samples,subfilter=400,layout=c(2,4))
 iat_pmwg(samples,subfilter=400) # ~ 50% yield 
@@ -102,7 +102,7 @@ iat_pmwg(samples,subfilter=400) # ~ 50% yield
 # 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
 
 # Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
+tabs <- plot_density(samples,subfilter=400,layout=c(2,4),pars=p_vector)
 #       mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
 # true    1.000 0.223    -0.500        -0.693        -0.693        -0.693        -0.693
 # 2.5%    1.002 0.216    -0.502        -0.714        -0.697        -0.712        -0.701
@@ -151,7 +151,7 @@ gd_pmwg(samples,subfilter=400)  # 1.01
 plotACFs(samples,subfilter=400,layout=c(2,4))
 iat_pmwg(samples,subfilter=400) # ~ 50% yield 
 # Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
+tabs <- plot_density(samples,subfilter=400,layout=c(2,5),pars=p_vector)
 
 
 ##### 3 level confidence, factor A shifts threshold up ----
@@ -190,7 +190,7 @@ save(samplers,file="probitIndividualA.RData")
 # runSingleProbitA.R to get 1000 samples
 print(load("probitIndividualA.RData"))
 
-plotChains(samples,subfilter=400) # Thoroughly converged by 400
+plot_chains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
 plotACFs(samples,subfilter=400,layout=c(2,4))
 iat_pmwg(samples,subfilter=400) # ~ 50% yield 
@@ -198,7 +198,7 @@ iat_pmwg(samples,subfilter=400) # ~ 50% yield
 # 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
 
 # Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
+tabs <- plot_density(samples,subfilter=400,layout=c(2,4),pars=p_vector)
 
 
 # NB: The real data example shows how to set arbitrarily different (but still 

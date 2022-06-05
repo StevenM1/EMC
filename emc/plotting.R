@@ -66,9 +66,9 @@ plotACFs <- function(samples,layout=NULL,subject=1,
   }
   for (i in 1:length(samples)) {
     if (selection=="alpha") {
-      plotChains(samples[[i]],selection=selection,filter=filter,subfilter=subfilter,
+      plot_chains(samples[[i]],selection=selection,filter=filter,subfilter=subfilter,
         layout=layout,plot_acf=TRUE,acf_chain=i,verbose=FALSE,subject=subject)
-    } else plotChains(samples[[i]],selection=selection,filter=filter,subfilter=subfilter,
+    } else plot_chains(samples[[i]],selection=selection,filter=filter,subfilter=subfilter,
         layout=layout,plot_acf=TRUE,acf_chain=i,verbose=FALSE)
   }
 }

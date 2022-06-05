@@ -1,6 +1,9 @@
 rm(list=ls())
 source("emc/emc.R")
 source("models/SDT/Probit/SDTgaussian.R")
+# This matchfun useful for SDT models, assumes binary noise/signal factor and 
+# an even number of confidence ratings
+matchfun <- function(d) as.numeric(d$S) == (as.numeric(d$lR)>length(levels(d$lR))/2)
 
 print(load("Data/wordfaceROC.RData"))
 # remove RT for ROC fitting
@@ -17,7 +20,7 @@ wordfaceROC1$subjects <- factor(as.character(wordfaceROC1$subjects))
 # thresholds across combinations of factors, say A and B, use (A*B)/lR etc.
 designFW1 <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
   Ffactors=list(subjects=104,S=c("new","old"),FW=c("faces","words")),Rlevels=1:6, 
-  matchfun=function(d) as.numeric(d$S) == (1+as.numeric(d$lR)>3),
+  matchfun=matchfun,
   constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWwords=0),model=probit)
 
 p_vector <- sampled_p_vector(designFW1)
@@ -55,27 +58,27 @@ samplers <- make_samplers(wordfaceROC1,designFW1,type="single")
 
 # Look at simulation, clearly not close at 1000, added another 2000
 print(load("probitFWsim.RData"))
-plotChains(samples,subfilter=200,layout=c(4,4))  # Fully converged
+plot_chains(samples,subfilter=200,layout=c(4,4))  # Fully converged
 gd_pmwg(samples,subfilter=200)
 plotACFs(samples,subfilter=200,layout=c(4,4)) # Quite autocorrelated
 iat_pmwg(samples,subfilter=200) 
 # Excellent recovery
-tabs <- plotDensity(samples,subfilter=200,layout=c(4,4),pars=p_vector)
+tabs <- plot_density(samples,subfilter=200,layout=c(4,4),pars=p_vector)
 
 # Look at data, quick convergence 
 print(load("probitFW1.RData")) 
-plotChains(samples,subfilter=100,layout=c(4,4)) # very fast convergence
+plot_chains(samples,subfilter=100,layout=c(4,4)) # very fast convergence
 gd_pmwg(samples,subfilter=100) # 1.01
 plotACFs(samples,subfilter=100,layout=c(4,4)) # Quite autocorrelated
 iat_pmwg(samples,subfilter=100) 
-tabs <- plotDensity(samples,subfilter=100,layout=c(4,4)) # prior domination ok
+tabs <- plot_density(samples,subfilter=100,layout=c(4,4)) # prior domination ok
 
 #### Fit full data set ----
 
 designFW <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
   Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),
                 FW=levels(wordfaceROC$FW)),Rlevels=1:6, 
-  matchfun=function(d) as.numeric(d$S) == (as.numeric(d$lR)>3),
+  matchfun=matchfun,
   constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWwords=0),model=probit)
 
 samplers <- make_samplers(wordfaceROC,designFW,type="standard")
@@ -105,7 +108,7 @@ selection="correlation"; layout=c(4,7)
 gd_pmwg(samples,filter="sample",selection=selection)
 iat_pmwg(samples,filter="sample",selection=selection,summary_alpha=max) 
 round(es_pmwg(samples,filter="sample",selection=selection,summary_alpha=min))
-tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection)
+tabs <- plot_density(samples,filter="sample",layout=layout,selection=selection)
 
 #### Fit
 # ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
@@ -128,22 +131,42 @@ plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
 
 ### Look at parameter estimates
 
-# Sampled parameters.
+# We can look at parameters in two ways, 1) in terms of the parameters that were
+# actually sampled (and hence always transformed to have no bounds) with names
+# organized by type (for the probit model the types are "mean", "sd" and 
+# "threshold") that are shown by this function:
+sp_names <- p_names(samples); sp_names
 
-# At hyper level moderately strong domination of prior
+# 2) in terms of the parameters that are mapped to the model parameterization,
+# which may be bounded, and which correspond to the combinations of factors that
+# specified in the formula for the parameter type they correspond to:
+mp_names <- p_names(samples,mapped=TRUE); mp_names
+
+# Note that in this form some of the parameters can be constants. The derivation
+# of their names can be seen by looking at the design, being the unique cells
+# for the factors in the formula for each type
+mp_design <- p_names(samples,mapped=TRUE,design=TRUE); mp_design
+
+# Lets look at sampled parameters first
+
+# At hyper level the posterior (black lines) shows moderately strong domination 
+# of the prior (red lines).
 tab_mu <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7))
-# Start by looking at mean and sd parameters
-round(tab_mu[,1:4],2)
 
-# To understand these, look at names and mapping print p_vector attribute 
-# saved with the design, and recall that mean for new faces and words (mean & 
+# Start by looking at mean and sd parameters
+round(tab_mu[,sp_names$mean],2)
+round(tab_mu[,sp_names$sd],2)
+
+# To understand these, recall that mean for new faces and words (mean & 
 # mean_FWwords) are set to zero and corresponding sd (sd sd_FWwords) set to 1
-# so as sd is sampled on log scale sampled values are zero.
-p_vector <- attr(designFW,"p_vector")
-names(p_vector)
+# (so as sd is sampled on log scale sampled values are set to zero).
 
 # Because we did not specify contrasts R's default treatment code was used.
-# Hence, mean_Sold is the study effect for faces (0.69) and mean_FWwords:Sold is  
+# We can get a list of the contrasts for each parameter type and look at the
+# mean and sd design matrices (which are the same as they share formulas).
+maps <- get_map(samples); maps$mean; maps$sd 
+
+# Reading across row 3 (down column Hence, mean_Sold is the study effect for faces (0.69) and mean_FWwords:Sold is  
 # extra study effect for words relative to faces (1.05).
 attr(p_vector,"map")$mean
 # The same is true for sd (0.18 and 0.22 respectiely), but recall the effect is 
@@ -162,6 +185,8 @@ p_test(samples,p_name="mean_FWwords:Sold",x_selection = "mu",mu=1)
 # omitted all subjects are plotted, whereas for the test the first subject is selected  
 plot_density(samples,filter="sample",selection="alpha",layout=c(2,7),subject="104")
 p_test(samples,p_name="sd_FWwords:Sold",x_selection = "alpha",x_name="104")
+
+
 
 # Turning to thresholds we get estimates for the first face and word threshold
 round(tab_mu[,5:6],2)

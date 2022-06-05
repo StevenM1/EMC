@@ -259,6 +259,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=FALSE,
 # burn=TRUE;ndiscard=0;nstart=100;max_iter=2000; cores_per_chain=19;cores_for_chains=3
 # cores_per_chain=1;cores_for_chains=1
 
+
 auto_burn <- function(samplers,
     burn=TRUE,ndiscard=200,nstart=300,nadapt=1000,
     discard_start=TRUE,start_particles=NA,

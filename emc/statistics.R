@@ -51,7 +51,7 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
 # pmwg_mcmc=sVat0;selection="mu";filter="sample"
 gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
     digits_print=2,sort_print=TRUE,autoburnin=FALSE,transform=TRUE,
-    selection="alpha",filter="burn",thin=1,subfilter=NULL,natural=FALSE) 
+    selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE) 
   # R hat, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
 {
@@ -64,15 +64,15 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
   
   if ( selection=="LL" ) stop("Rhat not appropriate for LL") 
   if (class(pmwg_mcmc[[1]]) %in% c("mcmc","mcmc.list")) {
-    if (natural) warning("Cannot transform to natural scale unless samples list provided")
+    if (mapped) warning("Cannot transform to natural scale unless samples list provided")
   } else {
     if (class(pmwg_mcmc)=="pmwgs") {
-      if (natural) warning("Cannot transform to natural scale unless samples list provided")
+      if (mapped) warning("Cannot transform to natural scale unless samples list provided")
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
                            thin=thin,subfilter=subfilter)   
     } else
       pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                thin=thin,subfilter=subfilter,natural=natural)
+                                thin=thin,subfilter=subfilter,mapped=mapped)
   } 
   if (selection=="alpha") {
     gd <- lapply(pmwg_mcmc,gelman_diag_robust,autoburnin = autoburnin, transform = transform) 
@@ -267,7 +267,7 @@ p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 # 
 # x=samples; p_name="mean_FWwords:Sold";x_selection = "mu"
 
-p_test <- function(x,y=NULL,p_name,mapped=FALSE,c_vector=NULL,
+p_test <- function(x,y=NULL,p_name,mapped=FALSE,lcontrasts=NULL,
                    x_name=NULL,y_name=NULL,
                    mu=0,alternative = c("less", "greater")[1],
                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
@@ -306,7 +306,7 @@ p_test <- function(x,y=NULL,p_name,mapped=FALSE,c_vector=NULL,
   }
 
 
-  if (mapped & !(selection %in% c("mu","alpha")))
+  if (mapped & !(x_selection %in% c("mu","alpha")))
     stop("Can only analyze mapped mu or alpha parameters")
   if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects") 
   design <- attr(x,"design_list")[[1]]
