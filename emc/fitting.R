@@ -249,16 +249,6 @@ auto_burn <- function(samplers,
     particles=NA,particle_factor=100, sample_particle_factor=100, p_accept=0.7,
     pdist_update_n=50,min_unique=200, mix=NULL,
     cores_per_chain=1,cores_for_chains=NULL)
-=======
-auto_burn <- function(samplers, ndiscard=200,nstart=300, discard_start=TRUE,
-                      start_particles=NA, start_particle_factor = 50, 
-                      epsilon = NULL, start_mu = NULL, start_var = NULL, 
-                      mix = NULL, single_mix= NULL, max_gd_trys=100,max_gd=1.1,
-                      verbose=TRUE,verbose_run_stage=FALSE, particle_update = 5,
-                      thorough=TRUE,natural=FALSE, min_iter=NULL,max_iter=NULL, 
-                      min_es = NULL, step_size = 50,
-                      p_accept=0.5, cores_per_chain=1,cores_for_chains=NULL)
->>>>>>> 67b905d4839cfa3ff5402f7d7fa81125c30a0781
   # Takes a pmwgs chains list, initializes it (see run_stages), if !burn adapts
   # and runs burn or sample until gd criterion satisfied (see run_gd for details)
 {
