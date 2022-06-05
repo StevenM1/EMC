@@ -72,6 +72,7 @@ new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL,
                           eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
                           likelihood_func = NULL, epsilon = NULL, subjects) 
 {
+  num_particles <- num_particles[s]
   eff_mu <- eff_mu[, s]
   eff_var <- eff_var[, , s]
   group_pars <- variant_funs$get_group_level(parameters, s)
@@ -117,8 +118,9 @@ new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL,
 run_stage <- function(pmwgs,
                       stage,
                       iter = 1000,
-                      particles = 1000,
+                      particles = 100,
                       verbose = TRUE,
+                      force_prev_epsilon = TRUE,
                       n_cores = 1,
                       n_unique = ifelse(stage == "adapt", 20, NA),
                       min_unique = ifelse(stage == "adapt", 200, NA),
@@ -126,8 +128,9 @@ run_stage <- function(pmwgs,
                       pstar = NULL,
                       mix = NULL,
                       pdist_update_n = ifelse(stage == "sample", 50, NA),
-                      epsilon_upper_bound = 2,
+                      epsilon_upper_bound = 15,
                       n_cores_conditional = 1,
+                      eff_mu = NULL, eff_var = NULL,
                       thin = NULL,
                       thin_eff_only = FALSE) {
   # Set defaults for NULL values
@@ -150,11 +153,14 @@ run_stage <- function(pmwgs,
   
   alphaStar=-qnorm(pstar/2) #Idk about this one
   n0=round(5/(pstar*(1-pstar))) #Also not questioning this math for now
-  if(is.null(epsilon)){
+  if(is.null(epsilon) | force_prev_epsilon){
     epsilon <- pmwgs$samples$epsilon[,ncol(pmwgs$samples$epsilon)]
   }
   if(length(epsilon) == 1){
     epsilon <- rep(epsilon, pmwgs$n_subjects)
+  }
+  if(length(particles == 1)){
+    particles <- rep(particles, pmwgs$n_subjects)
   }
   
   # Build new sample storage
@@ -164,9 +170,7 @@ run_stage <- function(pmwgs,
     pb <- accept_progress_bar(min = 0, max = iter)
   }
   start_iter <- pmwgs$samples$idx
-  
-  eff_mu <- NULL
-  eff_var <- NULL
+
   data <- pmwgs$data
   subjects <- pmwgs$subjects
   # Main iteration loop
@@ -176,13 +180,13 @@ run_stage <- function(pmwgs,
       update_progress_bar(pb, i, extra = accRate)
     }
     # Create/update efficient proposal distribution if we are in sampling phase.
-    if(stage == "sample" & (i %% pdist_update_n == 0 || i == 1)){
-      test_samples <- extract_samples(pmwgs, stage = c("adapt", "sample"), thin, i, thin_eff_only)
-      conditionals=mclapply(X = 1:pmwgs$n_subjects,FUN = variant_funs$get_conditionals,samples = test_samples, n_pars, mc.cores = n_cores_conditional)
-      conditionals <- array(unlist(conditionals), dim = c(pmwgs$n_pars, pmwgs$n_pars + 1, pmwgs$n_subjects))
-      eff_mu <- conditionals[,1,] #First column is the means
-      eff_var <- conditionals[,2:(n_pars+1),] #Other columns are the variances
-    }
+    # if(stage == "sample" & (i %% pdist_update_n == 0 || i == 1)){
+    #   test_samples <- extract_samples(pmwgs, stage = c("adapt", "sample"), thin, i, thin_eff_only)
+    #   conditionals=mclapply(X = 1:pmwgs$n_subjects,FUN = variant_funs$get_conditionals,samples = test_samples, n_pars, mc.cores = n_cores_conditional)
+    #   conditionals <- array(unlist(conditionals), dim = c(pmwgs$n_pars, pmwgs$n_pars + 1, pmwgs$n_subjects))
+    #   eff_mu <- conditionals[,1,] #First column is the means
+    #   eff_var <- conditionals[,2:(n_pars+1),] #Other columns are the variances
+    # }
     j <- start_iter + i
     # Gibbs step
     pars <- variant_funs$gibbs_step(pmwgs, pmwgs$samples$alpha[,,j-1])
@@ -203,28 +207,28 @@ run_stage <- function(pmwgs,
       }
     }
     # Test whether we can finish adaptation
-    if (stage == "adapt") {
-      res <- test_sampler_adapted(pmwgs, n_unique, i, n_cores_conditional, variant_funs$get_conditionals, verbose, thin, thin_eff_only)
-      if (res == "success") {
-        break
-      } else if (res == "increase") {
-        n_unique <- n_unique + .n_unique
-      }
-    }
+    # if (stage == "adapt") {
+    #   res <- test_sampler_adapted(pmwgs, n_unique, i, n_cores_conditional, variant_funs$get_conditionals, verbose, thin, thin_eff_only)
+    #   if (res == "success") {
+    #     break
+    #   } else if (res == "increase") {
+    #     n_unique <- n_unique + .n_unique
+    #   }
+    # }
   }
   if (verbose) close(pb)
-  if (stage == "adapt") {
-    if (i == iter) {
-      message(paste(
-        "Particle Metropolis within Gibbs Sampler did not",
-        "finish adaptation phase early (all", i, "iterations were",
-        "run).\nYou should examine your samples and perhaps start",
-        "a longer adaptation run."
-      ))
-    } else {
-      pmwgs <- trim_na(pmwgs)
-    }
-  }
+  # if (stage == "adapt") {
+  #   if (i == iter) {
+  #     message(paste(
+  #       "Particle Metropolis within Gibbs Sampler did not",
+  #       "finish adaptation phase early (all", i, "iterations were",
+  #       "run).\nYou should examine your samples and perhaps start",
+  #       "a longer adaptation run."
+  #     ))
+  #   } else {
+  #     pmwgs <- trim_na(pmwgs)
+  #   }
+  # }
   if(!is.null(thin) & !thin_eff_only){
     pmwgs <- thin_objects(pmwgs, thin, i)
   }
