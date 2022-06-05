@@ -216,8 +216,6 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
-<<<<<<< HEAD
-
 # burn=TRUE;ndiscard=200;nstart=300;nadapt=1000;
 #     discard_start=TRUE;start_particles=NA;
 #     start_mu = NULL; start_var = NULL;
