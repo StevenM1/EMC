@@ -256,3 +256,4 @@ tabs <- plotDensity(as_mcmc.list(samples,selection="alpha",filter="burn"),
 # Some shrinkage but not bad
 plotAlphaRecovery(tabs,layout=c(2,5))
 
+

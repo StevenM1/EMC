@@ -1,28 +1,5 @@
 #### chain statistics ----
 
-chain_n <- function(samplers) 
-  # Length of stages for each chain
-{
-  do.call(rbind,lapply(samplers, function(x){
-    table(factor(x$samples$stage,levels=c("burn","adapt","sample")))
-  }))
-}
-
-
-check_adapt <- function(samplers,verbose=TRUE) 
-  # Checks chains to see if adapted  
-{
-  ok <- TRUE
-  for (i in 1:length(samplers)) {
-    res <- attr(samplers[[i]],"adapted")
-    if (is.null(res) || is.character(res)) {
-      ok <- FALSE
-      if (verbose) message("Chain ",i," not adapted") 
-    } else if (verbose)
-      message("Chain ",i," adapted by iteration ", res)
-  }
-  ok
-}
 
 es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
                     filter="burn",thin=1,subfilter=NULL)
@@ -258,7 +235,7 @@ p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 }
 
 
-# y=NULL;p_name;mapped=FALSE;c_vector=NULL;
+# y=NULL;p_name;mapped=FALSE;fun=NULL; linear_contrasts=NULL
 #                    x_name=NULL;y_name=NULL;
 #                    mu=0;alternative = c("less", "greater")[1];
 #                    probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
@@ -266,8 +243,10 @@ p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 #                    y_filter="sample";y_selection="alpha";y_subfilter=0
 # 
 # x=samples; p_name="mean_FWwords:Sold";x_selection = "mu"
+# x_selection = "alpha"
 
-p_test <- function(x,y=NULL,p_name,mapped=FALSE,lcontrasts=NULL,
+p_test <- function(x,y=NULL,p_name=NULL,fun=NULL,
+                   mapped=FALSE,linear_contrasts=NULL,
                    x_name=NULL,y_name=NULL,
                    mu=0,alternative = c("less", "greater")[1],
                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
@@ -276,51 +255,41 @@ p_test <- function(x,y=NULL,p_name,mapped=FALSE,lcontrasts=NULL,
 
   
 
-  get_effect <- function(x,x_vector,x_name,p_name,c_vector=NULL) 
-    # Effect, must always be on mapped scale if c_vector supplied.
+  get_effect <- function(x,x_name,p_name=NULL,fun=NULL,lc_mat=NULL) 
+    # Effect, must always be on mapped scale if lc_mat supplied.
   {
-    if (is.null(x_name)) 
-      x <- do.call(rbind,x) else
-      x <- do.call(rbind,x[[x_name]])
-    p_root <- strsplit(p_name,"_")[[1]]
-    if (!is.null(c_vector)) { 
-      design <- attr(c_vector,"design")
-      model <- design$model
-      design$Ffactors$subjects <- design$Ffactors$subjects[1]
-      dadm <- design_model(make_data(x[1,],design,model,trials=1),design,model,
-                           rt_check=FALSE,compress=FALSE)
-      cvals <- apply(x,1,function(x){get_pars(x,dadm)[,p_root[1]]})
-      return((c_vector %*% cvals)[1,])  
-    }
-    if (length(p_root)==1) { # intercept 
-      return(x[,p_root]) 
-    } else p_root <- p_root[1]
-    cv <- attr(x_vector,"map")[[p_root]][,p_name] # Contrast vector
-    cpos <- cv>0
-    if (!any(cpos)) cpos <- x[,p_root,drop=FALSE] else
-      cpos <- x[,p_root,drop=FALSE] + sum(cv[cpos])*x[,p_name,drop=FALSE]
-    cneg <- cv<0
-    if (!any(cneg)) cneg  <- x[,p_root,drop=FALSE] else
-      cneg <- x[,p_root,drop=FALSE] + sum(cv[cneg])*x[,p_name,drop=FALSE]
-    cpos - cneg
+    x <- do.call(rbind,x)
+    if (!is.null(p_name)) return(x[,p_name])
+    if (!is.null(lc_mat)) {
+      
+    } else return(apply(x,1,fun))  
   }
 
 
+  if (!mapped & !is.null(linear_contrasts))
+    stop("Can only supply linear constrasts if mapped=TRUE")
   if (mapped & !(x_selection %in% c("mu","alpha")))
     stop("Can only analyze mapped mu or alpha parameters")
-  if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects") 
-  design <- attr(x,"design_list")[[1]]
-  if (!is.null(c_vector)) attr(c_vector,"design") <- design
-  x_vector <- sampled_p_vector(design)
+  
+  # Process x
+  if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects")
   x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,
                     subfilter=x_subfilter,mapped=mapped,add_constants=TRUE)
+  # Individual subject analysis
   if (x_selection != "alpha") x_name <- NULL else
     if (is.null(x_name)) x_name <- names(x)[1] 
   if (!is.null(x_name)) {
     if (!(x_name %in% names(x))) stop("Subject x_name not in x")
     message("Testing x subject ",x_name)
+    x <- x[[x_name]]
   }
-  x <- get_effect(x,x_vector,x_name,p_name,c_vector)
+  # Check test is valid
+  if (!is.null(p_name)) if (!(p_name %in% dimnames(x[[1]])[[2]]) ) 
+    stop("p_name not present in samples") else 
+    if (is.null(fun) & (mapped & is.null(linear_contrasts)))
+      stop("If no p_name must provide either a fun argument or linear_contrasts (if mapped=TRUE)")
+  # Get x effect
+  x <- get_effect(x,x_name,p_name,fun,linear_contrasts)
   if (is.null(y)) {
     p <- mean(x<mu)
     if (alternative=="greater") p <- 1-p
@@ -329,16 +298,17 @@ p_test <- function(x,y=NULL,p_name,mapped=FALSE,lcontrasts=NULL,
     dimnames(tab)[[2]] <- c(p_name,"mu")
   } else {
     if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects") 
-    y_vector <- sampled_p_vector(attr(y,"design_list")[[1]])
     y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,
                       subfilter=y_subfilter,mapped=mapped)
+    # Individual subject analysis
     if (y_selection != "alpha") y_name <- NULL else
       if (is.null(y_name)) y_name <- names(y)[1]
     if (!is.null(y_name)) {
       if (!(y_name %in% names(y))) stop("Subject y_name not in y")
       message("Testing y subject ",y_name)  
+      y <- y[[y_name]]
     }
-    y <- get_effect(y,y_vector,y_name,p_name)
+    y <- get_effect(y,y_name,p_name,fun,linear_contrasts)
     if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
     d <- x-y
     p <- mean(d<0)

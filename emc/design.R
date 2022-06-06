@@ -416,14 +416,3 @@ sampled_p_vector <- function(design,model=NULL)
   out
 }
 
-get_design <- function(samples) 
-  # prints out design from samples object  
-{
-  design <- attr(samples,"design_list")[[1]]
-  design$Ffactors$subjects <- design$Ffactors$subjects[1]
-  dadm <- design_model(make_data(sampled_p_vector(design,model),design,model,trials=1),design,model,
-                       rt_check=FALSE,compress=FALSE)
-  dadm[,!(names(dadm) %in% c("subjects","trials","R","rt","winner"))]
-}
-
-

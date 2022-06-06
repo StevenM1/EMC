@@ -100,41 +100,6 @@ mapped_par <- function(p_vector,design,model=NULL,
   out
 }
 
-mapped_designs <- function(samples,remove_subjects=TRUE) 
-  # Show augmented data and corresponding mapped parameter  
-{
-  design <- attr(samples,"design_list")[[1]]
-  p_vector <- attr(design,"p_vector")
-  model <- attr(samples,"model_list")[[1]]
-  if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
-  dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
-                       rt_check=FALSE,compress=FALSE)
-  ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
-  out <- dadm[,ok]
-  if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
-  out
-}
-
-
-get_map <- function(samples) {
-  attr(attr(attr(samples,"design_list")[[1]],"p_vector"),"map")
-}
-
-p_names <- function(samples,mapped=FALSE,design=FALSE) 
-  # parameter names of a pmwg object or list of pmwg objects or if mapped=TRUE
-  # gets a list of names for mapped parameters of each type
-{
-  
-  sp <- mp <- mapped_name_list(attr(samples,"design_list")[[1]],
-                     attr(samples,"model_list")[[1]],design)
-  if (mapped) return(mp)
-  if (class(samples)=="pmwg")
-    tmp <- dimnames(samples$samples$alpha)[[1]] else
-    tmp <- dimnames(samples[[1]]$samples$alpha)[[1]]
-  type <- unlist(lapply(strsplit(tmp,"_"),function(x){x[[1]]}))
-  for (i in names(sp)) sp[[i]] <- tmp[type==i]
-  sp
-} 
 
 
 
