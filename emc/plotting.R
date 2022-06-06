@@ -81,7 +81,8 @@ plotACFs <- function(samples,layout=NULL,subject=1,
 # selection="mu";filter="sample";thin=1;subfilter=NULL
 # xlim=NULL; ylim=NULL
 # plot_prior=TRUE; n_prior=1e3; mapped=FALSE
-# mapped=TRUE
+# 
+# pmwg_mcmc=samples; filter="sample";selection="mu";layout=c(2,7);mapped=TRUE
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
@@ -117,11 +118,10 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
     warning("Prior plots not implemented for show_chains=TRUE")
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (plot_prior) {
-      psamples <- 
-        get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
+      psamples <- get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
       if (mapped) {
-        psamples <- map_mcmc(psamples,
-          attr(pmwg_mcmc,"design_list")[[1]],attr(pmwg_mcmc,"model_list")[[1]])
+        psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
+                             model=attr(pmwg_mcmc,"model_list")[[1]])
         if (!is.null(attr(psamples,"isConstant"))) psamples <- 
             psamples[,!attr(psamples,"isConstant"),drop=FALSE]
       }
@@ -132,8 +132,8 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
                                   thin=thin,subfilter=subfilter,mapped=mapped)
-        if (!is.null(attr(pmwg_mcmc,"isConstant"))) pars <-
-            pmwg_mcmc[,!attr(pmwg_mcmc,"isConstant"),drop=FALSE]
+        if (!is.null(attr(pmwg_mcmc[[1]],"isConstant"))) for (i in 1:length(pmwg_mcmc)) 
+          pmwg_mcmc[[i]] <- pmwg_mcmc[[i]][,!attr(pmwg_mcmc[[i]],"isConstant"),drop=FALSE]
          if (mapped & !is.null(pars)) {
            pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
                             model=attr(pmwg_mcmc,"model_list")[[1]])[1,] 

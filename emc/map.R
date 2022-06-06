@@ -32,7 +32,7 @@ mapped_name_list <- function(design,model,save_design=FALSE)
 
   constants <- design$constants
   p_vector <- attr(design,"p_vector")
-  mp <- mapped_par(mcmc[1,],design)
+  mp <- mapped_par(p_vector,design)
   map <- attr(sampled_p_vector(design),"map")
   pmat <- model$transform(add_constants(t(as.matrix(p_vector)),constants))
   plist <- lapply(map,doMap,pmat=pmat)
@@ -40,16 +40,13 @@ mapped_name_list <- function(design,model,save_design=FALSE)
     ht <- apply(map$threshold[,grepl("lR",dimnames(map$threshold)[[2]]),drop=FALSE],1,sum)
     plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
   }
-  # Give mapped variables names and flag constant
+  # Give mapped variables names and remove constants
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
     uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
-    if (save_design) plist[[i]] <- mp[uniq,vars[-1]] else {
+    if (save_design) plist[[i]] <- mp[uniq,vars[-1]] else
       dimnames(plist[[i]])[[2]] <- 
         paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
-      if (dim(plist[[i]])[1]==1) isConstant <- NULL else
-        isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
-    }
   }
   if (save_design) plist else lapply(plist,function(x){dimnames(x)[[2]]}) 
 }
@@ -72,13 +69,14 @@ map_mcmc <- function(mcmc,design,model)
     plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
   }
   # Give mapped variables names and flag constant
+  isConstant <- NULL
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
     uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
     dimnames(plist[[i]])[[2]] <- 
       paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
-    if (dim(plist[[i]])[1]==1) isConstant <- NULL else
-      isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
+    if (dim(plist[[i]])[1]!=1) isConstant <- c(isConstant,
+      apply(plist[[i]],2,function(x){all(x[1]==x[-1])}))
   }
   out <- as.mcmc(do.call(cbind,lapply(plist,model$Mtransform)))
   attr(out,"isConstant") <- isConstant

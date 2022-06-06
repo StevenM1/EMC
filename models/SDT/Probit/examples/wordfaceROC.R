@@ -164,14 +164,28 @@ round(tab_mu[,sp_names$sd],2)
 # Because we did not specify contrasts R's default treatment code was used.
 # We can get a list of the contrasts for each parameter type and look at the
 # mean and sd design matrices (which are the same as they share formulas).
-maps <- get_map(samples); maps$mean; maps$sd 
-
-# Reading across row 3 (down column Hence, mean_Sold is the study effect for faces (0.69) and mean_FWwords:Sold is  
-# extra study effect for words relative to faces (1.05).
-attr(p_vector,"map")$mean
-# The same is true for sd (0.18 and 0.22 respectiely), but recall the effect is 
+maps <- get_map(samples)
+maps$mean 
+# Reading across row 3 (down column Hence, mean_Sold is the study effect for 
+# faces (0.69) and mean_FWwords:Sold is the extra study effect for words 
+# relative to faces (1.05).
+maps$sd
+# The same is true for sd (0.18 and 0.22 respectively), but recall the effect is 
 # on the log scale.
-attr(p_vector,"map")$sd
+
+
+tab_mu_mapped <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7),mapped=TRUE)
+
+# Need to remove cells set to constant in mp_names to look at estimates.
+
+# For means we can see that mean_words_old = mean_Sold + mean_FWwords:Sold
+round(tab_mu_mapped[,mp_names$mean[-c(1:2)]],2)
+
+# Similarly sd_words_old = exp(sd_Sold) and sd_words_old = exp(sd_Sold + sd_FWwords:Sold)
+round(tab_mu_mapped[,mp_names$sd[-c(1:2)]],2)
+
+
+#### Testing parameter estimates ----
 
 # Hence mean_FWwords:Sold > 0 :Sold tests if d'(words) > d'(faces). 
 # Similarly for sd_FWwords:Sold. We can see this is the case from tab_mu above, 
