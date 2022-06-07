@@ -84,7 +84,7 @@ remove_iterations <- function(pmwg,select,remove=TRUE,last_select=FALSE,filter=N
 }
 
 
-get_sigma <- function(samps,filter="samples",thin=thin,subfilter=NULL) 
+get_sigma <- function(samps,filter="samples",thin=1,subfilter=0) 
   # Get sigma matrix samples  
 {
   shorten <- function(x,r,d) {
@@ -131,7 +131,7 @@ chain_shorten <- function(samplers,n)
   samplers
 }
   
-get_sigma_chains <- function(samples,filter="samples",thin=thin,subfilter=NULL)
+get_sigma_chains <- function(samples,filter="samples",thin=1,subfilter=0)
   # Get sigma matrix samples for chains and put in one array  
 {
   sigma <- lapply(samples,get_sigma,filter=filter,thin=thin,subfilter=subfilter)
@@ -141,7 +141,7 @@ get_sigma_chains <- function(samples,filter="samples",thin=thin,subfilter=NULL)
 #### mcmc extraction ----
 
 as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-                    filter=stages,thin=1,subfilter=NULL)
+                    filter=stages,thin=1,subfilter=0)
   # replacement for pmwg package as_mccmc
   # allows for selection of subj_ll, and specifying selection as an integer
   # allows filter as single integer so can remove first filter samples
@@ -229,7 +229,7 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
 
 as_mcmc.list <- function(samplers,
   selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-  filter="burn",thin=1,subfilter=NULL,mapped=FALSE,include_constants=FALSE) 
+  filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
   # mapped = TRUE map mu or alpha to model parameters (constants indicated by
   # attribute isConstant)
