@@ -144,179 +144,178 @@ iat_pmwg <- function(pmwg_mcmc,
 # c_vector=c(0,1,-1,0,1,-1)/4
 # x=andrew;p_name="t0_CIc-i";x_selection="alpha";x_filter="burn";x_name="D"
   
-p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
-                   x_name=NULL,y_name=NULL,
-                   mu=0,alternative = c("less", "greater")[1],
-                   probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
-                   x_filter="burn",x_selection="alpha",x_subfilter=1,
-                   y_filter="burn",y_selection="alpha",y_subfilter=1) {
+# p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
+#                    x_name=NULL,y_name=NULL,
+#                    mu=0,alternative = c("less", "greater")[1],
+#                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
+#                    x_filter="burn",x_selection="alpha",x_subfilter=1,
+#                    y_filter="burn",y_selection="alpha",y_subfilter=1) {
+# 
+#   
+# 
+#   get_effect <- function(x,x_vector,x_name,p_name,Ntransform=NULL,c_vector=NULL) 
+#     # Effect, on natural scale if Ntransform supplied, and always on natural 
+#     # if c_vector supplied.
+#   {
+#     if (is.null(x_name)) 
+#       x <- do.call(rbind,x) else
+#       x <- do.call(rbind,x[[x_name]])
+#     p_root <- strsplit(p_name,"_")[[1]]
+#     if (!is.null(c_vector)) { 
+#       design <- attr(c_vector,"design")
+#       model <- design$model
+#       design$Ffactors$subjects <- design$Ffactors$subjects[1]
+#       dadm <- design_model(make_data(x[1,],design,model,trials=1),design,model,
+#                            rt_check=FALSE,compress=FALSE)
+#       cvals <- apply(x,1,function(x){get_pars(x,dadm)[,p_root[1]]})
+#       # if (!is.null(Ntransform)) {
+#       #   cvals <- t(cvals)
+#       #   dimnames(cvals)[[2]] <- rep(p_root[1],dim(cvals)[2])
+#       #   cvals <- t(Ntransform(cvals))
+#       # }
+#       return((c_vector %*% cvals)[1,])  
+#     }
+#     if (length(p_root)==1) { # intercept 
+#      if (!is.null(Ntransform)) {
+#       return(Ntransform(x[,p_root,drop=FALSE])[,1])    
+#      } else return(x[,p_root]) 
+#     } else p_root <- p_root[1]
+#     cv <- attr(x_vector,"map")[[p_root]][,p_name] # Contrast vector
+#     cpos <- cv>0
+#     if (!any(cpos)) cpos <- Ntransform(x[,p_root,drop=FALSE]) else
+#       cpos <- Ntransform(x[,p_root,drop=FALSE] + sum(cv[cpos])*x[,p_name,drop=FALSE])
+#     cneg <- cv<0
+#     if (!any(cneg)) cneg  <- Ntransform(x[,p_root,drop=FALSE]) else
+#       cneg <- Ntransform(x[,p_root,drop=FALSE] + sum(cv[cneg])*x[,p_name,drop=FALSE])
+#     cpos - cneg
+#   }
+# 
+# 
+#   if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects") 
+#   design <- attr(x,"design_list")[[1]]
+#   if (!is.null(c_vector)) attr(c_vector,"design") <- design
+#   x_vector <- sampled_p_vector(design)
+#   if (!natural) Ntransform <- NULL else 
+#     Ntransform <- attr(x,"design_list")[[1]]$model$Ntransform
+#   x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,subfilter=x_subfilter)
+#   if (x_selection != "alpha") x_name <- NULL else
+#     if (is.null(x_name)) x_name <- 1 else
+#     if (!(x_name %in% names(x))) stop("Subject x_name not in x")
+#   x <- get_effect(x,x_vector,x_name,p_name,Ntransform,c_vector)
+#   if (is.null(y)) {
+#     p <- mean(x<mu)
+#     if (alternative=="greater") p <- 1-p
+#     tab <- cbind(quantile(x,probs),c(NA,mu,NA))
+#     attr(tab,alternative) <- p
+#     dimnames(tab)[[2]] <- c(p_name,"mu")
+#   } else {
+#     if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects") 
+#     y_vector <- sampled_p_vector(attr(y,"design_list")[[1]])
+#     y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,subfilter=y_subfilter)
+#     if (y_selection != "alpha") y_name <- NULL else
+#       if (is.null(y_name)) y_name <- 1 else
+#         if (!(y_name %in% names(y))) stop("Subject y_name not in y")
+#     y <- get_effect(y,y_vector,y_name,p_name,Ntransform)
+#     if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
+#     d <- x-y
+#     p <- mean(d<0)
+#     if (alternative=="greater") p <- 1-p
+#     tab <- cbind(quantile(x,probs),quantile(y,probs),quantile(d,probs))
+#     attr(tab,alternative) <- p
+#     dimnames(tab)[[2]] <- c(paste(p_name,c(x_name,y_name),sep="_"),
+#                             paste(x_name,y_name,sep="-"))
+#   }
+#   if (print_table) {
+#     ptab <- tab
+#     ptab <- round(ptab,digits)
+#     attr(ptab,alternative) <- round(attr(ptab,alternative),p_digits)
+#     print(ptab)
+#   }
+#   invisible(tab)
+# }
 
-  
 
-  get_effect <- function(x,x_vector,x_name,p_name,Ntransform=NULL,c_vector=NULL) 
-    # Effect, on natural scale if Ntransform supplied, and always on natural 
-    # if c_vector supplied.
-  {
-    if (is.null(x_name)) 
-      x <- do.call(rbind,x) else
-      x <- do.call(rbind,x[[x_name]])
-    p_root <- strsplit(p_name,"_")[[1]]
-    if (!is.null(c_vector)) { 
-      design <- attr(c_vector,"design")
-      model <- design$model
-      design$Ffactors$subjects <- design$Ffactors$subjects[1]
-      dadm <- design_model(make_data(x[1,],design,model,trials=1),design,model,
-                           rt_check=FALSE,compress=FALSE)
-      cvals <- apply(x,1,function(x){get_pars(x,dadm)[,p_root[1]]})
-      # if (!is.null(Ntransform)) {
-      #   cvals <- t(cvals)
-      #   dimnames(cvals)[[2]] <- rep(p_root[1],dim(cvals)[2])
-      #   cvals <- t(Ntransform(cvals))
-      # }
-      return((c_vector %*% cvals)[1,])  
-    }
-    if (length(p_root)==1) { # intercept 
-     if (!is.null(Ntransform)) {
-      return(Ntransform(x[,p_root,drop=FALSE])[,1])    
-     } else return(x[,p_root]) 
-    } else p_root <- p_root[1]
-    cv <- attr(x_vector,"map")[[p_root]][,p_name] # Contrast vector
-    cpos <- cv>0
-    if (!any(cpos)) cpos <- Ntransform(x[,p_root,drop=FALSE]) else
-      cpos <- Ntransform(x[,p_root,drop=FALSE] + sum(cv[cpos])*x[,p_name,drop=FALSE])
-    cneg <- cv<0
-    if (!any(cneg)) cneg  <- Ntransform(x[,p_root,drop=FALSE]) else
-      cneg <- Ntransform(x[,p_root,drop=FALSE] + sum(cv[cneg])*x[,p_name,drop=FALSE])
-    cpos - cneg
-  }
-
-
-  if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects") 
-  design <- attr(x,"design_list")[[1]]
-  if (!is.null(c_vector)) attr(c_vector,"design") <- design
-  x_vector <- sampled_p_vector(design)
-  if (!natural) Ntransform <- NULL else 
-    Ntransform <- attr(x,"design_list")[[1]]$model$Ntransform
-  x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,subfilter=x_subfilter)
-  if (x_selection != "alpha") x_name <- NULL else
-    if (is.null(x_name)) x_name <- 1 else
-    if (!(x_name %in% names(x))) stop("Subject x_name not in x")
-  x <- get_effect(x,x_vector,x_name,p_name,Ntransform,c_vector)
-  if (is.null(y)) {
-    p <- mean(x<mu)
-    if (alternative=="greater") p <- 1-p
-    tab <- cbind(quantile(x,probs),c(NA,mu,NA))
-    attr(tab,alternative) <- p
-    dimnames(tab)[[2]] <- c(p_name,"mu")
-  } else {
-    if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects") 
-    y_vector <- sampled_p_vector(attr(y,"design_list")[[1]])
-    y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,subfilter=y_subfilter)
-    if (y_selection != "alpha") y_name <- NULL else
-      if (is.null(y_name)) y_name <- 1 else
-        if (!(y_name %in% names(y))) stop("Subject y_name not in y")
-    y <- get_effect(y,y_vector,y_name,p_name,Ntransform)
-    if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
-    d <- x-y
-    p <- mean(d<0)
-    if (alternative=="greater") p <- 1-p
-    tab <- cbind(quantile(x,probs),quantile(y,probs),quantile(d,probs))
-    attr(tab,alternative) <- p
-    dimnames(tab)[[2]] <- c(paste(p_name,c(x_name,y_name),sep="_"),
-                            paste(x_name,y_name,sep="-"))
-  }
-  if (print_table) {
-    ptab <- tab
-    ptab <- round(ptab,digits)
-    attr(ptab,alternative) <- round(attr(ptab,alternative),p_digits)
-    print(ptab)
-  }
-  invisible(tab)
-}
-
-
-# y=NULL;p_name;mapped=FALSE;fun=NULL; linear_contrasts=NULL
+# y=NULL;mapped=FALSE;x_fun=NULL; y_fun=NULL
 #                    x_name=NULL;y_name=NULL;
 #                    mu=0;alternative = c("less", "greater")[1];
 #                    probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
 #                    x_filter="sample";x_selection="alpha";x_subfilter=0;
 #                    y_filter="sample";y_selection="alpha";y_subfilter=0
 # 
-# x=samples; p_name="mean_FWwords:Sold";x_selection = "mu"
-# x_selection = "alpha"
+# x=samples; x_name="mean_FWwords:Sold";x_selection = "mu"
+# p_name=NULL; fun=function(x){sd=exp(x["sd_FWwords:Sold"])}
+# x_name="mean_FWwords:Sold";selection = "alpha"; x_subject=subject_names(samples)[1]
 
-p_test <- function(x,y=NULL,p_name=NULL,fun=NULL,
-                   mapped=FALSE,linear_contrasts=NULL,
-                   x_name=NULL,y_name=NULL,
+p_test <- function(x,x_name,x_fun=NULL,
+                   y=NULL,y_name=x_name,y_fun=NULL,
+                   mapped=FALSE,
+                   x_subject=NULL,y_subject=NULL,
                    mu=0,alternative = c("less", "greater")[1],
                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
-                   x_filter="sample",x_selection="alpha",x_subfilter=0,
-                   y_filter="sample",y_selection="alpha",y_subfilter=0) {
+                   filter="sample",selection="alpha",subfilter=0) {
 
   
 
-  get_effect <- function(x,x_name,p_name=NULL,fun=NULL,lc_mat=NULL) 
+  get_effect <- function(x,p_name=NULL,fun=NULL) 
     # Effect, must always be on mapped scale if lc_mat supplied.
   {
     x <- do.call(rbind,x)
-    if (!is.null(p_name)) return(x[,p_name])
-    if (!is.null(lc_mat)) {
-      
-    } else return(apply(x,1,fun))  
+    if (!is.null(fun)) return(apply(x,1,fun))
+    x[,p_name]
   }
 
 
-  if (!mapped & !is.null(linear_contrasts))
-    stop("Can only supply linear constrasts if mapped=TRUE")
   if (mapped & !(x_selection %in% c("mu","alpha")))
     stop("Can only analyze mapped mu or alpha parameters")
   
   # Process x
   if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects")
-  x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,
-                    subfilter=x_subfilter,mapped=mapped,add_constants=TRUE)
+  x <- as_mcmc.list(x,selection=selection,filter=filter,
+                    subfilter=subfilter,mapped=mapped)
   # Individual subject analysis
-  if (x_selection != "alpha") x_name <- NULL else
-    if (is.null(x_name)) x_name <- names(x)[1] 
-  if (!is.null(x_name)) {
-    if (!(x_name %in% names(x))) stop("Subject x_name not in x")
-    message("Testing x subject ",x_name)
-    x <- x[[x_name]]
+  if (selection != "alpha") x_subject <- NULL else
+    if (is.null(x_subject)) x_subject <- names(x)[1] 
+  if (!is.null(x_subject)) {
+    if (!(x_subject %in% names(x))) stop("Subject x_subject not in x")
+    message("Testing x subject ",x_subject)
+    x <- x[[x_subject]]
   }
   # Check test is valid
-  if (!is.null(p_name)) if (!(p_name %in% dimnames(x[[1]])[[2]]) ) 
-    stop("p_name not present in samples") else 
-    if (is.null(fun) & (mapped & is.null(linear_contrasts)))
-      stop("If no p_name must provide either a fun argument or linear_contrasts (if mapped=TRUE)")
+  if (is.null(x_fun) && !(x_name %in% dimnames(x[[1]])[[2]]) ) 
+    stop("x_name not present in samples") 
   # Get x effect
-  x <- get_effect(x,x_name,p_name,fun,linear_contrasts)
+  x <- get_effect(x,x_name,x_fun)
   if (is.null(y)) {
     p <- mean(x<mu)
     if (alternative=="greater") p <- 1-p
     tab <- cbind(quantile(x,probs),c(NA,mu,NA))
     attr(tab,alternative) <- p
-    dimnames(tab)[[2]] <- c(p_name,"mu")
+    dimnames(tab)[[2]] <- c(x_name,"mu")
   } else {
-    if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects") 
-    y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,
-                      subfilter=y_subfilter,mapped=mapped)
+    if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects")
+    y <- as_mcmc.list(y,selection=selection,filter=filter,
+                      subfilter=subfilter,mapped=mapped)
     # Individual subject analysis
-    if (y_selection != "alpha") y_name <- NULL else
-      if (is.null(y_name)) y_name <- names(y)[1]
-    if (!is.null(y_name)) {
-      if (!(y_name %in% names(y))) stop("Subject y_name not in y")
-      message("Testing y subject ",y_name)  
-      y <- y[[y_name]]
+    if (selection != "alpha") y_subject <- NULL else
+      if (is.null(y_subject)) y_subject <- names(y)[1]
+    if (!is.null(y_subject)) {
+      if (!(y_subject %in% names(y))) stop("Subject y_subject not in y")
+      message("Testing y subject ",y_subject)  
+      y <- y[[y_subject]]
     }
-    y <- get_effect(y,y_name,p_name,fun,linear_contrasts)
+    if (is.null(y_fun) && !(y_name %in% dimnames(y[[1]])[[2]]) ) 
+      stop("y_name not present in samples")
+    y <- get_effect(y,y_name,y_fun)
     if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
     d <- x-y
     p <- mean(d<0)
     if (alternative=="greater") p <- 1-p
     tab <- cbind(quantile(x,probs),quantile(y,probs),quantile(d,probs))
     attr(tab,alternative) <- p
-    dimnames(tab)[[2]] <- c(paste(p_name,c(x_name,y_name),sep="_"),
-                            paste(x_name,y_name,sep="-"))
+    if (x_name==y_name) 
+      dimnames(tab)[[2]] <- c(paste(x_name,c(x_subject,y_subject),sep="_"),
+                              paste(x_subject,y_subject,sep="-")) else
+      dimnames(tab)[[2]] <- c(x_name,y_name,paste(x_name,y_name,sep="-"))                          
   }
   if (print_table) {
     ptab <- tab
@@ -327,6 +326,16 @@ p_test <- function(x,y=NULL,p_name=NULL,fun=NULL,
   invisible(tab)
 }
 
+
+# ptype="mean"
+# selection="mu";Flist=NULL;Clist=NULL
+# p_tests <- function(samples,ptype,selection="mu",Flist=NULL,Clist=NULL) 
+#   # Performs multiple tests on mapped parameters  
+# {
+#   if (!(selection %in% c("mu","alpha"))
+#     stop("Can only analyze mapped mu or alpha parameters")
+#   
+# }
 
 # filter="burn";subfilter=0;use_best_fit=FALSE;print_summary=FALSE;digits=0
 # filter="sample"
