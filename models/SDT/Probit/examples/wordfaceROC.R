@@ -57,7 +57,7 @@ samplers <- make_samplers(wordfaceROC1,designFW1,type="single")
 # runSingleProbitFW1.R to get 1000 samples
 
 # Look at simulation, clearly not close at 1000, added another 2000
-print(load("probitFWsim.RData"))
+print(load("/models/SDT/Probit/examples/samples/probitFWsim.RData"))
 plot_chains(samples,subfilter=200,layout=c(4,4))  # Fully converged
 gd_pmwg(samples,subfilter=200)
 plotACFs(samples,subfilter=200,layout=c(4,4)) # Quite autocorrelated
@@ -66,7 +66,7 @@ iat_pmwg(samples,subfilter=200)
 tabs <- plot_density(samples,subfilter=200,layout=c(4,4),pars=p_vector)
 
 # Look at data, quick convergence 
-print(load("probitFW1.RData")) 
+print(load("/models/SDT/Probit/examples/samples/probitFW1.RData")) 
 plot_chains(samples,subfilter=100,layout=c(4,4)) # very fast convergence
 gd_pmwg(samples,subfilter=100) # 1.01
 plotACFs(samples,subfilter=100,layout=c(4,4)) # Quite autocorrelated
@@ -86,7 +86,7 @@ samplers <- make_samplers(wordfaceROC,designFW,type="standard")
 # runProbitFW.R to get 2000 burn in samples
 
 
-print(load("probitFW.RData")) 
+print(load("/models/SDT/Probit/examples/samples/probitFW.RData")) 
 # All converged 
 plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
 plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
@@ -113,7 +113,7 @@ tabs <- plot_density(samples,filter="sample",layout=layout,selection=selection)
 #### Fit
 # ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
 # save(ppWordFace,file="ppWordFace.RData")
-load("ppWordFace.RData")
+load("/models/SDT/Probit/examples/samples/ppWordFace.RData")
 # For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
 # whose first level is noise and second level is signal in order to construct an 
 # ROC. Where there this 2 level structure does not apply (e.g., different types 
@@ -213,6 +213,43 @@ tab_alpha_mapped <- plot_density(samples,filter="sample",selection="alpha",
 # As expected mean_words_old = .867 + .655
 round(tab_alpha_mapped[[subject_names(samples)[1]]][,mp_names$mean[-c(1:2)]],2)
 
+# It is common to think about sd in terms of ROC slope = 1/sd_old. Here we
+# extract slope and d' (mean_old) and plot it for words and faces with 
+# credible intervals. as_matrix stacks chains 
+pests <- lapply(as_mcmc.list(samples,selection="alpha",filter="sample",mapped=TRUE),as_matrix)
+
+dpFaces <- do.call(rbind,lapply(pests,function(x){
+  quantile(x[,"mean_faces_old"],probs=c(.025,.5,.975))
+}))
+
+dpWords <- do.call(rbind,lapply(pests,function(x){
+  quantile(x[,"mean_words_old"],probs=c(.025,.5,.975))
+}))
+
+sFaces <- do.call(rbind,lapply(pests,function(x){
+  quantile(1/x[,"sd_faces_old"],probs=c(.025,.5,.975))
+}))
+
+sWords <- do.call(rbind,lapply(pests,function(x){
+  quantile(1/x[,"sd_words_old"],probs=c(.025,.5,.975))
+}))
+
+plot(dpWords[,'50%'],sWords[,'50%'],xlab="d\'",ylab="zROC slope",xlim=c(0,5),ylim=c(0,1.6))
+for (i in 1:dim(dpWords)[1]) {
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'2.5%'],sWords[,'50%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'97.5%'],sWords[,'50%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'50%'],sWords[,'2.5%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'50%'],sWords[,'97.5%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+}
+for (i in 1:dim(dpWords)[1]) {
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'2.5%'],sFaces[,'50%'],angle=90,col="lightpink",length=.05,lwd=.5)
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'97.5%'],sFaces[,'50%'],angle=90,col="lightpink",length=.05,lwd=.5)
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'50%'],sFaces[,'2.5%'],angle=90,col="lightpink",length=.05,lwd=.5)
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'50%'],sFaces[,'97.5%'],angle=90,col="lightpink",length=.05,lwd=.5)
+}
+points(dpWords[,'50%'],sWords[,'50%'],pch=16)
+points(dpFaces[,'50%'],sFaces[,'50%'],col="red",xlab="d\'",ylab="zROC slope",pch=16)
+legend("topright",c("Words","Faces"),lty=1,pch=16,col=c("black","red"),bty="n")
 
 #### Testing population parameter estimates ----
 
@@ -295,7 +332,7 @@ p_test(x=samples,y=samples,
 
 
 #### Parameter recovery study ----
-print(load("probitFW.RData")) 
+print(load("/models/SDT/Probit/examples/samples/probitFW.RData")) 
 
 # Create a single simulated data set.
 
@@ -311,7 +348,8 @@ round(attr(new_dat_hyper,"pars"),2)
 # can we recover these?
 samplers <- make_samplers(new_dat,design,type="standard")
 # save(samplers,file="RecoveryProbitFixed.RData")
-print(load("RecoveryProbitFixed.RData"))
+# run in runRecoveryProbitFixed.R
+print(load("/models/SDT/Probit/examples/samples/RecoveryProbitFixed.RData"))
 pars <- attributes(attr(samples,"data_list")[[1]])$pars
 tabs <- plot_density(samples,selection="alpha",filter="burn",layout=c(2,7),pars=pars)
 # Some shrinkage but not bad
@@ -322,7 +360,8 @@ plot_alpha_recovery(tabs,layout=c(2,7),do_rmse=TRUE,do_coverage=TRUE)
 # can we recover these?
 samplers <- make_samplers(new_dat_hyper,design,type="standard")
 # save(samplers,file="RecoveryProbitRandom.RData")
-print(load("RecoveryProbitRandom.RData"))
+# run in runRecoveryProbitRandom.R
+print(load("/models/SDT/Probit/examples/samples/RecoveryProbitRandom.RData"))
 pars <- attributes(attr(samples,"data_list")[[1]])$pars
 tabs <- plot_density(samples,selection="alpha",filter="burn",layout=c(2,7),pars=pars)
 # Some shrinkage but not bad

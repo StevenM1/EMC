@@ -144,7 +144,7 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 save(samplers,file="probitIndividualM.RData")
 # runSingleProbitM.R to get 1000 samples
-print(load("probitIndividualM.RData"))
+print(load("/models/SDT/Probit/examples/samples/probitIndividualM.RData"))
 
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
@@ -188,7 +188,7 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 save(samplers,file="probitIndividualA.RData")
 # runSingleProbitA.R to get 1000 samples
-print(load("probitIndividualA.RData"))
+print(load("/models/SDT/Probit/examples/samples/probitIndividualA.RData"))
 
 plot_chains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
@@ -242,7 +242,7 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 # save(samplers,file="probitIndividualMA.RData")
 # runSingleProbitMA.R to get 1000 samples
-print(load("probitIndividualMA.RData"))
+print(load("/models/SDT/Probit/examples/samples/probitIndividualMA.RData"))
 
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
@@ -296,7 +296,7 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 # save(samplers,file="probitIndividualS.RData")
 # runSingleProbitS.R to get 1000 samples
-print(load("probitIndividualS.RData"))
+print(load("/models/SDT/Probit/examples/samples/probitIndividualS.RData"))
 
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
