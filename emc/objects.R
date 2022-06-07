@@ -229,11 +229,11 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
 
 as_mcmc.list <- function(samplers,
   selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-  filter="burn",thin=1,subfilter=NULL,mapped=FALSE,add_constants=FALSE) 
+  filter="burn",thin=1,subfilter=NULL,mapped=FALSE,include_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
   # mapped = TRUE map mu or alpha to model parameters (constants indicated by
   # attribute isConstant)
-  # add_constants= TRUE, if not mapped add in constants 
+  # include_constants= TRUE, if not mapped add in constants 
 {
   
   stages <- c("burn", "adapt", "sample")
@@ -258,7 +258,7 @@ as_mcmc.list <- function(samplers,
       mcmcList <- lapply(mcmcList,map_mcmc,
         design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
     } else warning("Can only map alpha or mu to model parameterization")
-  } else if (add_constants) {
+  } else if (include_constants) {
     if (selection == "alpha") {
       mcmcList <- lapply(mcmcList,function(x){lapply(x,add_constants_mcmc,
         constants=attr(samplers,"design_list")[[1]]$constants)})
@@ -282,8 +282,11 @@ as_mcmc.list <- function(samplers,
     lst <- vector(mode="list",length=nChains)
     for (i in 1:ns) {
       for (j in 1:nChains) if (selection=="LL")
-        lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter]) else
-        lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter,])  
+        lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter]) else {
+          isConstant <- attr(mcmcList[[j]][[i]],"isConstant")
+          lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter,])  
+          attr(lst[[j]],"isConstant") <- isConstant
+        }
       out[[i]] <- mcmc.list(lst)
     }
     out <- setNames(out,subjects)
