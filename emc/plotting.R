@@ -83,6 +83,7 @@ plotACFs <- function(samples,layout=NULL,subject=1,
 # plot_prior=TRUE; n_prior=1e3; mapped=FALSE
 # 
 # pmwg_mcmc=samples; filter="sample";selection="mu";layout=c(2,7);mapped=TRUE
+# selection="alpha"
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
@@ -132,7 +133,11 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
                                   thin=thin,subfilter=subfilter,mapped=mapped)
-        if (!is.null(attr(pmwg_mcmc[[1]],"isConstant"))) for (i in 1:length(pmwg_mcmc)) 
+        if (selection=="alpha") {
+          for (j in 1:length(pmwg_mcmc)) if (!is.null(attr(pmwg_mcmc[[j]][[1]],"isConstant"))) 
+            for (i in 1:length(pmwg_mcmc[[j]])) pmwg_mcmc[[j]][[i]] <- 
+                pmwg_mcmc[[j]][[i]][,!attr(pmwg_mcmc[[j]][[i]],"isConstant"),drop=FALSE]  
+        } else if (!is.null(attr(pmwg_mcmc[[1]],"isConstant"))) for (i in 1:length(pmwg_mcmc)) 
           pmwg_mcmc[[i]] <- pmwg_mcmc[[i]][,!attr(pmwg_mcmc[[i]],"isConstant"),drop=FALSE]
          if (mapped & !is.null(pars)) {
            pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
@@ -166,7 +171,7 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
         pmwg_mcmc <- pmwg_mcmc_combined
     } else pmwg_mcmc_combined <- pmwg_mcmc
     tabs <- lapply(pmwg_mcmc_combined,function(x){apply(x,2,quantile,probs=probs)})
-    if (plot_prior) dimnames(psamples) <- list(NULL,colnames(pmwg_mcmc_combined[[1]]))
+    # if (plot_prior) dimnames(psamples) <- list(NULL,colnames(pmwg_mcmc_combined[[1]]))
     if (do_plot) for (i in subject) {
       if (!no_layout) par(mfrow=layout)
       for (j in colnames(pmwg_mcmc_combined[[i]])) {
@@ -265,16 +270,28 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
 
 plot_alpha_recovery <- function(tabs,layout=c(2,3),
                          do_ci = TRUE,ci_col="grey",cap=.05,
-                         do_rmse=TRUE,rmse_pos="topleft",rmse_digits=3,
-                         do_coverage=TRUE,coverage_pos="bottomright",coverage_digits=1) 
+                         do_rmse=FALSE,rmse_pos="topleft",
+                         rmse_digits=3,pearson_digits=2,
+                         do_coverage=FALSE,coverage_pos="bottomright",
+                         coverage_digits=1,spearman_digits=2) 
   # Takes tables output by plot_density with par and plots recovery  
 {
   par(mfrow=layout)
   pnams <- dimnames(tabs[[1]])[[2]]
-  if (!do_rmse) rmse <- NULL else
+  if (!do_rmse) {
+    rmse <- NULL 
+    pearson <- setNames(numeric(length(pnams)),pnams)
+  } else {
+    pearson <- NULL
     rmse <- setNames(numeric(length(pnams)),pnams)
-  if (do_coverage) coverage <- NULL else
+  }
+  if (do_coverage) {
+    coverage <- NULL 
+    spearman <- setNames(numeric(length(pnams)),pnams)
+  } else {
+    spearman=NULL
     coverage <- setNames(numeric(length(pnams)),pnams)
+  }
   for (p in pnams) {
     xy <- do.call(rbind,lapply(tabs,function(x){x[,p]}))
     ylim <- c(min(xy),max(xy))
@@ -290,13 +307,19 @@ plot_alpha_recovery <- function(tabs,layout=c(2,3),
     if (do_rmse) {
       rmse[p] <- sqrt(mean((xy[,"true"] - xy[,"50%"])^2)) 
       legend(rmse_pos,paste("RMSE = ",round(rmse[p],rmse_digits)),bty="n")
+    } else {
+      pearson[p] <- cor(xy[,"true"],xy[,"50%"],method="pearson") 
+      legend(rmse_pos,paste("r(pearson) = ",round(pearson[p],pearson_digits)),bty="n")
     }
     if (do_coverage) {
      coverage[p] = 100*mean((xy[,"97.5%"] > xy[,"true"])  & (xy[,"2.5%"] < xy[,"true"]))
      legend(coverage_pos,paste("95% Coverage = ",round(coverage[p],coverage_digits)),bty="n")
+    } else {
+      spearman[p] <- cor(xy[,"true"],xy[,"50%"],method="spearman") 
+      legend(coverage_pos,paste("r(spearman) = ",round(spearman[p],spearman_digits)),bty="n")
     }
   }
-  invisible(list(RMSE = rmse,COVERAGE = coverage))
+  invisible(list(RMSE = rmse,COVERAGE = coverage,PEARSON=pearson,SPEARMAN=spearman))
 }
 
 
