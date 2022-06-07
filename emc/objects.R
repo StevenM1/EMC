@@ -299,6 +299,14 @@ as_mcmc.list <- function(samplers,
   }
 }
 
+
+as_matrix <- function(mcmcl) 
+  # stacks chains into a matrix  
+{
+  do.call(rbind,mcmcl)
+}
+
+
 #### Get information about chains lists
 
 chain_n <- function(samplers) 
