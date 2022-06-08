@@ -53,7 +53,7 @@ plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
   }
 }
   
-plotACFs <- function(samples,layout=NULL,subject=1,
+plot_acfs <- function(samples,layout=NULL,subject=1,
                      selection="alpha",filter="burn",subfilter=0)
   # Plots acf for all chains  
 {
