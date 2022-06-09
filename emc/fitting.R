@@ -94,7 +94,7 @@ run_chains <- function(samplers,iter=c(300,0,0),
 
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                    max_gd=1.1,thorough=TRUE, natural=FALSE,
-                   epsilon = NULL,particle_update = 5, 
+                   epsilon = NULL,particle_update = 5, verbose_run_stage = F,
                    particles=NA,particle_factor=100, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                    min_es=NULL,min_iter=NULL,max_iter=NULL) 
@@ -158,7 +158,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     repeat {
       particles <- round(particle_factor*sqrt(length(samplers[[1]]$par_names)))
       samplers_new <- mclapply(samplers,run_stage,stage=stage,iter=iter, mix=mix,
-                               epsilon = epsilon, particles=particles,pstar=p_accept,verbose=FALSE,
+                               epsilon = epsilon, particles=particles,pstar=p_accept,verbose=verbose_run_stage,
                                n_cores=cores_per_chain,mc.cores=cores_for_chains)
       if (class(samplers_new)=="try-error" || 
           any(lapply(samplers_new,class)=="try-error")) {
@@ -278,8 +278,7 @@ auto_burn <- function(samplers, ndiscard=200,nstart=300, discard_start=TRUE,
          cores_per_chain=cores_per_chain,cores_for_chains=cores_for_chains)
 }
 
-auto_adapt <- function(samplers,max_trys=25,verbose=FALSE,burn=TRUE,
-                       epsilon = NULL, particles=NA,particle_factor=40, p_accept=.7,
+auto_adapt <- function(samplers,max_trys=25,verbose=FALSE, epsilon = NULL, particles=NA,particle_factor=40, p_accept=.7,
                        cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                        n_cores_conditional = 1, min_es=NULL,min_unique = 200, 
                        step_size = 25, thin = NULL,
@@ -315,7 +314,7 @@ auto_adapt <- function(samplers,max_trys=25,verbose=FALSE,burn=TRUE,
 }
 
 
-auto_sample <- function(samplers,iter=NA,verbose=FALSE,burn=TRUE,
+auto_sample <- function(samplers,iter=NA,verbose=FALSE,
                        epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
                        cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                        n_cores_conditional = 1, min_es=NULL, step_size = 50, thin = NULL,
