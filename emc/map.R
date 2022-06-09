@@ -1,5 +1,6 @@
 # Parameter transformation and mapping
 
+
 add_constants <- function(p,constants) 
   # augments parameter matrix or vector p with constant parameters (also used in data)
 {
@@ -23,6 +24,34 @@ add_constants_mcmc <- function(p,constants)
   mcmc(add_constants(p,constants))
 
 
+mapped_name_list <- function(design,model,save_design=FALSE)
+  # makes a list, with entries for each parameter type, of names for mapped
+  # parameters or with unique design columns
+{
+  doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
+
+  constants <- design$constants
+  p_vector <- attr(design,"p_vector")
+  mp <- mapped_par(p_vector,design)
+  map <- attr(sampled_p_vector(design),"map")
+  pmat <- model$transform(add_constants(t(as.matrix(p_vector)),constants))
+  plist <- lapply(map,doMap,pmat=pmat)
+  if (model$type=="SDT") {
+    ht <- apply(map$threshold[,grepl("lR",dimnames(map$threshold)[[2]]),drop=FALSE],1,sum)
+    plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
+  }
+  # Give mapped variables names and remove constants
+  for (i in 1:length(plist)) {
+    vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
+    uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
+    if (save_design) plist[[i]] <- mp[uniq,vars[-1]] else
+      dimnames(plist[[i]])[[2]] <- 
+        paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
+  }
+  if (save_design) plist else lapply(plist,function(x){dimnames(x)[[2]]}) 
+}
+
+
 map_mcmc <- function(mcmc,design,model) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
   # model parameterization 
@@ -31,7 +60,7 @@ map_mcmc <- function(mcmc,design,model)
 
   if (!is.matrix(mcmc)) mcmc <- t(as.matrix(mcmc))
   map <- attr(sampled_p_vector(design),"map")
-  constants <- attributes(samplers)$design_list[[1]]$constants
+  constants <- design$constants
   mp <- mapped_par(mcmc[1,],design)
   pmat <- model$transform(add_constants(mcmc,constants))
   plist <- lapply(map,doMap,pmat=pmat)
@@ -40,13 +69,14 @@ map_mcmc <- function(mcmc,design,model)
     plist$threshold <- plist$threshold[,ht!=max(ht),drop=FALSE]
   }
   # Give mapped variables names and flag constant
+  isConstant <- NULL
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
     uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
     dimnames(plist[[i]])[[2]] <- 
       paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
-    if (dim(plist[[i]])[1]==1) isConstant <- NULL else
-      isConstant <- !apply(plist[[i]],2,function(x){all(x[1]==x[-1])})
+    if (dim(plist[[i]])[1]!=1) isConstant <- c(isConstant,
+      apply(plist[[i]],2,function(x){all(x[1]==x[-1])}))
   }
   out <- as.mcmc(do.call(cbind,lapply(plist,model$Mtransform)))
   attr(out,"isConstant") <- isConstant
@@ -54,7 +84,8 @@ map_mcmc <- function(mcmc,design,model)
 }
 
 
-mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE) 
+mapped_par <- function(p_vector,design,model=NULL,
+                       digits=3,remove_subjects=TRUE) 
   # Show augmented data and corresponding mapped parameter  
 {
   if (is.null(model)) if (is.null(design$model)) 
@@ -68,6 +99,7 @@ mapped_par <- function(p_vector,design,model=NULL,digits=3,remove_subjects=TRUE)
   if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
   out
 }
+
 
 
 

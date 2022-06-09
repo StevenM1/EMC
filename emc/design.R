@@ -1,3 +1,24 @@
+#### Special contrast matrices ----
+
+contr.anova <- function(n) 
+  # orthogonal helmert contrast scaled to estimate differences between 
+  # conditions
+{
+  contr <- contr.helmert(n)
+  contr/rep(2*apply(abs(contr),2,max),each=dim(contr)[1])
+}
+
+
+contr.increasing <- function(n) 
+  # special contrast for SDT threshold factor
+  # first = intercept, cumsum other (positive) levels to force non-decreasing
+{
+  contr <- matrix(0,nrow=n,ncol=n-1,dimnames=list(NULL,2:n))
+  contr[lower.tri(contr)] <- 1
+  contr
+}
+
+
 #### Make design matrices ----
 
 # matchfun=design$matchfun;simulate=TRUE;type=model$type
@@ -354,15 +375,6 @@ make_design <- function(Flist,Ffactors,Rlevels,model,
   # Binds together elements that make up a design a list  
 {
 
-  contr.increasing <- function(n) 
-  # special contrast for SDT threshold factor
-  # first = intercept, cumsum other (positive) levels to force non-decreasing
-  {
-    contr <- matrix(0,nrow=n,ncol=n-1,dimnames=list(NULL,2:n))
-    contr[lower.tri(contr)] <- 1
-    contr
-  }
-
   if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels))
   design <- list(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
        Clist=Clist,matchfun=matchfun,constants=constants,model=model)
@@ -403,15 +415,4 @@ sampled_p_vector <- function(design,model=NULL)
   attr(out,"map") <- lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
   out
 }
-
-get_design <- function(samples) 
-  # prints out design from samples object  
-{
-  design <- attr(samples,"design_list")[[1]]
-  design$Ffactors$subjects <- design$Ffactors$subjects[1]
-  dadm <- design_model(make_data(sampled_p_vector(design,model),design,model,trials=1),design,model,
-                       rt_check=FALSE,compress=FALSE)
-  dadm[,!(names(dadm) %in% c("subjects","trials","R","rt","winner"))]
-}
-
 

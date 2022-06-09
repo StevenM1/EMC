@@ -1,4 +1,6 @@
 require(coda)
+require(mvtnorm)
+require(MCMCpack)
 source("emc/objects.R")    # pmwg object manipulation + mcmc creation functions
 source("emc/statistics.R") # chain statistics
 source("emc/plotting.R")   # chain and data plotting

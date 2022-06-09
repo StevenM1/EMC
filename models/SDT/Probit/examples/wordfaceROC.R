@@ -1,6 +1,9 @@
 rm(list=ls())
 source("emc/emc.R")
 source("models/SDT/Probit/SDTgaussian.R")
+# This matchfun useful for SDT models, assumes binary noise/signal factor and 
+# an even number of confidence ratings
+matchfun <- function(d) as.numeric(d$S) == (as.numeric(d$lR)>length(levels(d$lR))/2)
 
 print(load("Data/wordfaceROC.RData"))
 # remove RT for ROC fitting
@@ -17,7 +20,7 @@ wordfaceROC1$subjects <- factor(as.character(wordfaceROC1$subjects))
 # thresholds across combinations of factors, say A and B, use (A*B)/lR etc.
 designFW1 <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
   Ffactors=list(subjects=104,S=c("new","old"),FW=c("faces","words")),Rlevels=1:6, 
-  matchfun=function(d) as.numeric(d$S) == (1+as.numeric(d$lR)>3),
+  matchfun=matchfun,
   constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWwords=0),model=probit)
 
 p_vector <- sampled_p_vector(designFW1)
@@ -54,28 +57,28 @@ samplers <- make_samplers(wordfaceROC1,designFW1,type="single")
 # runSingleProbitFW1.R to get 1000 samples
 
 # Look at simulation, clearly not close at 1000, added another 2000
-print(load("probitFWsim.RData"))
-plotChains(samples,subfilter=200,layout=c(4,4))  # Fully converged
+print(load("models/SDT/Probit/examples/samples/probitFWsim.RData"))
+plot_chains(samples,subfilter=200,layout=c(4,4))  # Fully converged
 gd_pmwg(samples,subfilter=200)
 plotACFs(samples,subfilter=200,layout=c(4,4)) # Quite autocorrelated
 iat_pmwg(samples,subfilter=200) 
 # Excellent recovery
-tabs <- plotDensity(samples,subfilter=200,layout=c(4,4),pars=p_vector)
+tabs <- plot_density(samples,subfilter=200,layout=c(4,4),pars=p_vector)
 
 # Look at data, quick convergence 
-print(load("probitFW1.RData")) 
-plotChains(samples,subfilter=100,layout=c(4,4)) # very fast convergence
+print(load("models/SDT/Probit/examples/samples/probitFW1.RData")) 
+plot_chains(samples,subfilter=100,layout=c(4,4)) # very fast convergence
 gd_pmwg(samples,subfilter=100) # 1.01
 plotACFs(samples,subfilter=100,layout=c(4,4)) # Quite autocorrelated
 iat_pmwg(samples,subfilter=100) 
-tabs <- plotDensity(samples,subfilter=100,layout=c(4,4)) # prior domination ok
+tabs <- plot_density(samples,subfilter=100,layout=c(4,4)) # prior domination ok
 
 #### Fit full data set ----
 
 designFW <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
   Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),
                 FW=levels(wordfaceROC$FW)),Rlevels=1:6, 
-  matchfun=function(d) as.numeric(d$S) == (as.numeric(d$lR)>3),
+  matchfun=matchfun,
   constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWwords=0),model=probit)
 
 samplers <- make_samplers(wordfaceROC,designFW,type="standard")
@@ -83,34 +86,34 @@ samplers <- make_samplers(wordfaceROC,designFW,type="standard")
 # runProbitFW.R to get 2000 burn in samples
 
 
-print(load("probitFW.RData")) 
+print(load("models/SDT/Probit/examples/samples/probitFW.RData")) 
 # All converged 
-plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
-plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
-plotChains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
-plotChains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="alpha") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
+plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="alpha") 
 check_adapt(samples)
 # Chain 1 adapted by iteration 292
 # Chain 2 adapted by iteration 299
 # Chain 3 adapted by iteration 301
 
 # Converged, some correlations and alphas look quite autocorrelated
-plotChains(samples,filter="sample",layout=c(3,5),selection="mu",thin=10) 
-plotChains(samples,filter="sample",layout=c(3,5),selection="variance",thin=10) 
-plotChains(samples,filter="sample",layout=c(4,4),selection="correlation",thin=10) 
-plotChains(samples,filter="sample",layout=c(3,5),selection="alpha",thin=10) 
+plot_chains(samples,filter="sample",layout=c(3,5),selection="mu",thin=10) 
+plot_chains(samples,filter="sample",layout=c(3,5),selection="variance",thin=10) 
+plot_chains(samples,filter="sample",layout=c(4,4),selection="correlation",thin=10) 
+plot_chains(samples,filter="sample",layout=c(3,5),selection="alpha",thin=10) 
 
 selection="mu"; selection="variance"; selection="alpha"; layout=c(3,5)
 selection="correlation"; layout=c(4,7)
 gd_pmwg(samples,filter="sample",selection=selection)
 iat_pmwg(samples,filter="sample",selection=selection,summary_alpha=max) 
 round(es_pmwg(samples,filter="sample",selection=selection,summary_alpha=min))
-tabs <- plotDensity(samples,filter="sample",layout=layout,selection=selection)
+tabs <- plot_density(samples,filter="sample",layout=layout,selection=selection)
 
 #### Fit
 # ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
 # save(ppWordFace,file="ppWordFace.RData")
-load("ppWordFace.RData")
+load("models/SDT/Probit/examples/samples/ppWordFace.RData")
 # For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
 # whose first level is noise and second level is signal in order to construct an 
 # ROC. Where there this 2 level structure does not apply (e.g., different types 
@@ -126,68 +129,210 @@ par(mfrow=c(2,4))
 plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
 
 
-### Look at parameter estimates
+### Look at parameter estimates: mu
 
-# Sampled parameters.
+# We can look at mu parameters in two ways, 1) in terms of the parameters that were
+# actually sampled (and hence always transformed to have no bounds) with names
+# organized by type (for the probit model the types are "mean", "sd" and 
+# "threshold") that are shown by this function:
+sp_names <- p_names(samples); sp_names
 
-# At hyper level moderately strong domination of prior
+# 2) in terms of the parameters that are mapped to the model parameterization,
+# which may be bounded, and which correspond to the combinations of factors that
+# specified in the formula for the parameter type they correspond to:
+mp_names <- p_names(samples,mapped=TRUE); mp_names
+
+# Note that in this form some of the parameters can be constants. The derivation
+# of their names can be seen by looking at the design, being the unique cells
+# for the factors in the formula for each type
+mp_design <- p_names(samples,mapped=TRUE,design=TRUE); mp_design
+
+# Lets look at sampled parameters first
+
+# At hyper level the posterior (black lines) shows moderately strong domination 
+# of the prior (red lines).
 tab_mu <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7))
-# Start by looking at mean and sd parameters
-round(tab_mu[,1:4],2)
 
-# To understand these, look at names and mapping print p_vector attribute 
-# saved with the design, and recall that mean for new faces and words (mean & 
+# Start by looking at mean and sd parameters
+round(tab_mu[,sp_names$mean],2)
+round(tab_mu[,sp_names$sd],2)
+
+# To understand these, recall that mean for new faces and words (mean & 
 # mean_FWwords) are set to zero and corresponding sd (sd sd_FWwords) set to 1
-# so as sd is sampled on log scale sampled values are zero.
-p_vector <- attr(designFW,"p_vector")
-names(p_vector)
+# (so as sd is sampled on log scale sampled values are set to zero).
 
 # Because we did not specify contrasts R's default treatment code was used.
-# Hence, mean_Sold is the study effect for faces (0.69) and mean_FWwords:Sold is  
-# extra study effect for words relative to faces (1.05).
-attr(p_vector,"map")$mean
-# The same is true for sd (0.18 and 0.22 respectiely), but recall the effect is 
+# We can get a list of the contrasts for each parameter type and look at the
+# mean and sd design matrices (which are the same as they share formulas).
+maps <- get_map(samples)
+maps$mean 
+# Reading across row 3 (down column Hence, mean_Sold is the study effect for 
+# faces (0.69) and mean_FWwords:Sold is the extra study effect for words 
+# relative to faces (1.05).
+maps$sd
+# The same is true for sd (0.18 and 0.22 respectively), but recall the effect is 
 # on the log scale.
-attr(p_vector,"map")$sd
 
-# Hence mean_FWwords:Sold > 0 :Sold tests if d'(words) > d'(faces). 
-# Similarly for sd_FWwords:Sold. We can see this is the case from tab_mu above, 
-# as the 95% CI is well away from zero, but we can also see the same thing by 
-# running a single sample test, which by default compares to mu=0.
-p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu")
-# Can also compare to another values, say 1 for the mean effect.
-p_test(samples,p_name="mean_FWwords:Sold",x_selection = "mu",mu=1)
+tab_mu_mapped <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7),mapped=TRUE)
 
-# We can also plot and test individual subjects. If the subject argument is 
-# omitted all subjects are plotted, whereas for the test the first subject is selected  
-plot_density(samples,filter="sample",selection="alpha",layout=c(2,7),subject="104")
-p_test(samples,p_name="sd_FWwords:Sold",x_selection = "alpha",x_name="104")
+# Need to remove cells set to constant in mp_names to look at estimates.
+
+# For means we can see that mean_words_old = mean_Sold + mean_FWwords:Sold
+round(tab_mu_mapped[,mp_names$mean[-c(1:2)]],2)
+
+# Similarly sd_words_old = exp(sd_Sold) and sd_words_old = exp(sd_Sold + sd_FWwords:Sold)
+round(tab_mu_mapped[,mp_names$sd[-c(1:2)]],2)
+
+### Look at parameter estimates: variance
+
+tab_var <- plot_density(samples,filter="sample",selection="variance",layout=c(2,7))
+# These estimates reflect indivdiual differences
+round(tab_var[,sp_names$mean],2)
+round(tab_var[,sp_names$sd],2)
+
+### Look at parameter estimates: correlation
+
+tab_cor <- plot_density(samples,filter="sample",selection="correlation",layout=c(4,4))
+# There are 91 correlations (14*13/2). Much of the correlation reflects the 
+# design matrix structure.
+
+
+### Look at parameter estimates: alpha
+
+
+# Individual participant plots show the prior implied by the population model,
+# providing an indication of shrinkage effects. 
+tab_alpha <- plot_density(samples,filter="sample",selection="alpha",layout=c(2,7))
+
+# Table of parameters is a list, can look at elements as with mu, e.g., 
+round(tab_alpha[[subject_names(samples)[1]]][,sp_names$mean],3)
+
+# As for mu can look at mapped parameters
+tab_alpha_mapped <- plot_density(samples,filter="sample",selection="alpha",
+                                 layout=c(2,7),mapped=TRUE)
+# As expected mean_words_old = .867 + .655
+round(tab_alpha_mapped[[subject_names(samples)[1]]][,mp_names$mean[-c(1:2)]],2)
+
+# It is common to think about sd in terms of ROC slope = 1/sd_old. Here we
+# extract slope and d' (mean_old) and plot it for words and faces with 
+# credible intervals. as_matrix stacks chains 
+pests <- lapply(as_mcmc.list(samples,selection="alpha",filter="sample",mapped=TRUE),as_matrix)
+
+dpFaces <- do.call(rbind,lapply(pests,function(x){
+  quantile(x[,"mean_faces_old"],probs=c(.025,.5,.975))
+}))
+
+dpWords <- do.call(rbind,lapply(pests,function(x){
+  quantile(x[,"mean_words_old"],probs=c(.025,.5,.975))
+}))
+
+sFaces <- do.call(rbind,lapply(pests,function(x){
+  quantile(1/x[,"sd_faces_old"],probs=c(.025,.5,.975))
+}))
+
+sWords <- do.call(rbind,lapply(pests,function(x){
+  quantile(1/x[,"sd_words_old"],probs=c(.025,.5,.975))
+}))
+
+plot(dpWords[,'50%'],sWords[,'50%'],xlab="d\'",ylab="zROC slope",xlim=c(0,5),ylim=c(0,1.6))
+for (i in 1:dim(dpWords)[1]) {
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'2.5%'],sWords[,'50%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'97.5%'],sWords[,'50%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'50%'],sWords[,'2.5%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'50%'],sWords[,'97.5%'],angle=90,col="lightgrey",length=.05,lwd=.5)
+}
+for (i in 1:dim(dpWords)[1]) {
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'2.5%'],sFaces[,'50%'],angle=90,col="lightpink",length=.05,lwd=.5)
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'97.5%'],sFaces[,'50%'],angle=90,col="lightpink",length=.05,lwd=.5)
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'50%'],sFaces[,'2.5%'],angle=90,col="lightpink",length=.05,lwd=.5)
+  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'50%'],sFaces[,'97.5%'],angle=90,col="lightpink",length=.05,lwd=.5)
+}
+points(dpWords[,'50%'],sWords[,'50%'],pch=16)
+points(dpFaces[,'50%'],sFaces[,'50%'],col="red",xlab="d\'",ylab="zROC slope",pch=16)
+legend("topright",c("Words","Faces"),lty=1,pch=16,col=c("black","red"),bty="n")
+
+#### Testing population parameter estimates ----
+
+# Suppose we want to test if d'(words) > d'(faces) in the population. This is 
+# just the same as testing mu parameter mean_FWwords:Sold > 0. We can do with 
+# the p_test function, which acts like a t-test (if we want to compare to 
+# something other than zero specify that with the mu argument).
+p_test(samples,x_name="mean_FWwords:Sold",selection = "mu")
+
+# The attribute of the table is the probability that samples less than zero
+# are observed. Just as in a t-test the complimentary probability is available.
+p_test(samples,x_name="mean_FWwords:Sold",selection = "mu",alternative="greater")
+
+# We can make the same test (words > faces) for log(sd)
+p_test(samples,x_name="sd_FWwords:Sold",selection = "mu")
+
+# We can present the results for sd instead of log(sd) by specifying a fun argument.
+# In this case p_name is just used to name the quantity being tested. 
+p_test(samples,x_name="sd",selection = "mu",
+       x_fun=function(x){exp(x["sd_FWwords:Sold"])})
+
+# We can also use the fun argument to combine different parameters, here adding
+# d'(words) - d'(faces) to d'(faces) to get d'(words) then testing if that is
+# greater than 1.
+p_test(samples,x_name="d\'(words)",selection = "mu",mu=1,
+       x_fun=function(x){sum(x[c("mean_Sold","mean_FWwords:Sold")])})
+
+# The same results is obtained by looking at mapped parameters (NB: mapped 
+# analyses are only available for mu and alpha, see below).
+p_test(samples,mapped=TRUE,x_name="mean_words_old",selection = "mu",mu=1)
 
 # Turning to thresholds we get estimates for the first face and word threshold
 round(tab_mu[,5:6],2)
 
 # To test if they credibly differ:
-p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu")
+p_test(samples,selection = "mu",x_name="threshold",
+       x_fun=function(x){diff(x[c("threshold","threshold_FWwords")])})
+
+# Alternately we can table all elements by entering the two thresholds through
+# separate x and y arguments. 
+p_test(x=samples,x_name="threshold_FWwords",y=samples,y_name="threshold",
+       selection = "mu")
+
+# Tests can also be performed on population variance (individual difference)
+# estimates. For example: 
+p_test(x=samples,x_name="mean_FWwords:Sold",y=samples,y_name="mean_Sold",
+       selection = "variance")
+
+# Finally, tests can be performed on correlations.
+p_test(samples,x_name="threshold_FWwords.threshold",selection = "correlation")
 
 
-# We could also look at variances. Again focusing on 
-var_tab <- plot_density(samples,filter="sample",selection="variance",layout=c(2,7))
-round(var_tab[,1:4],2)
-# Sometimes interest focuses on the "mapped" parameters
-tab_mu_mapped <- plotDensity(samples,filter="sample",selection="mu",mapped=TRUE,layout=c(2,7))
-round(tab_mu_mapped[,1:4],2)
+#### Testing individual participants
+# We could also do this for individual participants by testing the alpha and 
+# specifying a subject name (if not specified tests first, here we give the
+# first name explicitly).
+p_test(samples,x_name="mean_FWwords:Sold",selection = "alpha",
+       x_subject=subject_names(samples)[1])
 
+# We could also compare two subjects, here showing the second subject has a
+# smaller d' for faces than the first.
+p_test(x=samples,y=samples,
+       x_name="mean_Sold",selection = "alpha",
+       x_subject=subject_names(samples)[2],
+       y_subject=subject_names(samples)[1])
+# but a bigger increase for faces than the first.
+p_test(x=samples,y=samples,
+       x_name="mean_FWwords:Sold",selection = "alpha", 
+       x_subject=subject_names(samples)[2],
+       y_subject=subject_names(samples)[1])
 
-tab_alpha <- plotDensity(samples,filter="sample",selection="alpha",mapped=TRUE,layout=c(2,7))
+# Functions can also be specified
+p_test(x=samples,y=samples,
+       x_fun=function(x){exp(x["sd_FWwords:Sold"])},
+       y_fun=function(x){exp(x["sd_FWwords:Sold"])},
+       x_name="sd",selection = "alpha", 
+       x_subject=subject_names(samples)[2],
+       y_subject=subject_names(samples)[1])
 
-p_test(samples,p_name="sd_FWwords:Sold",x_selection = "mu",mapped=FALSE)
-
-
-get_design(samples)
 
 
 #### Parameter recovery study ----
-print(load("probitFW.RData")) 
+print(load("models/SDT/Probit/examples/samples/probitFW.RData")) 
 
 # Create a single simulated data set.
 
@@ -203,17 +348,25 @@ round(attr(new_dat_hyper,"pars"),2)
 # can we recover these?
 samplers <- make_samplers(new_dat,design,type="standard")
 # save(samplers,file="RecoveryProbitFixed.RData")
+# run in runRecoveryProbitFixed.R
+print(load("models/SDT/Probit/examples/samples/RecoveryProbitFixed.RData"))
+pars <- attributes(attr(samples,"data_list")[[1]])$pars
+tabs <- plot_density(samples,selection="alpha",filter="burn",layout=c(2,7),pars=pars)
+# Some shrinkage but not bad
+plot_alpha_recovery(tabs,layout=c(2,7))
+plot_alpha_recovery(tabs,layout=c(2,7),do_rmse=TRUE,do_coverage=TRUE)
 
+
+# can we recover these?
 samplers <- make_samplers(new_dat_hyper,design,type="standard")
 # save(samplers,file="RecoveryProbitRandom.RData")
-
-
-print(load("RecoveryProbitFixed.RData"))
-
-# After some checking of samples as above all looks good without trimming
+# run in runRecoveryProbitRandom.R
+print(load("models/SDT/Probit/examples/samples/RecoveryProbitRandom.RData"))
 pars <- attributes(attr(samples,"data_list")[[1]])$pars
-tabs <- plotDensity(as_mcmc.list(samples,selection="alpha",filter="burn"),
-                    layout=c(2,5),pars=pars)
+tabs <- plot_density(samples,selection="alpha",filter="burn",layout=c(2,7),pars=pars)
 # Some shrinkage but not bad
-plotAlphaRecovery(tabs,layout=c(2,5))
+plot_alpha_recovery(tabs,layout=c(2,7))
+plot_alpha_recovery(tabs,layout=c(2,7),do_rmse=TRUE,do_coverage=TRUE)
+
+
 

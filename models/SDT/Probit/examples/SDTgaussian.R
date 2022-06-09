@@ -94,15 +94,15 @@ save(samplers,file="probitIndividual.RData")
 # runSingleProbit.R to get 1000 samples
 print(load("probitIndividual.RData"))
 
-plotChains(samples,subfilter=400) # Thoroughly converged by 400
+plot_chains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
-plotACFs(samples,subfilter=400,layout=c(2,4))
+plot_acfs(samples,subfilter=400,layout=c(2,4))
 iat_pmwg(samples,subfilter=400) # ~ 50% yield 
 #   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
 # 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
 
 # Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
+tabs <- plot_density(samples,subfilter=400,layout=c(2,4),pars=p_vector)
 #       mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
 # true    1.000 0.223    -0.500        -0.693        -0.693        -0.693        -0.693
 # 2.5%    1.002 0.216    -0.502        -0.714        -0.697        -0.712        -0.701
@@ -144,14 +144,14 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 save(samplers,file="probitIndividualM.RData")
 # runSingleProbitM.R to get 1000 samples
-print(load("probitIndividualM.RData"))
+print(load("models/SDT/Probit/examples/samples/probitIndividualM.RData"))
 
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
-plotACFs(samples,subfilter=400,layout=c(2,4))
+plot_acfs(samples,subfilter=400,layout=c(2,4))
 iat_pmwg(samples,subfilter=400) # ~ 50% yield 
 # Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
+tabs <- plot_density(samples,subfilter=400,layout=c(2,5),pars=p_vector)
 
 
 ##### 3 level confidence, factor A shifts threshold up ----
@@ -188,17 +188,17 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 save(samplers,file="probitIndividualA.RData")
 # runSingleProbitA.R to get 1000 samples
-print(load("probitIndividualA.RData"))
+print(load("models/SDT/Probit/examples/samples/probitIndividualA.RData"))
 
-plotChains(samples,subfilter=400) # Thoroughly converged by 400
+plot_chains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
-plotACFs(samples,subfilter=400,layout=c(2,4))
+plot_acfs(samples,subfilter=400,layout=c(2,4))
 iat_pmwg(samples,subfilter=400) # ~ 50% yield 
 #   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
 # 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
 
 # Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,4),pars=p_vector)
+tabs <- plot_density(samples,subfilter=400,layout=c(2,4),pars=p_vector)
 
 
 # NB: The real data example shows how to set arbitrarily different (but still 
@@ -242,68 +242,68 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 # save(samplers,file="probitIndividualMA.RData")
 # runSingleProbitMA.R to get 1000 samples
-print(load("probitIndividualMA.RData"))
+print(load("models/SDT/Probit/examples/samples/probitIndividualMA.RData"))
 
 plotChains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01
-plotACFs(samples,subfilter=400,layout=c(2,5))
+plot_acfs(samples,subfilter=400,layout=c(2,5))
 iat_pmwg(samples,subfilter=400) # ~ 30-40% yield 
 # Excellent recovery, prior completely dominated
 tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
 
 
-
-#### Set thresholds as an increasing linear function ----
-
-# A bit messy but shows how thresholds can be varied functionally.
-# Make threshold function f(x) of 2:n thresholds, n = number of choices
-# first threshold is first level of threshold ~ lR. Note that here 
-# x = 1:(n-1) set in constants and f(x) = slope*x, but could do other spacing 
-# with different constants (e.g., log(2:n)). Threshold n still set to Inf
-# internally.
-
-source("models/SDT/Probit/SDTgaussianTfun.R")
-
-designPROBIT <- make_design(Flist=list(mean ~ S, sd ~ S,
-  threshold ~ lR, slope~1),model=probitTfun,matchfun=matchfun,
-  Ffactors=list(subjects=1,S=1:2),Rlevels=1:6, constants=c(mean=0,sd=0,
-  threshold_lR2=1,threshold_lR3=2,threshold_lR4=3,threshold_lR5=4,threshold_lR6=5))
-
-# Signal > noise variance typical of recognition memory
-p_vector <- sampled_p_vector(designPROBIT)
-p_vector[1] <- 1            # signal mean
-p_vector[2] <- log(1.25)    # signal sd = 1.25 (treatment coding)
-p_vector[3] <- -.5          # first threshold untransformed
-p_vector[4] <- 0.5          # threshold spacing  
-
-# Thresholds evenly spaced with 0.5 gap
-mapped_par(p_vector,designPROBIT) 
-
-# Make some data and plot ROCs
-dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=10000)
-
-# 0.8 = 1/sd(signal) slope evident 
-par(mfrow=c(1,2))
-plot_roc(dataPROBIT)
-plot_roc(dataPROBIT,zROC=TRUE,qfun=qnorm)
-
-# profiles
-dadmPROBIT <- design_model(data=dataPROBIT,design=designPROBIT)
-par(mfrow=c(2,2))
-for (i in names(p_vector))
-  print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.25,p_max=p_vector[i]+.25,dadm=dadmPROBIT))
-
-samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
-# save(samplers,file="probitIndividualS.RData")
-# runSingleProbitS.R to get 1000 samples
-print(load("probitIndividualS.RData"))
-
-plotChains(samples,subfilter=400) # Thoroughly converged by 400
-gd_pmwg(samples,subfilter=400)  # 1.01
-plotACFs(samples,subfilter=400,layout=c(2,5))
-iat_pmwg(samples,subfilter=400) # ~ 10% yield 
-# Excellent recovery, prior completely dominated
-tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
+####### NEED TO FIX
+# #### Set thresholds as an increasing linear function ----
+# 
+# # A bit messy but shows how thresholds can be varied functionally.
+# # Make threshold function f(x) of 2:n thresholds, n = number of choices
+# # first threshold is first level of threshold ~ lR. Note that here 
+# # x = 1:(n-1) set in constants and f(x) = slope*x, but could do other spacing 
+# # with different constants (e.g., log(2:n)). Threshold n still set to Inf
+# # internally.
+# 
+# source("models/SDT/Probit/SDTgaussianTfun.R")
+# 
+# designPROBIT <- make_design(Flist=list(mean ~ S, sd ~ S,
+#   threshold ~ lR, slope~1),model=probitTfun,matchfun=matchfun,
+#   Ffactors=list(subjects=1,S=1:2),Rlevels=1:6, constants=c(mean=0,sd=0,
+#   threshold_lR2=1,threshold_lR3=2,threshold_lR4=3,threshold_lR5=4,threshold_lR6=5))
+# 
+# # Signal > noise variance typical of recognition memory
+# p_vector <- sampled_p_vector(designPROBIT)
+# p_vector[1] <- 1            # signal mean
+# p_vector[2] <- log(1.25)    # signal sd = 1.25 (treatment coding)
+# p_vector[3] <- -.5          # first threshold untransformed
+# p_vector[4] <- 0.5          # threshold spacing  
+# 
+# # Thresholds evenly spaced with 0.5 gap
+# mapped_par(p_vector,designPROBIT) 
+# 
+# # Make some data and plot ROCs
+# dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=10000)
+# 
+# # 0.8 = 1/sd(signal) slope evident 
+# par(mfrow=c(1,2))
+# plot_roc(dataPROBIT)
+# plot_roc(dataPROBIT,zROC=TRUE,qfun=qnorm)
+# 
+# # profiles
+# dadmPROBIT <- design_model(data=dataPROBIT,design=designPROBIT)
+# par(mfrow=c(2,2))
+# for (i in names(p_vector))
+#   print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.25,p_max=p_vector[i]+.25,dadm=dadmPROBIT))
+# 
+# samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+# # save(samplers,file="probitIndividualS.RData")
+# # runSingleProbitS.R to get 1000 samples
+# print(load("models/SDT/Probit/examples/samples/probitIndividualS.RData"))
+# 
+# plotChains(samples,subfilter=400) # Thoroughly converged by 400
+# gd_pmwg(samples,subfilter=400)  # 1.01
+# plot_acfs(samples,subfilter=400,layout=c(2,5))
+# iat_pmwg(samples,subfilter=400) # ~ 10% yield 
+# # Excellent recovery, prior completely dominated
+# tabs <- plotDensity(samples,subfilter=400,layout=c(2,5),pars=p_vector)
 
 
 

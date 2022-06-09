@@ -84,7 +84,7 @@ remove_iterations <- function(pmwg,select,remove=TRUE,last_select=FALSE,filter=N
 }
 
 
-get_sigma <- function(samps,filter="samples",thin=thin,subfilter=NULL) 
+get_sigma <- function(samps,filter="samples",thin=1,subfilter=0) 
   # Get sigma matrix samples  
 {
   shorten <- function(x,r,d) {
@@ -131,15 +131,7 @@ chain_shorten <- function(samplers,n)
   samplers
 }
   
-p_names <- function(samplers) 
-  # parameter names of a pmwg object or list of pmwg objects  
-{
-  if (class(samplers)=="pmwg")
-    dimnames(samplers$samples$alpha)[[1]] else
-    dimnames(samplers[[1]]$samples$alpha)[[1]]
-} 
-
-get_sigma_chains <- function(samples,filter="samples",thin=thin,subfilter=NULL)
+get_sigma_chains <- function(samples,filter="samples",thin=1,subfilter=0)
   # Get sigma matrix samples for chains and put in one array  
 {
   sigma <- lapply(samples,get_sigma,filter=filter,thin=thin,subfilter=subfilter)
@@ -149,7 +141,7 @@ get_sigma_chains <- function(samples,filter="samples",thin=thin,subfilter=NULL)
 #### mcmc extraction ----
 
 as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-                    filter=stages,thin=1,subfilter=NULL)
+                    filter=stages,thin=1,subfilter=0)
   # replacement for pmwg package as_mccmc
   # allows for selection of subj_ll, and specifying selection as an integer
   # allows filter as single integer so can remove first filter samples
@@ -237,11 +229,11 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
 
 as_mcmc.list <- function(samplers,
   selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-  filter="burn",thin=1,subfilter=NULL,mapped=FALSE,add_constants=FALSE) 
+  filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
   # mapped = TRUE map mu or alpha to model parameters (constants indicated by
   # attribute isConstant)
-  # add_constants= TRUE, if not mapped add in constants 
+  # include_constants= TRUE, if not mapped add in constants 
 {
   
   stages <- c("burn", "adapt", "sample")
@@ -266,7 +258,7 @@ as_mcmc.list <- function(samplers,
       mcmcList <- lapply(mcmcList,map_mcmc,
         design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
     } else warning("Can only map alpha or mu to model parameterization")
-  } else if (add_constants) {
+  } else if (include_constants) {
     if (selection == "alpha") {
       mcmcList <- lapply(mcmcList,function(x){lapply(x,add_constants_mcmc,
         constants=attr(samplers,"design_list")[[1]]$constants)})
@@ -290,8 +282,11 @@ as_mcmc.list <- function(samplers,
     lst <- vector(mode="list",length=nChains)
     for (i in 1:ns) {
       for (j in 1:nChains) if (selection=="LL")
-        lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter]) else
-        lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter,])  
+        lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter]) else {
+          isConstant <- attr(mcmcList[[j]][[i]],"isConstant")
+          lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter,])  
+          attr(lst[[j]],"isConstant") <- isConstant
+        }
       out[[i]] <- mcmc.list(lst)
     }
     out <- setNames(out,subjects)
@@ -302,4 +297,94 @@ as_mcmc.list <- function(samplers,
     attr(out,"selection") <- selection
     return(out)
   }
+}
+
+
+as_matrix <- function(mcmcl) 
+  # stacks chains into a matrix  
+{
+  do.call(rbind,mcmcl)
+}
+
+
+#### Get information about chains lists
+
+chain_n <- function(samplers) 
+  # Length of stages for each chain
+{
+  do.call(rbind,lapply(samplers, function(x){
+    table(factor(x$samples$stage,levels=c("burn","adapt","sample")))
+  }))
+}
+
+
+check_adapt <- function(samplers,verbose=TRUE) 
+  # Checks chains to see if adapted  
+{
+  ok <- TRUE
+  for (i in 1:length(samplers)) {
+    res <- attr(samplers[[i]],"adapted")
+    if (is.null(res) || is.character(res)) {
+      ok <- FALSE
+      if (verbose) message("Chain ",i," not adapted") 
+    } else if (verbose)
+      message("Chain ",i," adapted by iteration ", res)
+  }
+  ok
+}
+
+get_design <- function(samples) 
+  # prints out design from samples object  
+{
+  design <- attr(samples,"design_list")[[1]]
+  design$Ffactors$subjects <- design$Ffactors$subjects[1]
+  dadm <- design_model(make_data(sampled_p_vector(design,model),design,model,trials=1),design,model,
+                       rt_check=FALSE,compress=FALSE)
+  dadm[,!(names(dadm) %in% c("subjects","trials","R","rt","winner"))]
+}
+
+
+mapped_designs <- function(samples,remove_subjects=TRUE) 
+  # Show augmented data and corresponding mapped parameter  
+{
+  design <- attr(samples,"design_list")[[1]]
+  p_vector <- attr(design,"p_vector")
+  model <- attr(samples,"model_list")[[1]]
+  if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
+  dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
+                       rt_check=FALSE,compress=FALSE)
+  ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
+  out <- dadm[,ok]
+  if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
+  out
+}
+
+
+get_map <- function(samples) {
+  attr(attr(attr(samples,"design_list")[[1]],"p_vector"),"map")
+}
+
+
+p_names <- function(samples,mapped=FALSE,design=FALSE) 
+  # parameter names of a pmwg object or list of pmwg objects or if mapped=TRUE
+  # gets a list of names for mapped parameters of each type
+{
+  
+  sp <- mp <- mapped_name_list(attr(samples,"design_list")[[1]],
+                     attr(samples,"model_list")[[1]],design)
+  if (mapped) return(mp)
+  if (class(samples)=="pmwg")
+    tmp <- dimnames(samples$samples$alpha)[[1]] else
+    tmp <- dimnames(samples[[1]]$samples$alpha)[[1]]
+  type <- unlist(lapply(strsplit(tmp,"_"),function(x){x[[1]]}))
+  for (i in names(sp)) sp[[i]] <- tmp[type==i]
+  sp
+} 
+
+subject_names <- function(samples) 
+  # Get names of subjects  
+{
+  if (class(samples)=="pmwg") 
+    names(samples$data) else 
+    names(samples[[1]]$data)
 }

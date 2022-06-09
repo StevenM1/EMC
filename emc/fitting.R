@@ -216,14 +216,37 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
-auto_burn <- function(samplers, ndiscard=200,nstart=300, discard_start=TRUE,
-                      start_particles=NA, start_particle_factor = 50, 
-                      epsilon = NULL, start_mu = NULL, start_var = NULL, 
-                      mix = NULL, single_mix= NULL, max_gd_trys=100,max_gd=1.1,
-                      verbose=TRUE,verbose_run_stage=FALSE, particle_update = 5,
-                      thorough=TRUE,natural=FALSE, min_iter=NULL,max_iter=NULL, 
-                      min_es = NULL, step_size = 50,
-                      p_accept=0.5, cores_per_chain=1,cores_for_chains=NULL)
+# burn=TRUE;ndiscard=200;nstart=300;nadapt=1000;
+#     discard_start=TRUE;start_particles=NA;
+#     start_mu = NULL; start_var = NULL;
+#     start_mix=NULL;single_start_mix=c(.5,.5);
+#     verbose=TRUE;verbose_run_stage=FALSE;
+#     max_gd_trys=100;max_gd=1.1;thorough=TRUE;
+#     min_es=NULL;min_iter=NULL;max_iter=NULL
+#     epsilon = NULL; epsilon_upper_bound=2;
+#     particles=NA;particle_factor=100; sample_particle_factor=100; p_accept=0.7;
+#     pdist_update_n=50;min_unique=200; mix=NULL;
+#     cores_per_chain=1;cores_for_chains=NULL
+# 
+# burn=TRUE;ndiscard=0;nstart=500;cores_per_chain=10;max_gd_trys=0
+# 
+# burn=TRUE;ndiscard=0;nstart=100;max_iter=2000; cores_per_chain=19;cores_for_chains=3
+# cores_per_chain=1;cores_for_chains=1
+
+
+auto_burn <- function(samplers,
+    burn=TRUE,ndiscard=200,nstart=300,nadapt=1000,
+    discard_start=TRUE,start_particles=NA,
+    start_mu = NULL, start_var = NULL,
+    start_mix=NULL,single_start_mix=c(.5,.5),
+    verbose=TRUE,verbose_run_stage=FALSE,
+    max_gd_trys=100,max_gd=1.1,
+    thorough=TRUE,natural=FALSE,
+    min_es=NULL,min_iter=NULL,max_iter=NULL,
+    epsilon = NULL, epsilon_upper_bound=2, 
+    particles=NA,particle_factor=100, sample_particle_factor=100, p_accept=0.7,
+    pdist_update_n=50,min_unique=200, mix=NULL,
+    cores_per_chain=1,cores_for_chains=NULL)
   # Takes a pmwgs chains list, initializes it (see run_stages), if !burn adapts
   # and runs burn or sample until gd criterion satisfied (see run_gd for details)
 {
