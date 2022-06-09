@@ -24,8 +24,8 @@ profile_pmwg(pname="mean_lM1",p=p_vector,p_min=0,p_max=2,dadm=dadmNORMAL)
 # profile_pmwg(pname="sd",p=p_vector,p_min=log(.5),p_max=log(1.5),dadm=dadmNORMAL)
 
 sampler <- make_samplers(dadmNORMAL, designNORMAL, type = "standard")
-burned <- run_chains(sampler, iter = c(50, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
+#samples <- run_chains(sampler, iter = c(50, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
 
-burned <- auto_burn(sampler,nstart = 200, ndiscard = 200, cores_per_chain = 10, cores_for_chains = 1, verbose_run_stage = T)
+burned <- auto_burn(sampler,nstart = 50, ndiscard = 50, cores_per_chain = 10, cores_for_chains = 1, verbose_run_stage = T)
 adapted <- auto_adapt(burned, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
-sampled <- auto_sample(adapted, iter = 500, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
+sampled <- auto_sample(adapted, iter = 100, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
