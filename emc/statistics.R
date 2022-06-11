@@ -2,7 +2,7 @@
 
 
 es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
-                    filter="burn",thin=1,subfilter=NULL)
+                    filter="sample",thin=1,subfilter=NULL)
   # Effective size 
 {
   if (!(class(pmwg_mcmc[[1]]) %in% c("mcmc","mcmc.list"))) {
@@ -24,11 +24,11 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
 
 # return_summary=FALSE;print_summary=TRUE;digits_print=2;sort_print=TRUE;
 # autoburnin=FALSE;transform=TRUE
-# selection="alpha";filter="burn";thin=1;subfilter=NULL
+# selection="alpha";filter="sample";thin=1;subfilter=NULL
 # pmwg_mcmc=sVat0;selection="mu";filter="sample"
 gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
     digits_print=2,sort_print=TRUE,autoburnin=FALSE,transform=TRUE,
-    selection="alpha",filter="burn",thin=1,subfilter=NULL,mapped=FALSE) 
+    selection="alpha",filter="sample",thin=1,subfilter=NULL,mapped=FALSE) 
   # R hat, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
 {
@@ -70,7 +70,7 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
 
 iat_pmwg <- function(pmwg_mcmc,
     print_summary=TRUE,digits_print=2,sort_print=TRUE,summary_alpha=mean,
-    selection="alpha",filter="burn",thin=1,subfilter=NULL) 
+    selection="alpha",filter="sample",thin=1,subfilter=NULL) 
   # Integrated autocorrelation time, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
 {
@@ -137,19 +137,19 @@ iat_pmwg <- function(pmwg_mcmc,
 # y=NULL;natural=TRUE;x_name=NULL;y_name=NULL; c_vector=NULL
 # mu=0;alternative = c("less", "greater")[1];
 # probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
-# x_filter="burn";x_selection="alpha";x_subfilter=1;
-# y_filter="burn";y_selection="alpha";y_subfilter=1
+# x_filter="sample";x_selection="alpha";x_subfilter=1;
+# y_filter="sample";y_selection="alpha";y_subfilter=1
 # 
 # x=ddmPNASa;p_name="a_Ea-n";x_selection = "mu";x_filter="sample"
 # c_vector=c(0,1,-1,0,1,-1)/4
-# x=andrew;p_name="t0_CIc-i";x_selection="alpha";x_filter="burn";x_name="D"
+# x=andrew;p_name="t0_CIc-i";x_selection="alpha";x_filter="sample";x_name="D"
   
 # p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 #                    x_name=NULL,y_name=NULL,
 #                    mu=0,alternative = c("less", "greater")[1],
 #                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
-#                    x_filter="burn",x_selection="alpha",x_subfilter=1,
-#                    y_filter="burn",y_selection="alpha",y_subfilter=1) {
+#                    x_filter="sample",x_selection="alpha",x_subfilter=1,
+#                    y_filter="sample",y_selection="alpha",y_subfilter=1) {
 # 
 #   
 # 
@@ -337,9 +337,9 @@ p_test <- function(x,x_name,x_fun=NULL,
 #   
 # }
 
-# filter="burn";subfilter=0;use_best_fit=FALSE;print_summary=FALSE;digits=0
+# filter="sample";subfilter=0;use_best_fit=FALSE;print_summary=FALSE;digits=0
 # filter="sample"
-pmwg_IC <- function(samplers,filter="burn",subfilter=0,use_best_fit=FALSE,
+pmwg_IC <- function(samplers,filter="sample",subfilter=0,use_best_fit=FALSE,
                     print_summary=FALSE,digits=0,subject=NULL)
   # Gets DIC, BPIC, effective parameters, mean deviance, and deviance of mean  
 {
@@ -396,7 +396,7 @@ pmwg_IC <- function(samplers,filter="burn",subfilter=0,use_best_fit=FALSE,
 
 
 
-compare_ICs <- function(sList,filter="burn",subfilter=0,use_best_fit=FALSE,
+compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=FALSE,
                     print_summary=FALSE,digits=0,digits_p=3,subject=NULL) {
   
   getp <- function(IC) {

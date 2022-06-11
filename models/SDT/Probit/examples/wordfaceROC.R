@@ -87,7 +87,7 @@ samplers <- make_samplers(wordfaceROC,designFW,type="standard")
 
 
 print(load("models/SDT/Probit/examples/samples/probitFW.RData")) 
-# All converged 
+# All appear to have reached the posterior model 
 plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
 plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
 plot_chains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
@@ -97,21 +97,22 @@ check_adapt(samples)
 # Chain 2 adapted by iteration 299
 # Chain 3 adapted by iteration 301
 
+# Now lets look at the final samples (the default setting of filter)
 # Converged, some correlations and alphas look quite autocorrelated
-plot_chains(samples,filter="sample",layout=c(3,5),selection="mu",thin=10) 
-plot_chains(samples,filter="sample",layout=c(3,5),selection="variance",thin=10) 
-plot_chains(samples,filter="sample",layout=c(4,4),selection="correlation",thin=10) 
-plot_chains(samples,filter="sample",layout=c(3,5),selection="alpha",thin=10) 
+plot_chains(samples,layout=c(3,5),selection="mu",thin=10) 
+plot_chains(samples,layout=c(3,5),selection="variance",thin=10) 
+plot_chains(samples,layout=c(4,4),selection="correlation",thin=10) 
+plot_chains(samples,layout=c(3,5),selection="alpha",thin=10) 
 
 selection="mu"; selection="variance"; selection="alpha"; layout=c(3,5)
 selection="correlation"; layout=c(4,7)
-gd_pmwg(samples,filter="sample",selection=selection)
-iat_pmwg(samples,filter="sample",selection=selection,summary_alpha=max) 
-round(es_pmwg(samples,filter="sample",selection=selection,summary_alpha=min))
-tabs <- plot_density(samples,filter="sample",layout=layout,selection=selection)
+gd_pmwg(samples,selection=selection)
+iat_pmwg(samples,selection=selection,summary_alpha=max) 
+round(es_pmwg(samples,selection=selection,summary_alpha=min))
+tabs <- plot_density(samples,layout=layout,selection=selection)
 
 #### Fit
-# ppWordFace <- post_predict(samples,filter="sample",n_cores=18)
+# ppWordFace <- post_predict(samples,n_cores=18)
 # save(ppWordFace,file="ppWordFace.RData")
 load("models/SDT/Probit/examples/samples/ppWordFace.RData")
 # For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
@@ -151,7 +152,7 @@ mp_design <- p_names(samples,mapped=TRUE,design=TRUE); mp_design
 
 # At hyper level the posterior (black lines) shows moderately strong domination 
 # of the prior (red lines).
-tab_mu <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7))
+tab_mu <- plot_density(samples,selection="mu",layout=c(2,7))
 
 # Start by looking at mean and sd parameters
 round(tab_mu[,sp_names$mean],2)
@@ -173,7 +174,7 @@ maps$sd
 # The same is true for sd (0.18 and 0.22 respectively), but recall the effect is 
 # on the log scale.
 
-tab_mu_mapped <- plot_density(samples,filter="sample",selection="mu",layout=c(2,7),mapped=TRUE)
+tab_mu_mapped <- plot_density(samples,selection="mu",layout=c(2,7),mapped=TRUE)
 
 # Need to remove cells set to constant in mp_names to look at estimates.
 
@@ -185,14 +186,14 @@ round(tab_mu_mapped[,mp_names$sd[-c(1:2)]],2)
 
 ### Look at parameter estimates: variance
 
-tab_var <- plot_density(samples,filter="sample",selection="variance",layout=c(2,7))
+tab_var <- plot_density(samples,selection="variance",layout=c(2,7))
 # These estimates reflect indivdiual differences
 round(tab_var[,sp_names$mean],2)
 round(tab_var[,sp_names$sd],2)
 
 ### Look at parameter estimates: correlation
 
-tab_cor <- plot_density(samples,filter="sample",selection="correlation",layout=c(4,4))
+tab_cor <- plot_density(samples,selection="correlation",layout=c(4,4))
 # There are 91 correlations (14*13/2). Much of the correlation reflects the 
 # design matrix structure.
 
@@ -202,13 +203,13 @@ tab_cor <- plot_density(samples,filter="sample",selection="correlation",layout=c
 
 # Individual participant plots show the prior implied by the population model,
 # providing an indication of shrinkage effects. 
-tab_alpha <- plot_density(samples,filter="sample",selection="alpha",layout=c(2,7))
+tab_alpha <- plot_density(samples,selection="alpha",layout=c(2,7))
 
 # Table of parameters is a list, can look at elements as with mu, e.g., 
 round(tab_alpha[[subject_names(samples)[1]]][,sp_names$mean],3)
 
 # As for mu can look at mapped parameters
-tab_alpha_mapped <- plot_density(samples,filter="sample",selection="alpha",
+tab_alpha_mapped <- plot_density(samples,selection="alpha",
                                  layout=c(2,7),mapped=TRUE)
 # As expected mean_words_old = .867 + .655
 round(tab_alpha_mapped[[subject_names(samples)[1]]][,mp_names$mean[-c(1:2)]],2)
@@ -216,7 +217,7 @@ round(tab_alpha_mapped[[subject_names(samples)[1]]][,mp_names$mean[-c(1:2)]],2)
 # It is common to think about sd in terms of ROC slope = 1/sd_old. Here we
 # extract slope and d' (mean_old) and plot it for words and faces with 
 # credible intervals. as_matrix stacks chains 
-pests <- lapply(as_mcmc.list(samples,selection="alpha",filter="sample",mapped=TRUE),as_matrix)
+pests <- lapply(as_mcmc.list(samples,selection="alpha",mapped=TRUE),as_matrix)
 
 dpFaces <- do.call(rbind,lapply(pests,function(x){
   quantile(x[,"mean_faces_old"],probs=c(.025,.5,.975))

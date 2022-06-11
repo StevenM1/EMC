@@ -113,10 +113,10 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   missingFilter(data[,names(data)!="winner"],LT,UT,LC,UC,Rmissing)
 }
 
-# hyper=FALSE;n_post=100;expand=1; filter="burn";subfilter=1;thin=1;
+# hyper=FALSE;n_post=100;expand=1; filter="sample";subfilter=1;thin=1;
 # use_par=c("random","mean","median")[1]; n_cores=1
 post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
-                         filter="burn",subfilter=0,thin=1,n_cores=1,
+                         filter="sample",subfilter=0,thin=1,n_cores=1,
                          use_par=c("random","mean","median")[1]) 
   # Post predictions for samples object, based on random samples or some
   # central tendency statistic. 

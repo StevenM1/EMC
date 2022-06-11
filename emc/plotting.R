@@ -4,7 +4,7 @@
 # subject=NA;ylim=NULL; plot_acf=FALSE;acf_chain=1
 # layout=c(2,5)
 plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
-    selection="alpha",filter="burn",thin=1,subfilter=0,                       
+    selection="alpha",filter="sample",thin=1,subfilter=0,                       
     plot_acf=FALSE,acf_chain=1, verbose=TRUE) # ,use_par=NA 
   # Plots chains  (if alpha or LL can do individual subject, all by default)    
 {
@@ -54,7 +54,7 @@ plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
 }
   
 plot_acfs <- function(samples,layout=NULL,subject=1,
-                     selection="alpha",filter="burn",subfilter=0)
+                     selection="alpha",filter="sample",subfilter=0)
   # Plots acf for all chains  
 {
   if (class(samples)=="pmwgs") samples <- list(samples) 
@@ -85,7 +85,7 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # pmwg_mcmc=samples; filter="sample";selection="mu";layout=c(2,7);mapped=TRUE
 # selection="alpha"
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
-    selection="alpha",filter="burn",thin=1,subfilter=0,mapped=FALSE,
+    selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
     show_chains=FALSE,do_plot=TRUE,subject=NA,
     pars=NULL,probs=c(.025,.5,.975),bw = "nrd0", adjust = 1) # ,use_par=NA
