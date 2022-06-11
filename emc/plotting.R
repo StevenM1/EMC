@@ -6,7 +6,7 @@
 plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
     selection="alpha",filter="sample",thin=1,subfilter=0,                       
     plot_acf=FALSE,acf_chain=1, verbose=TRUE) # ,use_par=NA 
-  # Plots chains  (if alpha or LL can do individual subject, all by default)    
+  # Plots chains  (if alpha, LL or epsilon can do individual subject, all by default)    
 {
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (class(pmwg_mcmc)=="pmwgs") 
@@ -33,10 +33,10 @@ plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
             ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE,ylim=ylim)
       }
     }
-  } else if (attr(pmwg_mcmc,"selection")=="LL") {
+  } else if (attr(pmwg_mcmc,"selection") %in% c("LL","epsilon")) {
     if (any(is.na(subject))) subject <- names(pmwg_mcmc)
     if (!all(subject %in% names(pmwg_mcmc)))
-      stop("Subject onot present\n")
+      stop("Subject not present\n")
     for (i in subject) {
       if (plot_acf) 
         acf(pmwg_mcmc[[i]],main=paste0("Chain ",acf_chain,": ","LL ",i)) else
@@ -52,6 +52,7 @@ plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
            ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE)
   }
 }
+
   
 plot_acfs <- function(samples,layout=NULL,subject=1,
                      selection="alpha",filter="sample",subfilter=0)
