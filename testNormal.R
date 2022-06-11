@@ -14,7 +14,12 @@ designNORMAL <- make_design(Flist=list(mean ~ lM, sd ~ 1),
 p_vector <- sampled_p_vector(designNORMAL)
 p_vector[1:2] <- c(0,1)
 
-dataNORMAL <- make_data(p_vector,design=designNORMAL,trials=100)
+Sigma <- matrix(c(.08, .02,
+                  .02, .1), nrow = 2)
+
+p_mat <- rmvnorm(length(designNORMAL$Ffactors$subjects),mean=p_vector,sigma=Sigma)
+dimnames(p_mat)[[1]] <- designNORMAL$Ffactors$subjects
+dataNORMAL <- make_data(p_vector= p_mat,design=designNORMAL,trials=200)
 plot_defective_density(dataNORMAL,layout=c(1,2))
 
 dadmNORMAL <- design_model(dataNORMAL,designNORMAL)
@@ -24,8 +29,10 @@ profile_pmwg(pname="mean_lM1",p=p_vector,p_min=0,p_max=2,dadm=dadmNORMAL)
 # profile_pmwg(pname="sd",p=p_vector,p_min=log(.5),p_max=log(1.5),dadm=dadmNORMAL)
 
 sampler <- make_samplers(dadmNORMAL, designNORMAL, type = "standard")
-burned <- run_chains(sampler, iter = c(50, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
+#samples <- run_chains(sampler, iter = c(50, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
+source("emc/emc.R")
 
-burned <- auto_burn(sampler,nstart = 200, ndiscard = 200, cores_per_chain = 10, cores_for_chains = 1, verbose_run_stage = T)
+debug(auto_burn)
+burned <- auto_burn(sampler,nstart = 30, ndiscard = 20, cores_per_chain = 10, cores_for_chains = 1, verbose_run_stage = T, step_size = 50)
 adapted <- auto_adapt(burned, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
-sampled <- auto_sample(adapted, iter = 500, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
+sampled <- auto_sample(adapted, iter = 100, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)

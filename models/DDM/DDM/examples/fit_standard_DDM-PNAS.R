@@ -58,14 +58,15 @@ samplers <- make_samplers(dat,design_a,type="standard",rt_resolution=.02,
   prior=list(theta_mu_mean = rep(0, 7), theta_mu_var = diag(rep(5, 7))))
 # Likelihood speedup factor: 4
 
-sPNAS_a <- auto_burn(samplers,burn=FALSE,ndiscard=100,nstart=100,min_es=500,
+sPNAS_a <- auto_burn(samplers,ndiscard=100,nstart=100,
                      cores_per_chain=4)
 
 ##### Check convergence
+sPNAS_a <- sampled
 
 chain_n(sPNAS_a)
 
-plotChains(sPNAS_a,selection="LL",filter="sample",layout=c(4,5))
+plot_chains(sPNAS_a,selection="LL",filter="sample",layout=c(4,5))
 plotACFs(sPNAS_a,selection="LL",filter="sample",layout=c(4,5))
   
 par(mfrow=c(2,7))
