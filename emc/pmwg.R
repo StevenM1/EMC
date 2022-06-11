@@ -144,7 +144,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
 # data_list=dataNUM; design_list=designNUM;model_list=NULL
 make_samplers <- function(data_list,design_list,model_list=NULL,
   type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
-  n_chains=3,rt_resolution=0.001,
+  n_chains=3,rt_resolution=0.02,
   prior_list = NULL,
   par_groups=NULL,
   n_factors=NULL,constraintMat = NULL,covariates=NULL)

@@ -4,9 +4,9 @@
 # subject=NA;ylim=NULL; plot_acf=FALSE;acf_chain=1
 # layout=c(2,5)
 plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
-    selection="alpha",filter="burn",thin=1,subfilter=0,                       
+    selection="alpha",filter="sample",thin=1,subfilter=0,                       
     plot_acf=FALSE,acf_chain=1, verbose=TRUE) # ,use_par=NA 
-  # Plots chains  (if alpha or LL can do individual subject, all by default)    
+  # Plots chains  (if alpha, LL or epsilon can do individual subject, all by default)    
 {
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (class(pmwg_mcmc)=="pmwgs") 
@@ -33,10 +33,10 @@ plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
             ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE,ylim=ylim)
       }
     }
-  } else if (attr(pmwg_mcmc,"selection")=="LL") {
+  } else if (attr(pmwg_mcmc,"selection") %in% c("LL","epsilon")) {
     if (any(is.na(subject))) subject <- names(pmwg_mcmc)
     if (!all(subject %in% names(pmwg_mcmc)))
-      stop("Subject onot present\n")
+      stop("Subject not present\n")
     for (i in subject) {
       if (plot_acf) 
         acf(pmwg_mcmc[[i]],main=paste0("Chain ",acf_chain,": ","LL ",i)) else
@@ -52,9 +52,10 @@ plot_chains <- function(pmwg_mcmc,layout=NA,subject=NA,ylim=NULL,
            ylab=attr(pmwg_mcmc,"selection"),smooth=FALSE)
   }
 }
+
   
 plot_acfs <- function(samples,layout=NULL,subject=1,
-                     selection="alpha",filter="burn",subfilter=0)
+                     selection="alpha",filter="sample",subfilter=0)
   # Plots acf for all chains  
 {
   if (class(samples)=="pmwgs") samples <- list(samples) 
@@ -85,7 +86,7 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # pmwg_mcmc=samples; filter="sample";selection="mu";layout=c(2,7);mapped=TRUE
 # selection="alpha"
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
-    selection="alpha",filter="burn",thin=1,subfilter=0,mapped=FALSE,
+    selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
     show_chains=FALSE,do_plot=TRUE,subject=NA,
     pars=NULL,probs=c(.025,.5,.975),bw = "nrd0", adjust = 1) # ,use_par=NA
@@ -599,7 +600,7 @@ plot_fits <- function(data,pp,factors=NULL,
                       probs=c(1:99)/100,
                       data_lwd=2,fit_lwd=1,qp_cex=1,
                       q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft",
-                      matchfun,signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
+                      matchfun=NULL,signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
   # as for plot_fits but does it per subject.
   for (i in levels(data$subjects)) 
     plot_fit(data,pp,subject=i,factors,stat,stat_name,ci,do_plot,xlim,ylim,layout,mfcol,

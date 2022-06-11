@@ -8,19 +8,19 @@ source("models/DDM/DDM/ddm.R")
 ddmTZD <- list(
   type="DDM",
   p_types=c("v","a","sv","t0","st0","s","Z","SZ","DP"),
+  # The "TZD" parameterization defined relative to the "rtdists" package is:
   # natural scale
-  #   v = rtdists v (positive favors upper)
+  #   v = rtdists rate v (positive favors upper)
   # log scale 
   #   t0 > 0: lower bound of non-decision time 
   #   st0 > 0: rtdists width of non-decision time distribution 
-  #   a > 0: rtdists a
-  #   sv > 0: rtdists sv
-  #   s > 0: rtdists s
+  #   a > 0: rtdists upper threshold, a
+  #   sv > 0: rtdists v standard deviation sv
+  #   s > 0: rtdists moment-to-moment standard deviation, s
   # probit scale
-  #   0 < Z < 1: rtdists z = Z*a 
-  #   0 < SZ < 1: rtdists sz = 2*SZ*min(c(a*Z,a*(1-Z)) probit scale
-  #   0 < DP < 1: rtdists t0(upper)-t0(lower) = d = (2*DP-1)*t0
-  # 
+  #   0 < Z < 1: rtdists start point z = Z*a 
+  #   0 < SZ < 1: rtdists start-point variability, sz = 2*SZ*min(c(a*Z,a*(1-Z)) 
+  #   0 < DP < 1: rtdists d = t0(upper)-t0(lower) = (2*DP-1)*t0  # 
   # 
   # Transform to natural scale
   Ntransform=function(x) {

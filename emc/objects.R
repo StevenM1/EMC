@@ -154,8 +154,8 @@ get_sigma_chains <- function(samples,filter="samples",thin=1,subfilter=0)
 
 #### mcmc extraction ----
 
-as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
-                    filter=stages,thin=1,subfilter=0)
+as_Mcmc <- function(sampler,filter=stages,thin=1,subfilter=0,
+  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1])
   # replacement for pmwg package as_mccmc
   # allows for selection of subj_ll, and specifying selection as an integer
   # allows filter as single integer so can remove first filter samples
@@ -224,8 +224,10 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
     ), names(sampler$data))
     attr(out,"selection") <- selection
     return(out)
-  } else if (selection == "LL") {
-    LL <- sampler$samples$subj_ll[, filter,drop=FALSE]
+  } else if (selection %in% c("LL","epsilon")) {
+    if (selection == "epsilon") 
+      LL <- sampler$samples$epsilon[, filter,drop=FALSE] else
+      LL <- sampler$samples$subj_ll[, filter,drop=FALSE]
     if (!is.null(subfilter)) LL <- shorten(LL,subfilter,2)
     if (thin > dim(LL)[2]) stop("Thin to large\n")
     out <- setNames(lapply(
@@ -234,7 +236,7 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
     attr(out,"selection") <- selection
     return(out)
   }
-  stop("Argument `selection` should be one of mu, variance, covariance, correlation, alpha, LL\n")
+  stop("Argument `selection` should be one of mu, variance, covariance, correlation, alpha, LL, or epsilon\n")
 }    
 
 
@@ -242,7 +244,7 @@ as_Mcmc <- function(sampler,selection=c("alpha","mu","variance","covariance","co
 
 
 as_mcmc.list <- function(samplers,
-  selection=c("alpha","mu","variance","covariance","correlation","LL")[1],
+  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1],
   filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
   # mapped = TRUE map mu or alpha to model parameters (constants indicated by
@@ -281,7 +283,7 @@ as_mcmc.list <- function(samplers,
         constants=attr(samplers,"design_list")[[1]]$constants)
     }    
   }
-  if (selection=="LL")
+  if (selection %in% c("LL","epsilon"))
     iter <- unlist(lapply(mcmcList,function(x){length(x[[1]])})) else 
     if (selection == "alpha") 
       iter <- unlist(lapply(mcmcList,function(x){dim(x[[1]])[1]})) else
@@ -289,13 +291,13 @@ as_mcmc.list <- function(samplers,
   if (!all(iter[1]==iter[-1])) 
     message("Chains have different numbers of samples, using first ",min(iter))
   iter <- min(iter)
-  if (selection %in% c("alpha","LL")) {
+  if (selection %in% c("alpha","LL","epsilon")) {
     nChains <- length(mcmcList)
     ns <- length(samplers[[1]]$subjects)
     out <- vector(mode="list",length=ns)
     lst <- vector(mode="list",length=nChains)
     for (i in 1:ns) {
-      for (j in 1:nChains) if (selection=="LL")
+      for (j in 1:nChains) if (selection %in% c("LL","epsilon"))
         lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter]) else {
           isConstant <- attr(mcmcList[[j]][[i]],"isConstant")
           lst[[j]] <- as.mcmc(mcmcList[[j]][[i]][1:iter,])  
