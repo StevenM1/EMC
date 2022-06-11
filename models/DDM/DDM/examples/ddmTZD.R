@@ -1,8 +1,23 @@
 rm(list=ls())
 source("emc/emc.R")
 source("models/DDM/DDM/ddmTZD.R")
+# NB: The "TZD" parameterization defined relative to the "rtdists" package is:
+  # natural scale
+  #   v = rtdists rate v (positive favors upper)
+  # log scale 
+  #   t0 > 0: lower bound of non-decision time 
+  #   st0 > 0: rtdists width of non-decision time distribution 
+  #   a > 0: rtdists upper threshold, a
+  #   sv > 0: rtdists v standard deviation sv
+  #   s > 0: rtdists moment-to-moment standard deviation, s
+  # probit scale
+  #   0 < Z < 1: rtdists start point z = Z*a 
+  #   0 < SZ < 1: rtdists start-point variability, sz = 2*SZ*min(c(a*Z,a*(1-Z)) 
+  #   0 < DP < 1: rtdists d = t0(upper)-t0(lower) = (2*DP-1)*t0
 
-load("Data/PNAS.RData")
+
+
+print(load("Data/PNAS.RData"))
 # Note that this data was censored at 0.25s and 1.5s
 
 dat <- data[,c("s","E","S","R","RT")]
@@ -43,42 +58,104 @@ Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
 dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 
 # Test stimulus factor with intercept and right-left factor. When applied to rate 
-# parameter it produces the traditional DDM "drift rate" parameter. The 
+# parameter v_S is the traditional DDM "drift rate" parameter. The 
 # intercept term is drift bias. If it is zero drift rate is the same for left
-# and right. 
+# and right, if positive rate bias favors right, when negative left, e.g.,
+# intercept v = 1, v_S = 2 implies an upper rate of 3 and lower rate of -1. 
 Vmat <- matrix(c(-1,1),ncol=1,dimnames=list(NULL,""))  
 
 
-# Fit a Wiener diffusion model (i.e., no between-trial variability) with
-# traditional characterization where E affects only threshold (a) 
+# Fit a Wiener diffusion model where between-trial variability parameters are set
+# to zero in "constants" (NB: this is done on the sampled scale, so qnorm (probit)
+# for DP and SZ and log for st0 and sv) with the traditional characterization of
+# the speed vs. accuracy emphasis factor (E) selectively influencing threshold (a), 
+# and stimulus (S) affecting rate (v). In order to make the model identifiable
+# we set moment-to-moment variability to the conventional value of 1. 
 
 design_a <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),
   Clist=list(S=Vmat,E=Emat),
   Flist=list(v~S,a~E,sv~1, t0~1, st0~1, s~1, Z~1, SZ~1, DP~1),
-  constants=c(s=log(1),st0=log(0),DP=qnorm(0.5),SZ=qnorm(0),sv=log(1)),
+  constants=c(s=log(1),st0=log(0),DP=qnorm(0.5),SZ=qnorm(0),sv=log(0)),
   model=ddmTZD)
 
-# 7 parameter model
+# This produces a 7 parameter model
 sampled_p_vector(design_a)
 
-samplers <- make_samplers(dat,design_a,type="standard",rt_resolution=.02,
-  prior=list(theta_mu_mean = rep(0, 7), theta_mu_var = diag(rep(5, 7))))
-# Likelihood speedup factor: 4
-# save(samplers,file="sPNAS_a.RData")
-#  Fit in script sPNAS_a.R 
+# v is the rate intercept, and v_S the traditional drift rate, a is the threshold
+# for accuracy, a_Ea-n accuracy-neutral and a_Ea-s accuracy - neutral. t0 is the
+# mean non-decision time and Z the proportional start-point bias (unbiased Z=0.5).
+
+# We will fit a "standard" hierarchical model that allows for population 
+# correlations among all parameters (7 x (7-1) /2 = 21 correlations), along with 
+# population mean (mu) and variance estimates for each parameter. 
+
+# Here we use the default hyper-prior, reproduced here explicitly (the same
+# is obtained if the prior argument is omitted from make_samplers). It sets a
+# mean of zero and a variance of 1 for all parameters and assumes they are 
+# independent. 
+prior=list(theta_mu_mean = rep(0, 7), theta_mu_var = diag(rep(5, 7)))
+
+# make_samplers combines the data and design and makes a list of n_chains
+# pmwg objects ready for sampling. Here we use the default 3 chains. Each will
+# be sampled independently (multiple chains are useful for assessing convergence).
+samplers <- make_samplers(dat,design_a,type="standard",
+                          prior_list=prior,n_chains=3,rt_resolution=.02)
+# make_samplers also compresses the data, grouping together trials with the same 
+# parametersand rt's that differ less than the value specified in the rt_resolution 
+# argument. Here we use the default which assumes a seconds scale (using 
+# seconds is STRONGLY recommended) appropriate to visual stimuli presented on a
+# monitor with 50Hz refresh (i.e., refreshing each 0.02s). Uniform random error
+# in rt measurement is introduced in such a setup unless timing is coordinated
+# with the sync pulse. Response devices such as the mouse or keyboard buttons
+# introduce further error, so this setting is quite conservative. Taking 
+# measurement resolution can substantially speed up likelihood calculation, the
+# key bottleneck in sampling, in this case by a factor of 4
+
+save(samplers,file="sPNAS_a.RData")
+#  Fitting is performed in the script sPNAS_a.R (e.g., on a linux based system
+# the command line is R CMD BATCH sPNAS_a.R & to run it in background)
+# We run 300 burn in samples, up to 1000 adapt samples (adapt can pull out 
+# early when complete, so this is an upper limit) and 1000 final "efficeint"
+# samples to be used for inference, using the follwing command
+sPNAS_a <- run_chains(samplers,iter=c(300,1000,1000),cores_per_chain=10)
+
+# By default each chain gets its own cores (this can be set with the 
+# cores_for_chains argument) and the cores_per_chain argument above gives each
+# chain 10, so 30 are used in total (using up most of the capacity of the 32 
+# core system this was run on (16 physical cores, each with two threads)
+
+# Once sampling is completed the script also gets posterior predictive samples
+# to enable model fit checks. By default this is based on randomly selecting 
+# iterations from the final (sample) stage, and provides posterior predictives 
+# for the random effects. Here we use one core pre participant.
+ppPNAS_a <- post_predict(sPNAS_a,n_cores=19)
+
+# Lets load in the results and look at them.
 print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
 
 ##### Check convergence
+
+print(load("sPNAS_a.RData"))
+sPNAS_a <- sPNAS_a_adapt
 # Adapted with 533 final samples
 chain_n(sPNAS_a)
+plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="epsilon",layout=c(4,5),filter="burn",subfilter=100)
+
+par(mfrow=c(2,7))
+plot_chains(sPNAS_a,selection="alpha",layout=NULL,filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="mu",layout=c(2,4),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="variance",layout=c(2,4),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="correlation",layout=c(3,7),filter="burn",subfilter=100)
+
 
 # Focus on the sample stage from here (the default setting of filter) 
 
 # RANDOM EFFECTS (i.e., subject level)
 # Participant likelihoods all fat flat hairy caterpillars
-plot_chains(sPNAS_a,selection="LL",layout=c(4,5))
+plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn")
 # Plot random effects, again they look good
 par(mfrow=c(2,7)) # one row per participant
 plot_chains(sPNAS_a,selection="alpha",layout=NULL)
@@ -133,21 +210,21 @@ iat_pmwg(sPNAS_a,selection="correlation")
 
 ########  Fit 
 
-ppPNAS_a <- post_predict(sPNAS_a,n_cores=5)
+# Already run and saved
+# ppPNAS_a <- post_predict(sPNAS_a,n_cores=5)
 # save(ppPNAS_a,sPNAS_a,file="sPNAS_a.RData")
 
 # By default the plot shows results for all subjects, putting everyone on the
 # same x scale, which can make it hard to see fit for some or most subjects
 plot_fit(dat,ppPNAS_a,layout=c(2,3))
 
-# You could specify your own limits (e.g,. the data range) and move the 
-# legend)
+# You could specify your own limits (e.g,. the data range) and move the legend)
 plot_fit(dat,ppPNAS_a,layout=c(2,3),xlim=c(.25,1.5),lpos="right")
 
 # Or plot for a single subject, e.g., the first 
 plot_fit(dat,ppPNAS_a,layout=c(2,3),subject="as1t")
 
-# This function (note the s on fits) does the x scaling per subject
+# This function (note the "s" in plot_fits) does the x scaling per subject
 plot_fits(dat,ppPNAS_a,layout=c(2,3),lpos="right")
 
 # Can also show the average over subjects as subjects is like any other factor,
@@ -194,20 +271,18 @@ round(tab,2)
 
 ######## Posterior parameter inference ----
 
-ciPNAS <- plot_density(sPNAS_a,layout=c(2,4),do_plot=FALSE,selection="mu")
+# Population means (mu)
+# Here we use plot_density without plotting to get a table of 95% parameter CIs
+ciPNAS <- plot_density(sPNAS_a,layout=c(2,4),selection="mu",do_plot=FALSE)
 round(ciPNAS,2)
-#           v  v_S    a a_Ea-n a_Ea-s    t0     Z
-# 2.5%  -0.26 1.69 0.31   0.04   0.38 -1.42 -0.07
-# 50%   -0.11 2.24 0.41   0.08   0.51 -1.39 -0.03
-# 97.5%  0.05 2.76 0.50   0.12   0.62 -1.35  0.00
 
 # Lets look at the mapping using the mean of the population mean (mu)
 # samples, which is stored as an attribute (very little difference from
 # the median, ciPNAS[2,])
 pMU <- attr(ciPNAS,"mean")
-# Just take first 6 rows (full output repeats for all 19 subjects)
-# NB: The correspondence to population mean  
-mapped_par(pMU,design_a)[1:6,c(1:4,6,9)]
+# Now map the mean into the fill design. Between trial variability parameters
+# are fixed at either zero (), 
+mapped_par(pMU,design_a)
 #       S        E      v     a   t0     Z
 # 1  left accuracy -2.338 1.502 0.25 0.487
 # 2  left  neutral -2.338 1.384 0.25 0.487
@@ -244,6 +319,19 @@ p_test(sPNAS_a,p_name="a_Ea-s",x_selection = "mu", x_filter="sample")
 # Average rate is ~2.4
 p_test(sPNAS_a,p_name="v_S",x_selection = "mu", x_filter="sample")
 
+
+#####  FULL DDM
+
+design_a_full <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Clist=list(S=Vmat,E=Emat),
+  Flist=list(v~S,a~E,sv~1, t0~1, st0~1, s~1, Z~1, SZ~1, DP~1),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
+
+samplers <- make_samplers(dat,design_a_full,type="standard")
+save(samplers,file="sPNAS_a_full.RData")
 
 
 
