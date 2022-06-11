@@ -20,6 +20,20 @@ thin_pmwg <- function(pmwg,thin=10)
 }
 
 
+filter_obj <- function(obj, idx){
+  dims <- dim(obj)
+  dim_names <- dimnames(obj)
+  if(is.null(dims)) return(obj)
+  if(length(dims) == 2){
+    if(isSymmetric(round(obj, 5))) return(obj) #Don't extend priors and theta_mu_var_inv
+  } 
+  obj <- obj[slice.index(obj, length(dims)) %in% idx]
+  dims[length(dims)] <- length(idx)
+  dim(obj) <- dims
+  dimnames(obj) <- dim_names # Give back to the community
+  return(obj)
+}
+
 get_stage <- function(pmwg,stage="burn") 
   # Returns object with only stage samples
 {

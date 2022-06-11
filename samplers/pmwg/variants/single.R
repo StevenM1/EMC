@@ -3,6 +3,7 @@ library(MASS) ## For matrix inverse.
 library(MCMCpack) #For inverse wishart
 library(lme4)
 library(parallel)
+library(matrixcalc)
 
 source("samplers/pmwg/messaging.R")
 
@@ -82,6 +83,7 @@ init <- function(pmwgs, start_mu = NULL, start_var = NULL,
 }
 
 start_proposals <- function(s, start_mu, start_var, n_particles, pmwgs){
+  n_particles <- n_particles
   proposals <- particle_draws(n_particles, start_mu, start_var)
   colnames(proposals) <- pmwgs$par_names # preserve par names
   lw <- apply(proposals,1,pmwgs$ll_func,dadm = pmwgs$data[[which(pmwgs$subjects == s)]])
@@ -90,13 +92,14 @@ start_proposals <- function(s, start_mu, start_var, n_particles, pmwgs){
   return(list(proposal = proposals[idx,], ll = lw[idx]))
 }
 
-new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, mean_samples,
-                          eff_mu = NULL, eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
-                          likelihood_func = NULL, epsilon = NULL, subjects) 
+new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, prev_sample,
+                                 eff_mu = NULL, eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
+                                 likelihood_func = NULL, epsilon = NULL, subjects) 
 {
-  eff_mu <- eff_mu[, s]
+  num_particles <- num_particles[s]
+  eff_mu <- prev_sample[,s] #eff_mu[, s]
   eff_var <- eff_var[,,s]
-  subj_mu <- mean_samples[,s]
+  subj_mu <- prev_sample[,s]
   particle_numbers <- numbers_from_proportion(mix_proportion, num_particles)
   cumuNumbers <- cumsum(particle_numbers)
   pop_particles <- particle_draws(particle_numbers[1], prior_mu, 
@@ -106,7 +109,7 @@ new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, me
   if(mix_proportion[3] == 0){
     eff_particles <- NULL
   } else{
-    eff_particles <- particle_draws(particle_numbers[3], eff_mu, eff_var)
+    eff_particles <- particle_draws(particle_numbers[3], subj_mu, eff_var*epsilon[s]^2)
   }
   proposals <- rbind(pop_particles, ind_particles, eff_particles)
   colnames(proposals) <- names(subj_mu)
@@ -120,7 +123,7 @@ new_particle_single <- function (s, data, num_particles, prior_mu, prior_var, me
     eff_density <- 0
   }
   else {
-    eff_density <- mvtnorm::dmvnorm(x = proposals, mean = eff_mu, sigma = eff_var)
+    eff_density <- mvtnorm::dmvnorm(x = proposals, mean = subj_mu, sigma = eff_var*epsilon[s]^2)
   }
   lm <- log(mix_proportion[1] * exp(lp) + (mix_proportion[2] * 
                                              prop_density) + (mix_proportion[3] * eff_density))
@@ -147,7 +150,7 @@ run_stage <- function(pmwgs,
   if(is.null(mix)) mix <- set_mix(stage, verbose)
   # Set stable (fixed) new_sample argument for this run
   n_pars <- length(pmwgs$par_names)
-    # Display stage to screen
+  # Display stage to screen
   
   alphaStar=-qnorm(pstar/2) #Idk about this one
   n0=round(5/(pstar*(1-pstar))) #Also not questioning this math for now
@@ -156,6 +159,9 @@ run_stage <- function(pmwgs,
   }  
   if(length(epsilon) == 1){
     epsilon <- rep(epsilon, pmwgs$n_subjects)
+  }
+  if(length(particles) == 1){
+    particles <- rep(particles, pmwgs$n_subjects)
   }
   
   # Build new sample storage
@@ -172,27 +178,34 @@ run_stage <- function(pmwgs,
   subjects <- pmwgs$subjects
   n_subjects <- pmwgs$n_subjects
   eff_mu <- NULL
-  eff_var <- NULL
-  if(stage == "sample") eff_var <- replicate(n_subjects, prior_var)
+  eff_var <- replicate(n_subjects, prior_var)
   # Main iteration loop
   for (i in 1:iter) {
     if (verbose) {
       update_progress_bar(pb, i, extra = mean(accept_rate(pmwgs)))
     }
     j <- start_iter + i
-    
-    if(stage == "sample" & (i %% 10 == 0 || i == 1)){
+    if(j == n_window + 1){
+      mix <- set_mix("sample", verbose = F)
+      epsilon <- epsilon * 2
+    }
+    if(j > n_window & (j %% 10 == 0 || i == 1 || j == n_window)){
       for(k in 1:n_subjects){
         # I outline quicker ways to do this below, but for now this is easier for testing
-        eff_var[,,k] <- cov(t(pmwgs$samples$alpha[,k,(j-1-n_window):(j-1)]))
+        covMat   <- cov(t(pmwgs$samples$alpha[,k,(j-1-n_window):(j-1)]))
+        if(!is.positive.semi.definite(covMat)){
+          save(covMat, file = "wrongCov.RData")
+          covMat <- as.matrix(nearPD(covMat)$mat)
+        }
+        eff_var[,,k] <- covMat
       }
-      eff_mu <- apply(pmwgs$samples$alpha[,,(j-1-n_window):(j-1)], 1:2, mean)
+      # eff_mu <- apply(pmwgs$samples$alpha[,,(j-1-n_window):(j-1)], 1:2, mean)
     }
     
-    mean_samples <- matrix(pmwgs$samples$alpha[,,j-1], nrow = n_pars, ncol = n_subjects)
-    rownames(mean_samples) <- pmwgs$par_names
-    proposals=lapply(X=1:pmwgs$n_subjects,FUN = new_particle_single, data, particles, prior_mu, prior_var,
-                       mean_samples, eff_mu, eff_var, mix, pmwgs$ll_func, epsilon, subjects)
+    prev_sample <- matrix(pmwgs$samples$alpha[,,j-1], nrow = n_pars, ncol = n_subjects)
+    rownames(prev_sample) <- pmwgs$par_names
+    proposals=mclapply(X=1:pmwgs$n_subjects,FUN = new_particle_single, data, particles, prior_mu, prior_var,
+                       prev_sample, eff_mu, eff_var, mix, pmwgs$ll_func, epsilon, subjects, mc.cores = n_cores)
     proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
     alpha <- matrix(proposals[1:n_pars,], nrow = n_pars, ncol = n_subjects)
     ll <- proposals[n_pars + 1,]
@@ -206,7 +219,7 @@ run_stage <- function(pmwgs,
     if(!is.null(pstar)){
       if(j > (n_window + n0)){
         acc <-  pmwgs$samples$alpha[1,,j] != pmwgs$samples$alpha[1,,(j-1)]
-        epsilon<-pmin(update.epsilon(epsilon^2, acc, pstar, j, pmwgs$n_pars, alphaStar), epsilon_upper_bound)
+        epsilon<-pmin(update.epsilon(epsilon^2, acc, pstar, j, pmwgs$n_pars, alphaStar), 15)
       }
     }
     
@@ -232,9 +245,9 @@ update.epsilon<- function(epsilon2, acc, p, i, d, alpha) {
 
 set_mix <- function(stage, verbose) {
   if (stage == "sample") {
-    mix <- c(0.1, 0.2, 0.7)
+    mix <- c(0.3, 0.2, 0.5)
   } else {
-    mix <- c(0.1, 0.9, 0)
+    mix <- c(0.3, 0.7, 0)
   }
   if(verbose) message(sprintf("mix has been set to c(%s) based on the stage being run",  paste(mix, collapse = ", ")))
   return(mix)

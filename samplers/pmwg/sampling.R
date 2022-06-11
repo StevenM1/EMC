@@ -392,20 +392,6 @@ extend_obj <- function(obj, n_extend){
   return(extended)
 }
 
-filter_obj <- function(obj, idx){
-  dims <- dim(obj)
-  dim_names <- dimnames(obj)
-  if(is.null(dims)) return(obj)
-  if(length(dims) == 2){
-    if(isSymmetric(round(obj, 5))) return(obj) #Don't extend priors and theta_mu_var_inv
-  } 
-  obj <- obj[slice.index(obj, length(dims)) %in% idx]
-  dims[length(dims)] <- length(idx)
-  dim(obj) <- dims
-  dimnames(obj) <- dim_names # Give back to the community
-  return(obj)
-}
-
 extend_sampler <- function(sampler, n_samples, stage) {
   # This function takes the sampler and extends it along the intended number of
   # iterations, to ensure that we're not constantly increasing our sampled object

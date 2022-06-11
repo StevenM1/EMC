@@ -16,9 +16,9 @@ run_stages <- function(sampler,iter=c(300,0,0),
 {
   
   if (is.na(particles)) 
-      particles <- round(particle_factor*sqrt(length(sampler$par_names)))
+    particles <- round(particle_factor*sqrt(length(sampler$par_names)))
   if (!sampler$init) {
-      sampler <- init(sampler, n_cores = n_cores, particles = particles, 
+    sampler <- init(sampler, n_cores = n_cores, 
         epsilon = epsilon, start_mu = start_mu, start_var = start_var) 
   }
   if (all(iter==0)) return(sampler)
@@ -144,7 +144,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   repeat {
     run_try <- 0
     repeat {
-      which_stuck <- stuck_chains(samplers_new)
+      which_stuck <- stuck_chains(samplers)
       
       samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                                n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
@@ -204,7 +204,7 @@ auto_burn <- function(samplers,ndiscard=200,nstart=300,nadapt=1000,
     max_gd_trys=100,max_gd=1.1,
     thorough=TRUE,mapped=FALSE, step_size = NA,
     min_es=NULL,min_iter=NULL,max_iter=NULL,
-    epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,
+    epsilon = NULL, epsilon_upper_bound=15, p_accept=0.5,
     cores_per_chain=1,cores_for_chains=NULL)
   # Takes a pmwgs chains list, initializes it (see run_stages), if !burn adapts
   # and runs burn or sample until gd criterion satisfied (see run_gd for details)
