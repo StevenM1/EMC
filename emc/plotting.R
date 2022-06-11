@@ -599,7 +599,7 @@ plot_fits <- function(data,pp,factors=NULL,
                       probs=c(1:99)/100,
                       data_lwd=2,fit_lwd=1,qp_cex=1,
                       q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft",
-                      matchfun,signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
+                      matchfun=NULL,signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
   # as for plot_fits but does it per subject.
   for (i in levels(data$subjects)) 
     plot_fit(data,pp,subject=i,factors,stat,stat_name,ci,do_plot,xlim,ylim,layout,mfcol,
