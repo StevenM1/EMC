@@ -198,6 +198,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
+
 auto_burn <- function(samplers,ndiscard=200,nstart=300,
     particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
     mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
@@ -311,7 +312,10 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
                        epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                        n_cores_conditional = 1, step_size = 50, thin = NULL,
-                       verbose_run_stage = FALSE){
+                       verbose_run_stage = FALSE)
+  # Automatically run the sample stage  
+{
+  
   if(verbose) message("Running sample stage")
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -350,7 +354,9 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   return(samplers)
 }
 
-test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional = 1, verbose = F){
+test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional = 1, 
+                         verbose = FALSE)
+{
   # Only need to check uniqueness for one parameter
   first_par <- test_samples$alpha[1, , ]
   # Split the matrix into a list of vectors by subject
