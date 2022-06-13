@@ -16,6 +16,7 @@ source("models/DDM/DDM/ddmTZD.R")
   #   0 < DP < 1: rtdists d = t0(upper)-t0(lower) = (2*DP-1)*t0
 
 
+#### Format the data to be analyzed ----
 
 print(load("Data/PNAS.RData"))
 # Note that this data was censored at 0.25s and 1.5s
@@ -23,6 +24,8 @@ print(load("Data/PNAS.RData"))
 dat <- data[,c("s","E","S","R","RT")]
 names(dat)[c(1,5)] <- c("subjects","rt")
 levels(dat$R) <- levels(dat$S)
+
+#### Explore the data ----
 
 # 3 x 2 design, 19 subjects
 lapply(dat,levels)
@@ -53,6 +56,9 @@ table(dat$subjects)
 # 70-90% accuracy, .35s - .5s mean RT
 plot_defective_density(dat,factors=c("E","S"),layout=c(2,3))
 
+
+#### Set up the design ----
+
 # Test E factor with Accuracy - Neutral &  Accuracy - Speed contrasts
 Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
 dimnames(Emat) <- list(NULL,c("a-n","a-s"))
@@ -64,6 +70,7 @@ dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 # intercept v = 1, v_S = 2 implies an upper rate of 3 and lower rate of -1. 
 Vmat <- matrix(c(-1,1),ncol=1,dimnames=list(NULL,""))  
 
+#### Wiener diffusion model ----
 
 # Fit a Wiener diffusion model where between-trial variability parameters are set
 # to zero in "constants" (NB: this is done on the sampled scale, so qnorm (probit)
@@ -113,19 +120,38 @@ samplers <- make_samplers(dat,design_a,type="standard",
 # measurement resolution can substantially speed up likelihood calculation, the
 # key bottleneck in sampling, in this case by a factor of 4
 
-save(samplers,file="sPNAS_a.RData")
+# save(samplers,file="sPNAS_a.RData")
+
+save(sPNAS_a,file="sPNAS_a.RData")
+
+#### Explore the fitting script ----
+
 #  Fitting is performed in the script sPNAS_a.R (e.g., on a linux based system
 # the command line is R CMD BATCH sPNAS_a.R & to run it in background)
-# We run 300 burn in samples, up to 1000 adapt samples (adapt can pull out 
-# early when complete, so this is an upper limit) and 1000 final "efficeint"
-# samples to be used for inference, using the follwing command
-sPNAS_a <- run_chains(samplers,iter=c(300,1000,1000),cores_per_chain=10)
 
-# By default each chain gets its own cores (this can be set with the 
-# cores_for_chains argument) and the cores_per_chain argument above gives each
-# chain 10, so 30 are used in total (using up most of the capacity of the 32 
-# core system this was run on (16 physical cores, each with two threads)
-
+# We use three procedures that run the "burn", "adapt" and "sample" until they
+# produce samples with the required characteristics. By default each chain gets 
+# its own cores (this can be set with the cores_for_chains argument) and the 
+# cores_per_chain argument above gives each chain 2 cores, so 6 are used in 
+# total. Here are the functions called by sPNAS_a.R
+# 
+# The first "burn" stage by default runs 500 iterations, discards the first 200 
+# and repeatedly trys adding new iterations (and possibly removing initial)
+# iterations until R hat is less than a criterion (1.1 by default) for all
+# random effect parameters in all chains. The aim of this stage is to find
+# the posterior mode and get chains suitable for the next "adapt" stage.
+#
+# sPNAS_a <- auto_burn(samplers,cores_per_chain=2)
+#
+# The "adapt" stage develops and approximation to the posterior that will make
+# sampling more efficient (less autocorrelated) in the final "sample" stage.
+#
+# sPNAS_a <- auto_adapt(sPNAS_a,cores_per_chain=2)
+#
+# Here in the final sample stage we ask for 1000 iterations per chain.
+#
+# sPNAS_a <- auto_sample(sPNAS_a,iter=1000,cores_per_chain=2)
+# 
 # Once sampling is completed the script also gets posterior predictive samples
 # to enable model fit checks. By default this is based on randomly selecting 
 # iterations from the final (sample) stage, and provides posterior predictives 
@@ -137,34 +163,31 @@ print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData"))
 
 ##### Check convergence
 
-print(load("sPNAS_a.RData"))
-sPNAS_a <- sPNAS_a_adapt
-# Adapted with 533 final samples
+# We can check the state of samplers
 chain_n(sPNAS_a)
-plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="epsilon",layout=c(4,5),filter="burn",subfilter=100)
 
+# Lets first look at the burn samples
+plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn")
 par(mfrow=c(2,7))
-plot_chains(sPNAS_a,selection="alpha",layout=NULL,filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="mu",layout=c(2,4),filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="variance",layout=c(2,4),filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="correlation",layout=c(3,7),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="alpha",layout=NULL,filter="burn")
+# R hat indicates good mixing
+gd_pmwg(sPNAS_a,selection="alpha",filter="burn")
+# Default shows multivariate version over parameters. An invisible return
+# provides full detail, here printed and rounded, all very good.
+round(gd_pmwg(sPNAS_a,selection="alpha",filter="burn",print_summary = FALSE),2)
 
 
 # Focus on the sample stage from here (the default setting of filter) 
 
 # RANDOM EFFECTS (i.e., subject level)
 # Participant likelihoods all fat flat hairy caterpillars
-plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn")
-# Plot random effects, again they look good
+plot_chains(sPNAS_a,selection="LL",layout=c(4,5))
+# Plot random effects (default selection="alpha"), again they look good
 par(mfrow=c(2,7)) # one row per participant
 plot_chains(sPNAS_a,selection="alpha",layout=NULL)
 
 # MIXING 
 # R hat indicates good mixing
-gd_pmwg(sPNAS_a,selection="alpha")
-# Default shows multivariate version over parameters. An invisible return
-# provides full detail, here printed and rounded, all very good.
 round(gd_pmwg(sPNAS_a,selection="alpha",print_summary = FALSE),2)
 
 # SAMPLING EFFICIENCY
@@ -209,10 +232,6 @@ iat_pmwg(sPNAS_a,selection="correlation")
 
 
 ########  Fit 
-
-# Already run and saved
-# ppPNAS_a <- post_predict(sPNAS_a,n_cores=5)
-# save(ppPNAS_a,sPNAS_a,file="sPNAS_a.RData")
 
 # By default the plot shows results for all subjects, putting everyone on the
 # same x scale, which can make it hard to see fit for some or most subjects
@@ -333,5 +352,16 @@ design_a_full <- make_design(
 samplers <- make_samplers(dat,design_a_full,type="standard")
 save(samplers,file="sPNAS_a_full.RData")
 
+print(load("sPNAS_a_full.RData"))
+sPNAS_a <- sPNAS_a_full_burn
+chain_n(sPNAS_a)
+plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="epsilon",layout=c(4,5),filter="burn",subfilter=100)
+
+par(mfrow=c(2,7))
+plot_chains(sPNAS_a,selection="alpha",layout=NULL,filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="mu",layout=c(2,4),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="variance",layout=c(2,4),filter="burn",subfilter=100)
+plot_chains(sPNAS_a,selection="correlation",layout=c(3,7),filter="burn",subfilter=100)
 
 

@@ -1,0 +1,11 @@
+rm(list=ls())
+source("emc/emc.R")
+source("models/DDM/DDM/ddmTZD.R")
+load("sPNAS_a_full.RData")
+
+sPNAS_a_full_burn <- auto_burn(samplers,cores_per_chain=8)
+save(samplers,sPNAS_a_full_burn,file="sPNAS_a_full.RData")
+sPNAS_a_full_adapt <- auto_adapt(sPNAS_a_full_burn,cores_per_chain=8)
+save(samplers,sPNAS_a_full_burn,sPNAS_a_full_adapt,file="sPNAS_a_full.RData")
+sPNAS_a_full_samples <- auto_sample(sPNAS_a_full_adapt,iter=1000,cores_per_chain=8)
+save(samplers,sPNAS_a_full_burn,sPNAS_a_full_adapt,sPNAS_a_full_samples,file="sPNAS_a_full.RData")
