@@ -137,7 +137,6 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   n_remove <- iter
   # Iterate until criterion
   trys <- 0
-  shorten <- FALSE
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
