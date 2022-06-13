@@ -199,7 +199,8 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
-auto_burn <- function(samplers,ndiscard=200,nstart=300,nadapt=1000,
+
+auto_burn <- function(samplers,ndiscard=200,nstart=300,
     particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
     mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
     max_gd_trys=100,max_gd=1.1,
@@ -261,11 +262,12 @@ adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles 
   return(list(particles = particles, particle_factor = particle_factor))
 }
 
-auto_adapt <- function(samplers,max_trys=25,verbose=FALSE, epsilon = NULL, particles=NA,particle_factor=40, p_accept=.7,
-                       cores_per_chain=1,cores_for_chains=NA,mix=NULL,
+auto_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
+                       particles=NA,particle_factor=40, p_accept=.7,
+                       cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                        n_cores_conditional = 1, min_es=NULL,min_unique = 200, 
                        step_size = 25, thin = NULL,
-                       verbose_run_stage = F){
+                       verbose=TRUE,verbose_run_stage = FALSE){
     if(verbose) message("Running adapt stage")
     source(samplers[[1]]$source)
     if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -273,8 +275,7 @@ auto_adapt <- function(samplers,max_trys=25,verbose=FALSE, epsilon = NULL, parti
     design_list <- attr(samplers,"design_list")
     model_list <- attr(samplers,"model_list")
     trys <- 0
-    samplers_new <- samplers
-    samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
+    samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                              particles=particles,particle_factor=particle_factor,epsilon=epsilon,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage,
@@ -302,11 +303,14 @@ auto_adapt <- function(samplers,max_trys=25,verbose=FALSE, epsilon = NULL, parti
 }
 
 
-auto_sample <- function(samplers,iter=NA,verbose=FALSE,
+auto_sample <- function(samplers,iter=NA,verbose=TRUE,
                        epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
-                       cores_per_chain=1,cores_for_chains=NA,mix=NULL,
+                       cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                        n_cores_conditional = 1, step_size = 50, thin = NULL,
-                       verbose_run_stage = F){
+                       verbose_run_stage = FALSE)
+  # Automatically run the sample stage  
+{
+  
   if(verbose) message("Running sample stage")
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -319,12 +323,16 @@ auto_sample <- function(samplers,iter=NA,verbose=FALSE,
     if(step == n_steps){
       step_size <- ifelse(iter %% step_size == 0, step_size, iter %% step_size)
     } 
-    test_samples <- lapply(samplers_new, extract_samples, stage = c("adapt", "sample"), thin = thin, 50*trys, thin_eff_only = F)
+    test_samples <- lapply(samplers_new, extract_samples, 
+        stage = c("adapt", "sample"), thin = thin, 50*trys, thin_eff_only = FALSE)
     keys <- unique(unlist(lapply(test_samples, names)))
     test_samples <- setNames(do.call(mapply, c(abind, lapply(test_samples, '[', keys))), keys)
     test_samples$iteration <- sum(test_samples$iteration)
-    conditionals=mclapply(X = 1:samplers_new[[1]]$n_subjects,FUN = variant_funs$get_conditionals,samples = test_samples, samplers_new[[1]]$n_pars, mc.cores = n_cores_conditional)
-    conditionals <- array(unlist(conditionals), dim = c(samplers_new[[1]]$n_pars, samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
+    conditionals=mclapply(X = 1:samplers_new[[1]]$n_subjects,
+      FUN = variant_funs$get_conditionals,samples = test_samples, 
+      samplers_new[[1]]$n_pars, mc.cores = n_cores_conditional)
+    conditionals <- array(unlist(conditionals), dim = c(samplers_new[[1]]$n_pars, 
+      samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
     eff_mu <- conditionals[,1,] #First column is the means
     eff_var <- conditionals[,2:(samplers_new[[1]]$n_pars+1),] #Other columns are the variances
     samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,0,step_size),
@@ -341,7 +349,9 @@ auto_sample <- function(samplers,iter=NA,verbose=FALSE,
   return(samplers)
 }
 
-test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional = 1, verbose = F){
+test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional = 1, 
+                         verbose = FALSE)
+{
   # Only need to check uniqueness for one parameter
   first_par <- test_samples$alpha[1, , ]
   # Split the matrix into a list of vectors by subject
