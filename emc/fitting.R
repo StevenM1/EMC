@@ -93,8 +93,8 @@ run_chains <- function(samplers,iter=c(300,0,0),
 
 
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
-                   max_gd=1.1,thorough=TRUE, mapped=FALSE,
-                   epsilon = NULL,particle_update = 5, verbose_run_stage = F,
+                   max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
+                   epsilon = NULL, verbose_run_stage = F,
                    particles=NA,particle_factor=100, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                    min_es=NULL,min_iter=NULL,max_iter=NULL) 
@@ -137,15 +137,19 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   n_remove <- iter
   # Iterate until criterion
   trys <- 0
-  shorten <- FALSE
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
+  gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
+                filter="burn",mapped=mapped)
+  gd_diff <- (gd[,ncol(gd)] - max_gd)
   repeat {
     run_try <- 0
     repeat {
-      which_stuck <- stuck_chains(samplers)
-      
+      new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
+      particle_factor <- new_particle_n$particle_factor
+      particles <- new_particle_n$particles
+      if(any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
       samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                                n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                                particles=particles,particle_factor=particle_factor,epsilon=epsilon,
@@ -173,10 +177,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
     if (is.null(attr(enough,"es"))) es_message <- NULL else
       es_message <- paste(", Effective samples =",round(attr(enough,"es")))
-    gd_diff <- (gd[,3] - max_gd)
-    new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
-    particle_factor <- new_particle_n$particle_factor
-    particles <- new_particle_n$particles
+    gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
     ok_gd <- all(gd < max_gd)
     shorten <- !ok_gd
     if (trys > max_trys || (ok_gd & enough)) {
@@ -231,12 +232,6 @@ auto_burn <- function(samplers,ndiscard=200,nstart=300,nadapt=1000,
     attr(samplers,"model_list") <- model_list
   } 
   if (max_gd_trys==0) return(samplers)
-  gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
-                filter="burn",mapped=mapped)
-  gd_diff <- (gd[,3] - max_gd)
-  new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
-  particle_factor <- new_particle_n$particle_factor
-  particles <- new_particle_n$particles
   message("Beginning iterations to achieve Rhat < ",max_gd)
   run_gd(samplers, max_trys=max_gd_trys,verbose=verbose,
          max_gd=max_gd,thorough=thorough, mapped=mapped, p_accept = p_accept,
@@ -381,7 +376,7 @@ test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional 
   }
 }
 
-stuck_chains <- function(samples,filter=c("burn","sample")[1], # dont use adapt
+check_stuck <- function(samples,filter=c("burn","sample")[1], # dont use adapt
                          start=1,last=TRUE,n=100, # n, from start or last n
                          flat=0.1,dfac=3) 
   # flat: criterion on % change in median first to last 1/3 relative to last 1/3 Let me know what you think.
@@ -391,24 +386,39 @@ stuck_chains <- function(samples,filter=c("burn","sample")[1], # dont use adapt
   
 {
   samplell <- function(sampler,filter,subfilter)
-    apply(sampler$samples$subj_ll[,sampler$samples$stage==filter][,subfilter],2,sum)
+    sampler$samples$subj_ll[,sampler$samples$stage==filter][,subfilter]
   
   ns <- unlist(lapply(samples,function(x){sum(x$samples$stage==filter)}))
   if (!all(ns[1]==ns[-1])) stop("Filtered chains not of same length")
   if (n>ns[1]) stop("n is larger than available samples")
   if (last) start <- ns[1]-n + 1
   iter <- 1:n
-  lls <- do.call(cbind,lapply(samples,samplell,filter=filter,subfilter=iter+start-1))
+  lls <- do.call(abind, list(lapply(samples,samplell,filter=filter,subfilter=iter+start-1), along = 3))
   first <- 1:(round(n/3))
   last <- round(2*n/3):n
-  first <- apply(lls[first,],2,median)
-  last <- apply(lls[last,],2,median)
+  first <- apply(lls[,first,],c(1,3),median)
+  last <- apply(lls[,last,],c(1,3),median)
   isFlat <- 100*abs((last-first)/last) < flat
-  if (all(isFlat)) {
-    med <- apply(lls,2,median)
-    best <- which.max(med)
-    bad <- med[best]-med[-best] > dfac*IQR(lls[,best])
-    c(1:length(med))[-best][bad]
-  } else (integer(0))
+  # if(any(isFlat)){
+    diff <- apply(last, 1, FUN = function(x) return(max(x) - min(x)))
+    IQRs <- apply(lls, c(1,3), FUN = IQR)
+    best <- max.col(last)
+    worst <- max.col(-last)
+    n_subs <- samples[[1]]$n_subjects
+    bad_subs <- which(diff > dfac*IQRs[matrix(c(1:n_subs, best), nrow = n_subs)]) # Yay R tricks
+    if(any(bad_subs)) samples <- fix_stuck(samples, bad_subs, best, worst)
+  # }
+    
+  return(samples)
+}
+
+fix_stuck <- function(samples, bad_subs, best, worst){
+  # This function takes the bad subjects and replaces the last entry of the 
+  # worst chain with the best chain.
+  idx <- samples[[1]]$samples$idx
+  for(i in 1:length(bad_subs)){
+    samples[[worst[i]]]$samples$alpha[,i,idx] <- samples[[best[i]]]$samples$alpha[,i,idx]
+  }
+  return(samples)
 }
 
