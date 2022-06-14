@@ -105,6 +105,7 @@ mapped_par <- function(p_vector,design,model=NULL,
 }
 
 
-
+get_design_matrix <- function(samples) 
+  attr(sampled_p_vector(attr(samples,"design_list")[[1]]),"map")
 
 
