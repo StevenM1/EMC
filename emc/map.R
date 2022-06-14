@@ -43,10 +43,12 @@ mapped_name_list <- function(design,model,save_design=FALSE)
   # Give mapped variables names and remove constants
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
-    uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
-    if (save_design) plist[[i]] <- mp[uniq,vars[-1]] else
-      dimnames(plist[[i]])[[2]] <- 
-        paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
+    if (is.null(vars)) dimnames(plist[[i]])[2] <- names(plist)[i] else {
+      uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
+      if (save_design) plist[[i]] <- mp[uniq,vars[-1]] else
+        dimnames(plist[[i]])[[2]] <- 
+          paste(vars[1],apply(mp[uniq,vars[-1],drop=FALSE],1,paste,collapse="_"),sep="_")
+    }
   }
   if (save_design) plist else lapply(plist,function(x){dimnames(x)[[2]]}) 
 }
