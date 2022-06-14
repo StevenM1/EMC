@@ -235,26 +235,23 @@ iat_pmwg <- function(pmwg_mcmc,
 # }
 
 
-# y=NULL;mapped=FALSE;x_fun=NULL; y_fun=NULL
-#                    x_name=NULL;y_name=NULL;
-#                    mu=0;alternative = c("less", "greater")[1];
-#                    probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
-#                    x_filter="sample";x_selection="alpha";x_subfilter=0;
-#                    y_filter="sample";y_selection="alpha";y_subfilter=0
-# 
-# x=samples; x_name="mean_FWwords:Sold";x_selection = "mu"
-# p_name=NULL; fun=function(x){sd=exp(x["sd_FWwords:Sold"])}
-# x_name="mean_FWwords:Sold";selection = "alpha"; x_subject=subject_names(samples)[1]
 
+# x_fun=NULL;y=NULL;y_name=x_name;y_fun=NULL;
+# mapped=FALSE;x_subject=NULL;y_subject=NULL;
+# mu=0;alternative = c("less", "greater")[1];
+# probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
+# filter="sample";selection="mu";subfilter=0
+# 
+# x=sPNAS_a;x_name="t0"; mapped=TRUE
 p_test <- function(x,x_name,x_fun=NULL,
                    y=NULL,y_name=x_name,y_fun=NULL,
                    mapped=FALSE,
                    x_subject=NULL,y_subject=NULL,
                    mu=0,alternative = c("less", "greater")[1],
                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
-                   filter="sample",selection="alpha",subfilter=0) {
-
+                   filter="sample",selection="mu",subfilter=0) 
   
+{
 
   get_effect <- function(x,p_name=NULL,fun=NULL) 
     # Effect, must always be on mapped scale if lc_mat supplied.
@@ -265,7 +262,7 @@ p_test <- function(x,x_name,x_fun=NULL,
   }
 
 
-  if (mapped & !(x_selection %in% c("mu","alpha")))
+  if (mapped & !(selection %in% c("mu","alpha")))
     stop("Can only analyze mapped mu or alpha parameters")
   
   # Process x

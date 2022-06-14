@@ -56,7 +56,7 @@ mapped_name_list <- function(design,model,save_design=FALSE)
 
 map_mcmc <- function(mcmc,design,model) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
-  # model parameterization 
+  # model parameterization. NB: Does not apply Mtransform, only Ntransform 
 {
   doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
 
@@ -75,12 +75,14 @@ map_mcmc <- function(mcmc,design,model)
   for (i in 1:length(plist)) {
     vars <- row.names(attr(terms(design$Flist[[i]]),"factors"))
     uniq <- !duplicated(apply(mp[,vars],1,paste,collapse="_"))
-    dimnames(plist[[i]])[[2]] <- 
-      paste(vars[1],apply(mp[uniq,vars[-1]],1,paste,collapse="_"),sep="_")
+    if (is.null(vars)) dimnames(plist[[i]])[2] <- names(plist)[i] else {
+      dimnames(plist[[i]])[[2]] <- 
+        paste(vars[1],apply(mp[uniq,vars[-1],drop=FALSE],1,paste,collapse="_"),sep="_")
+    }
     if (dim(plist[[i]])[1]!=1) isConstant <- c(isConstant,
       apply(plist[[i]],2,function(x){all(x[1]==x[-1])}))
   }
-  out <- as.mcmc(do.call(cbind,lapply(plist,model$Mtransform)))
+  out <- model$Ntransform(as.mcmc(do.call(cbind,plist)))
   attr(out,"isConstant") <- isConstant
   out
 }
