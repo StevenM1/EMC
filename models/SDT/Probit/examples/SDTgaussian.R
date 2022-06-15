@@ -52,6 +52,29 @@ par(mfrow=c(1,3))
 for (i in names(p_vector))
   print(profile_pmwg(pname=i,p=p_vector,p_min=p_vector[i]-.5,p_max=p_vector[i]+.5,dadm=dadmPROBIT))
 
+dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=1000)
+samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
+save(samplers,file="probitIndividualBinary.RData")
+# runSingleProbitBinary.R to get 1000 samples
+print(load("probitIndividualBinary.RData"))
+
+plot_chains(samples,subfilter=100,filter="burn") # Thoroughly converged by 400
+gd_pmwg(samples,subfilter=100,filter="burn")  # 1.01
+plot_acfs(samples,subfilter=100,filter="burn")
+iat_pmwg(samples,subfilter=100,filter="burn") # ~ 50% yield 
+#   mean_S2 sd_S2 threshold threshold_lR2 threshold_lR3 threshold_lR4 threshold_lR5
+# 1    2.09  2.22      2.04          1.74          2.07          2.31           2.5
+
+# Excellent recovery, prior completely dominated
+tabs <- plot_density(samples,filter="burn",subfilter=100,layout=c(1,3),pars=p_vector)
+
+ppBinary <- post_predict(samples,filter="burn",subfilter=100)
+
+pc <- function(d) 100*mean(d$S==d$R)
+# Drilling down on accuracy we see the biggest misfit is in speed for right
+# responses by > 5%.
+tab <- plot_fit(data=dataPROBIT,pp=ppBinary,stat=pc,
+                stat_name="Accuracy (%)",layout=c(1,2))
 
 
 ##### ROC example, 3 level confidence ----

@@ -432,9 +432,7 @@ plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL)
 # ci=c(.025,.5,.975)
 # signalFactor="S";zROC=FALSE;qfun=NULL;lim=NULL;rocfit_cex=.5
 # 
-# data=wordfaceROC; pp=ppWordFace; factors=c("FW","S"); zROC=TRUE; qfun=qnorm
-# data=wordfaceROC; pp=ppWordFace; factors=NULL; subject = "134"; zROC=TRUE; qfun=qnorm
-#
+# data=dataPROBIT;pp=ppBinary
 # stat=pc; stat_name="Accuracy (%)"; xlim=c(70,95)
 plot_fit <- function(data,pp,subject=NULL,factors=NULL,
                      stat=NULL,stat_name="",
@@ -465,35 +463,62 @@ plot_fit <- function(data,pp,subject=NULL,factors=NULL,
   }
   if (!is.null(layout)) if (mfcol) par(mfcol=layout) else par(mfrow=layout)
   if (all(is.na(data$rt)) & is.null(matchfun)) {  # type=SDT
-    if (length(levels(data$R))==2) 
-      stop("No plots for binary responses, provide matchfun for accuracy table.") 
-    if (!any(fnams==signalFactor))
-      stop("Data does not have a column specified in the signalFactor argument: ",signalFactor)
-    if (length(levels(data[[signalFactor]]))!=2)
-      stop("signalFactor must have exactly two levels for an ROC plot")
-    if (zROC & is.null(qfun))
-      stop("Must supply qfun for zROC")
-    fnams <- fnams[fnams != signalFactor]
-    cells <- dat[,fnams,drop=FALSE]
-    for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
-    cells <- apply(cells,1,paste,collapse=" ")
-    pp_cells <- pp[,fnams,drop=FALSE]
-    for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
-    pp_cells <- apply(pp_cells,1,paste,collapse=" ")
-    postn <- unique(pp$postn)
-    ucells <- sort(unique(cells))
-    for (i in ucells) {
-      dpts <- plot_roc(dat[cells==i,],zROC=zROC,qfun=qfun,lim=lim,main=i) 
-      tab <- table(pp[pp_cells==i,]$postn,pp[pp_cells==i,]$R,pp[pp_cells==i,][[signalFactor]])
-      ctab <- apply(tab,1,function(x){list(1-apply(t(x)/apply(x,2,sum),1,cumsum)[-dim(x)[1],])})
-      if (!zROC) lapply(ctab,function(x){
-        points(x[[1]][,1],x[[1]][,2],col="grey",pch=16,cex=rocfit_cex)
-      }) else ctab <- lapply(ctab,function(x){
-        x[[1]] <- qnorm(x[[1]])
-        points(x[[1]][row.names(dpts),1],x[[1]][row.names(dpts),2],col="grey",pch=16,cex=rocfit_cex)
-      })
-      points(dpts[,1],dpts[,2])
-      lines(dpts[,1],dpts[,2])
+    if (length(levels(data$R))==2 & is.null(stat)) 
+      stop("No plots for binary responses, use an accuracy function in stat arguement.")
+    if (!is.null(stat)) { # statistic 
+      cells <- dat[,fnams,drop=FALSE]
+      for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+      cells <- apply(cells,1,paste,collapse=" ")
+      pp_cells <- pp[,fnams,drop=FALSE]
+      for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
+      pp_cells <- apply(pp_cells,1,paste,collapse=" ")
+      postn <- unique(pp$postn)
+      ucells <- sort(unique(cells))
+      tab <- matrix(nrow=length(ucells),ncol=4,
+        dimnames=list(ucells,c("Observed",names(quantile(1:5,ci)))))
+      for (i in ucells) {
+        obs <- stat(dat[cells==i,])
+        ppi <- pp[pp_cells==i,]
+        pred <- sapply(postn,function(x){stat(ppi[ppi$postn==x,])})
+        if (do_plot) {
+          dens <- density(pred)
+          if (!is.null(xlim)) xlimi <- xlim else  
+            xlimi <- c(pmin(obs,min(dens$x)),pmax(obs,max(dens$x)))
+          plot(dens,main=i,xlab=stat_name,xlim=xlimi)
+          abline(v=obs)
+        }
+        tab[i,] <- c(obs,quantile(pred,ci))
+      }
+      invisible(tab)
+    } else {
+      if (!any(fnams==signalFactor))
+        stop("Data does not have a column specified in the signalFactor argument: ",signalFactor)
+      if (length(levels(data[[signalFactor]]))!=2)
+        stop("signalFactor must have exactly two levels for an ROC plot")
+      if (zROC & is.null(qfun))
+        stop("Must supply qfun for zROC")
+      fnams <- fnams[fnams != signalFactor]
+      cells <- dat[,fnams,drop=FALSE]
+      for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+      cells <- apply(cells,1,paste,collapse=" ")
+      pp_cells <- pp[,fnams,drop=FALSE]
+      for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
+      pp_cells <- apply(pp_cells,1,paste,collapse=" ")
+      postn <- unique(pp$postn)
+      ucells <- sort(unique(cells))
+      for (i in ucells) {
+        dpts <- plot_roc(dat[cells==i,],zROC=zROC,qfun=qfun,lim=lim,main=i) 
+        tab <- table(pp[pp_cells==i,]$postn,pp[pp_cells==i,]$R,pp[pp_cells==i,][[signalFactor]])
+        ctab <- apply(tab,1,function(x){list(1-apply(t(x)/apply(x,2,sum),1,cumsum)[-dim(x)[1],])})
+        if (!zROC) lapply(ctab,function(x){
+          points(x[[1]][,1],x[[1]][,2],col="grey",pch=16,cex=rocfit_cex)
+        }) else ctab <- lapply(ctab,function(x){
+          x[[1]] <- qnorm(x[[1]])
+          points(x[[1]][row.names(dpts),1],x[[1]][row.names(dpts),2],col="grey",pch=16,cex=rocfit_cex)
+        })
+        points(dpts[,1],dpts[,2])
+        lines(dpts[,1],dpts[,2])
+      }
     }
   } else {
     cells <- dat[,fnams,drop=FALSE]
