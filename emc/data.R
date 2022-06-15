@@ -1,8 +1,9 @@
 # data generation 
 
 
-# data=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
-# model=probit; design=designPROBIT; trials=10
+# model=NULL;trials=NULL;data=NULL;expand=1;
+# mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
+# trials=10
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL)

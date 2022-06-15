@@ -88,8 +88,8 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
-    show_chains=FALSE,do_plot=TRUE,subject=NA,
-    pars=NULL,probs=c(.025,.5,.975),bw = "nrd0", adjust = 1) # ,use_par=NA
+    show_chains=FALSE,do_plot=TRUE,subject=NA,add_means=FALSE,
+    pars=NULL,probs=c(.025,.5,.975),bw = "nrd0", adjust = 1) 
   # Plots density (if alpha can do individual subject, all by default)
   # If show_chains superimposes destinies for each chain on same plot
   # invisibly returns tables of true and 95% CIs (for all chains combined
@@ -209,7 +209,8 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
       if (!is.null(pars)) tabs[[i]] <- rbind(true=pars[,i],tabs[[i]])
     }
     tabs <- tabs[as.character(subject)]
-    attr(tabs,"mean") <- lapply(pmwg_mcmc_combined,function(x){apply(x,2,mean)})
+    if (add_means) 
+      attr(tabs,"mean") <- lapply(pmwg_mcmc_combined,function(x){apply(x,2,mean)})
     invisible(tabs)
   } else {
     if (class(pmwg_mcmc) == "mcmc.list") {
@@ -234,7 +235,7 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
       names(pars) <- colnames(pmwg_mcmc_combined)
     }
     tabs <- rbind(true=pars,apply(pmwg_mcmc_combined,2,quantile,probs=probs))
-    attr(tabs,"mean") <- apply(pmwg_mcmc_combined,2,mean)
+    if (add_means) attr(tabs,"mean") <- apply(pmwg_mcmc_combined,2,mean)
     if (!no_layout) par(mfrow=layout)
     if (plot_prior) dimnames(psamples) <- list(NULL,colnames(pmwg_mcmc_combined))
     if (do_plot) for (j in colnames(pmwg_mcmc_combined)) {

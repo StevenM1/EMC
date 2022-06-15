@@ -9,12 +9,13 @@ contr.anova <- function(n)
 }
 
 
-contr.increasing <- function(n) 
+contr.increasing <- function(n,levels=NULL) 
   # special contrast for SDT threshold factor
   # first = intercept, cumsum other (positive) levels to force non-decreasing
 {
   contr <- matrix(0,nrow=n,ncol=n-1,dimnames=list(NULL,2:n))
   contr[lower.tri(contr)] <- 1
+  if (!is.null(levels)) dimnames(contr)[[2]] <- levels[-1]
   contr
 }
 
@@ -109,6 +110,8 @@ make_dm <- function(form,da,Clist=NULL)
 
 
 # model=NULL; prior = NULL;add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
+# 
+# add_acc=FALSE;verbose=FALSE;rt_check=FALSE;compress=FALSE
 
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.001,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
@@ -370,12 +373,18 @@ map_p <- function(p,dadm)
 }
 
 
+# Clist=NULL;matchfun=NULL;constants=NULL
+
+# Flist=list(mean ~ S, sd ~ 1, threshold ~ lR)
+# Ffactors=list(subjects="as1t",S=levels(data$S));Rlevels=levels(data$R)
+# matchfun=matchfun;constants=c(mean=0,sd=0);model=probit
+
 make_design <- function(Flist,Ffactors,Rlevels,model,
                         Clist=NULL,matchfun=NULL,constants=NULL) 
   # Binds together elements that make up a design a list  
 {
 
-  if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels))
+  if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels),Rlevels)
   design <- list(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
        Clist=Clist,matchfun=matchfun,constants=constants,model=model)
   p_vector <- sampled_p_vector(design,design$model)
