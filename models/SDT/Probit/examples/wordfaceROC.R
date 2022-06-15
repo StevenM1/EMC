@@ -9,7 +9,7 @@ print(load("Data/wordfaceROC.RData"))
 # remove RT for ROC fitting
 wordfaceROC$rt <- NA
 
-#### Test fits ----
+#### Fit a single subject ----
 wordfaceROC1 <- wordfaceROC[wordfaceROC$subjects=="104",]
 wordfaceROC1$subjects <- factor(as.character(wordfaceROC1$subjects))
 
@@ -38,9 +38,9 @@ mapped_par(p_vector,designFW1)
 simFW1 <- make_data(p_vector,design=designFW1,trials=10000)
 par(mfrow=c(2,2))
 plot_roc(simFW1[simFW1$FW=="faces",],main="Faces")
-plot_roc(simFW1[simFW1$FW=="faces",],zROC=TRUE,qfun=qnorm,main="Faces",lim=c(-2.5,2))
+plot_roc(simFW1[simFW1$FW=="faces",],zROC=TRUE,qfun=qnorm,main="Faces",lim=c(-2.5,2.5))
 plot_roc(simFW1[simFW1$FW=="words",],main="Words")
-plot_roc(simFW1[simFW1$FW=="words",],zROC=TRUE,qfun=qnorm,main="Words",lim=c(-2.5,2))
+plot_roc(simFW1[simFW1$FW=="words",],zROC=TRUE,qfun=qnorm,main="Words",lim=c(-2.5,2.5))
 
 # profiles
 dadmFWsim <- design_model(data=simFW1,design=designFW1)
@@ -82,42 +82,92 @@ designFW <- make_design(Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR),
   constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWwords=0),model=probit)
 
 samplers <- make_samplers(wordfaceROC,designFW,type="standard")
+# Speedup of 60 reflects the fact that likelihood for SDT models acts on
+# counts in each category, so only one likelihood computation is requried for
+# each category
 # save(samplers,file="probitFW.RData")
-# runProbitFW.R to get 2000 burn in samples
+#### Explore the fitting script ----  
+
+#  Fitting is performed in the script runProbitFW.R (e.g., on a linux based system
+# the command line is R CMD BATCH runProbitFW.R & to run it in background)
+
+# We use three procedures that run the "burn", "adapt" and "sample" until they
+# produce samples with the required characteristics. By default each chain gets 
+# its own cores (this can be set with the cores_for_chains argument) and the 
+# cores_per_chain argument above gives each chain 2 cores, so 6 are used in 
+# total. Here are the functions called by runProbitFW.R
+# 
+# The first "burn" stage by default runs 500 iterations, discards the first 200 
+# and repeatedly trys adding new iterations (and possibly removing initial)
+# iterations until R hat is less than a criterion (1.1 by default) for all
+# random effect parameters in all chains. The aim of this stage is to find
+# the posterior mode and get chains suitable for the next "adapt" stage.
+#
+# samples <- auto_burn(samplers,cores_per_chain=4)
+#
+# The "adapt" stage develops and approximation to the posterior that will make
+# sampling more efficient (less autocorrelated) in the final "sample" stage.
+#
+# samples <- auto_adapt(samples,cores_per_chain=4)
+#
+# Here in the final sample stage we ask for 5000 iterations per chain.
+#
+# samples <- auto_sample(samples,iter=5000,cores_per_chain=4)
+# 
+# Once sampling is completed the script also gets posterior predictive samples
+# to enable model fit checks. By default this is based on randomly selecting 
+# iterations from the final (sample) stage, and provides posterior predictives 
+# for the random effects. Here we use one core pre participant.
+# ppWordFace <- post_predict(samples,n_cores=12)
+
+# Lets load in the results and look at them.
 
 
 print(load("models/SDT/Probit/examples/samples/probitFW.RData")) 
-# All appear to have reached the posterior model 
-plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="mu") 
-plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="variance") 
-plot_chains(samples,filter="burn",subfilter=100,layout=c(4,4),selection="correlation") 
-plot_chains(samples,filter="burn",subfilter=100,layout=c(3,5),selection="alpha") 
+# We can check the state of samplers
+chain_n(samples)
+# and check if adaptation has worked 
 check_adapt(samples)
-# Chain 1 adapted by iteration 292
-# Chain 2 adapted by iteration 299
-# Chain 3 adapted by iteration 301
+
+# In the burn phase all chains appear to have reached the posterior model 
+plot_chains(samples,filter="burn",layout=c(3,5),selection="mu") 
+plot_chains(samples,filter="burn",layout=c(3,5),selection="variance") 
+plot_chains(samples,filter="burn",layout=c(4,4),selection="correlation") 
+plot_chains(samples,filter="burn",layout=c(3,5),selection="alpha") 
 
 # Now lets look at the final samples (the default setting of filter)
-# Converged, some correlations and alphas look quite autocorrelated
+# We use some thinning (showing only every 10th iteration) to speed up plotting.
+# All appear converged.
 plot_chains(samples,layout=c(3,5),selection="mu",thin=10) 
 plot_chains(samples,layout=c(3,5),selection="variance",thin=10) 
 plot_chains(samples,layout=c(4,4),selection="correlation",thin=10) 
 plot_chains(samples,layout=c(3,5),selection="alpha",thin=10) 
 
+# pick a selection and look at the convergence diagnostics
 selection="mu"; selection="variance"; selection="alpha"; layout=c(3,5)
 selection="correlation"; layout=c(4,7)
+
+# In all cases mixed
 gd_pmwg(samples,selection=selection)
+# Some large inefficiency with sd parameters for some participants
 iat_pmwg(samples,selection=selection,summary_alpha=max) 
+# Use min to look at worst case
 round(es_pmwg(samples,selection=selection,summary_alpha=min))
+
+# Check if priors dominated by posterior (i.e., data updates them)
 tabs <- plot_density(samples,layout=layout,selection=selection)
+# Good updating for population level, and tabs is a matrix
+round(tabs,3)
+
+# As expected for alpha updating is less and influence of population model 
+# acting as a prior is more evident. In this case tabs is a list (e.g., here 
+# for the first participant)
+round(tabs[[1]],3)
 
 #### Fit
-# ppWordFace <- post_predict(samples,n_cores=18)
-# save(ppWordFace,file="ppWordFace.RData")
-load("models/SDT/Probit/examples/samples/ppWordFace.RData")
 # For type=SDT plot_fit requires a factor (by default "S", argument signalFactor) 
 # whose first level is noise and second level is signal in order to construct an 
-# ROC. Where there this 2 level structure does not apply (e.g., different types 
+# ROC. Where this 2 level structure does not apply (e.g., different types 
 # of signal) subset the factor. 
 
 # Average fit
@@ -125,7 +175,8 @@ par(mfrow=c(2,2))
 plot_fit(wordfaceROC,ppWordFace,factors=c("FW","S"))
 plot_fit(wordfaceROC,ppWordFace,factors=c("FW","S"),zROC=TRUE,qfun=qnorm,lim=c(-1.5,1.25))
 
-# Individual fits
+# Individual fits, here just ROC, noiser and sometimes points missing (as 
+# participants did not use a confidence level) but overall failry good.
 par(mfrow=c(2,4))
 plot_fit(wordfaceROC,ppWordFace,zROC=TRUE,qfun=qnorm)
 
@@ -214,43 +265,6 @@ tab_alpha_mapped <- plot_density(samples,selection="alpha",
 # As expected mean_words_old = .867 + .655
 round(tab_alpha_mapped[[subject_names(samples)[1]]][,mp_names$mean[-c(1:2)]],2)
 
-# It is common to think about sd in terms of ROC slope = 1/sd_old. Here we
-# extract slope and d' (mean_old) and plot it for words and faces with 
-# credible intervals. as_matrix stacks chains 
-pests <- lapply(as_mcmc.list(samples,selection="alpha",mapped=TRUE),as_matrix)
-
-dpFaces <- do.call(rbind,lapply(pests,function(x){
-  quantile(x[,"mean_faces_old"],probs=c(.025,.5,.975))
-}))
-
-dpWords <- do.call(rbind,lapply(pests,function(x){
-  quantile(x[,"mean_words_old"],probs=c(.025,.5,.975))
-}))
-
-sFaces <- do.call(rbind,lapply(pests,function(x){
-  quantile(1/x[,"sd_faces_old"],probs=c(.025,.5,.975))
-}))
-
-sWords <- do.call(rbind,lapply(pests,function(x){
-  quantile(1/x[,"sd_words_old"],probs=c(.025,.5,.975))
-}))
-
-plot(dpWords[,'50%'],sWords[,'50%'],xlab="d\'",ylab="zROC slope",xlim=c(0,5),ylim=c(0,1.6))
-for (i in 1:dim(dpWords)[1]) {
-  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'2.5%'],sWords[,'50%'],angle=90,col="lightgrey",length=.05,lwd=.5)
-  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'97.5%'],sWords[,'50%'],angle=90,col="lightgrey",length=.05,lwd=.5)
-  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'50%'],sWords[,'2.5%'],angle=90,col="lightgrey",length=.05,lwd=.5)
-  arrows(dpWords[,'50%'],sWords[,'50%'],dpWords[,'50%'],sWords[,'97.5%'],angle=90,col="lightgrey",length=.05,lwd=.5)
-}
-for (i in 1:dim(dpWords)[1]) {
-  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'2.5%'],sFaces[,'50%'],angle=90,col="lightpink",length=.05,lwd=.5)
-  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'97.5%'],sFaces[,'50%'],angle=90,col="lightpink",length=.05,lwd=.5)
-  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'50%'],sFaces[,'2.5%'],angle=90,col="lightpink",length=.05,lwd=.5)
-  arrows(dpFaces[,'50%'],sFaces[,'50%'],dpFaces[,'50%'],sFaces[,'97.5%'],angle=90,col="lightpink",length=.05,lwd=.5)
-}
-points(dpWords[,'50%'],sWords[,'50%'],pch=16)
-points(dpFaces[,'50%'],sFaces[,'50%'],col="red",xlab="d\'",ylab="zROC slope",pch=16)
-legend("topright",c("Words","Faces"),lty=1,pch=16,col=c("black","red"),bty="n")
 
 #### Testing population parameter estimates ----
 
