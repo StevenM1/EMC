@@ -316,10 +316,18 @@ as_mcmc.list <- function(samplers,
 }
 
 
-as_matrix <- function(mcmcl) 
-  # stacks chains into a matrix  
+parameters_data_frame <- function(samples,filter="sample",thin=1,subfilter=0,
+                      mapped=FALSE,include_constants=FALSE,
+    selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[2]) 
+  # extracts and stacks chains into a matrix  
 {
-  do.call(rbind,mcmcl)
+  out <- as_mcmc.list(samples,selection=selection,filter=filter,
+    subfilter=subfilter,mapped=mapped,include_constants=include_constants)
+  if (selection!="alpha") as.data.frame(do.call(rbind,out)) else {
+    out <- lapply(out,function(x){do.call(rbind,x)})
+    subjects <- rep(names(out),lapply(out,function(x){dim(x)[1]}))
+    cbind.data.frame(subjects=factor(subjects,levels=names(out)),do.call(rbind,out))
+  }
 }
 
 

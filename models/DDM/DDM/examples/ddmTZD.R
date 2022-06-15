@@ -122,9 +122,7 @@ samplers <- make_samplers(dat,design_a,type="standard",
 
 # save(samplers,file="sPNAS_a.RData")
 
-save(sPNAS_a,file="sPNAS_a.RData")
-
-#### Explore the fitting script ----
+#### Explore the fitting script ----  
 
 #  Fitting is performed in the script sPNAS_a.R (e.g., on a linux based system
 # the command line is R CMD BATCH sPNAS_a.R & to run it in background)
@@ -156,7 +154,7 @@ save(sPNAS_a,file="sPNAS_a.RData")
 # to enable model fit checks. By default this is based on randomly selecting 
 # iterations from the final (sample) stage, and provides posterior predictives 
 # for the random effects. Here we use one core pre participant.
-ppPNAS_a <- post_predict(sPNAS_a,n_cores=19)
+# ppPNAS_a <- post_predict(sPNAS_a,n_cores=19)
 
 # Lets load in the results and look at them.
 print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
@@ -170,10 +168,10 @@ chain_n(sPNAS_a)
 plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn")
 par(mfrow=c(2,7))
 plot_chains(sPNAS_a,selection="alpha",layout=NULL,filter="burn")
-# R hat indicates good mixing
+# R hat indicates mostly good mixing
 gd_pmwg(sPNAS_a,selection="alpha",filter="burn")
 # Default shows multivariate version over parameters. An invisible return
-# provides full detail, here printed and rounded, all very good.
+# provides full detail, here printed and rounded, again very good
 round(gd_pmwg(sPNAS_a,selection="alpha",filter="burn",print_summary = FALSE),2)
 
 
@@ -187,7 +185,7 @@ par(mfrow=c(2,7)) # one row per participant
 plot_chains(sPNAS_a,selection="alpha",layout=NULL)
 
 # MIXING 
-# R hat indicates good mixing
+# R hat indicates excellent mixing
 round(gd_pmwg(sPNAS_a,selection="alpha",print_summary = FALSE),2)
 
 # SAMPLING EFFICIENCY
@@ -198,9 +196,10 @@ round(es_pmwg(sPNAS_a,selection="alpha"))
 round(es_pmwg(sPNAS_a,selection="alpha",summary_alpha=min))
 # To get per subject details
 round(es_pmwg(sPNAS_a,selection="alpha",summary_alpha=NULL))
-# Integrated autocorrelation time provides a nice summary of efficiency, a
+# Integrated autocorrelation time (IAT) provides a summary of efficiency, a
 # value of 1 means perfect efficiency, larger values indicate the approximate 
-# factor by which iterations need to be increased to get a nominal value. 
+# factor by which iterations need to be increased to get a nominal value 
+# i.e., Effective size ~ True size / IAT. 
 iat_pmwg(sPNAS_a,selection="alpha")
 
 
@@ -290,56 +289,152 @@ round(tab,2)
 
 ######## Posterior parameter inference ----
 
-# Population means (mu)
+### Population mean (mu) tests
+
 # Here we use plot_density without plotting to get a table of 95% parameter CIs
 ciPNAS <- plot_density(sPNAS_a,layout=c(2,4),selection="mu",do_plot=FALSE)
 round(ciPNAS,2)
 
-# Lets look at the mapping using the mean of the population mean (mu)
-# samples, which is stored as an attribute (very little difference from
-# the median, ciPNAS[2,])
-pMU <- attr(ciPNAS,"mean")
-# Now map the mean into the fill design. Between trial variability parameters
-# are fixed at either zero (), 
-mapped_par(pMU,design_a)
-#       S        E      v     a   t0     Z
-# 1  left accuracy -2.338 1.502 0.25 0.487
-# 2  left  neutral -2.338 1.384 0.25 0.487
-# 3  left    speed -2.338 0.907 0.25 0.487
-# 4 right accuracy  2.119 1.502 0.25 0.487
-# 5 right  neutral  2.119 1.384 0.25 0.487
-# 6 right    speed  2.119 0.907 0.25 0.487
-
-# Slight bias to left (lower)
-p_test(sPNAS_a,p_name="v",x_selection = "mu", x_filter="sample")
-
-# Non-decision time tightly estimated
-p_test(sPNAS_a,p_name="t0",x_selection = "mu", x_filter="sample")
-
-# Threshold less precise
-p_test(sPNAS_a,p_name="a",x_selection = "mu", x_filter="sample")
-
-# Very slight left bias
-p_test(sPNAS_a,p_name="Z",x_selection = "mu", x_filter="sample",
-       mu=0.5,digits=3,alternative = "greater")
+# We will also do testing of the "mapped" parameters, that is, parameters 
+# transformed to the scale used by the model and mapped to the design cells. 
+# To illustate here are the mapped posterior medians
+mapped_par(ciPNAS[2,],design_a)
 
 
-######### E Main Effect ----
+# Testing can be performed with the p_test function, which is similar to the 
+# base R t.test function. By default its assumes selection="mu". 
+# If just one "x" is specified it tests whether a single 
+# parameter differs from zero, reproducing one of the credible intervals in the
+# table above, but with the probability of being less than zero. 
 
+## Rates
+
+# There is a slight drift-rate bias to left (lower) but not credible at 95%
+p_test(x=sPNAS_a,x_name="v")
+# In this case it might be better to get the probability of greater than zero:
+p_test(x=sPNAS_a,x_name="v",alternative = "greater")
+# The main effect of stimulus (i.e., the conventional DDM drift rate) is 
+# clearly greater than zero.
+p_test(sPNAS_a,x_name="v_S")
+
+## Non-decision time
+
+# Recall non-decision time is on a log scale
+p_test(sPNAS_a,x_name="t0")
+# We can also test transformed parameters by specifying a function. The x_name
+# is just used in the table header. 
+p_test(sPNAS_a,x_fun=function(x){exp(x["t0"])},x_name="t0(sec)")
+# Alternatively p_test can automatically transform to the scale used by the
+# model, here producing the same result.
+p_test(x=sPNAS_a,x_name="t0",mapped=TRUE)
+
+## Start-point bias 
+
+# Here we both transform and then test again the unbiased level (0.5). There is 
+# a very close to (two tailed 95%) credible bias to left (lower), to get more
+# resolution we up the default digits.
+p_test(sPNAS_a,x_name="Z",x_fun=function(x){pnorm(x["Z"])},
+       mu=0.5,digits=4,alternative = "greater")
+
+## Threshold
+
+# Transforming thresholds to the natural scale
+p_test(sPNAS_a,x_name="a",x_fun=function(x){exp(x["a"])})
 # Accuracy threshold is credibly but not much greater than neutral
-p_test(sPNAS_a,p_name="a_Ea-n",x_selection = "mu", x_filter="sample")
-
+p_test(sPNAS_a,x_name="a_Ea-n")
 # Accuracy threshold is much greater than speed.
-p_test(sPNAS_a,p_name="a_Ea-s",x_selection = "mu", x_filter="sample")
+p_test(sPNAS_a,x_name="a_Ea-s")
+
+# Using mapped=TRUE not only transforms to the scale used by the model but also
+# to the cells of the design, automatically generating appropriate names which 
+# can be seen using this function.
+p_names(sPNAS_a,mapped=TRUE)$a
+# For example we could test if the threshold for speed differs from zero
+p_test(x=sPNAS_a,x_name="a_speed",mapped=TRUE)
+# mapped=TRUE also allows arbitrary comparisons between cells to be done. For 
+# example, we can compare the difference between neutral and speed.
+p_test(x=sPNAS_a,x_name="n-s",mapped=TRUE,x_fun=function(x){
+  diff(x[c("a_speed","a_neutral")])})
+# The same thing can be achieved by specifying and x and y argument
+p_test(x=sPNAS_a,x_name="a_neutral",y=sPNAS_a,y_name="a_speed",mapped=TRUE)
+# More generally we can test differences between combinations of cells using a
+# fun. For example, is the average of accuracy and neutral different from speed?
+p_test(x=sPNAS_a,x_name="an-s",mapped=TRUE,x_fun=function(x){
+  sum(x[c("a_accuracy","a_neutral")])/2 - x["a_speed"]})
+
+### Population variability 
+# Here we cannot use mapping, as these parameters are about variability 
+# on the sampled scale, but we can make tests.
+
+ciPNAS <- plot_density(sPNAS_a,layout=c(2,4),selection="variance",do_plot=FALSE)
+round(ciPNAS,3)
+
+# Suppose we wanted to compare standard deviations of the accuracy-neutral and
+# accuracy minus speed contrasts
+p_test(x=sPNAS_a,x_name="a_Ea-n",x_fun=function(x){sqrt(x["a_Ea-s"])},
+  y=sPNAS_a,y_name="a_Ea-s",y_fun=function(x){sqrt(x["a_Ea-n"])},selection="variance")
+
+### Population correlation
+# Again mapped cant be tested. There are lots of these so lets look at them first
+# overall.
+
+ciPNAS <- plot_density(sPNAS_a,layout=c(2,4),selection="correlation",do_plot=FALSE)
+round(ciPNAS,3)
+
+# The strongest correlations are among the a parameters. Do the two 
+# intercept-effect correlations differ?
+p_test(x=sPNAS_a,x_name="a_Ea-n.a",y=sPNAS_a,y_name="a_Ea-s.a",selection="correlation")
+# Their imprecise estimation makes any difference not credible.
+
+# It is also important to note that the intercept and effect contrasts are themselves
+# not orthogonal, which will induce a correlation. This can be seen from the dot
+# products of their design matrix being non-zero
+
+get_design_matrix(sPNAS_a)$a
+
+# The two effects are orthogonal so this is not a factor in their positive correlation
+p_test(sPNAS_a,x_name="a_Ea-s.a_Ea-n",selection="correlation")
+
+# Otherwise the table above reveals no credible correlations.
 
 
-######### S Main effect ----
+### Random effect (alpha) tests
 
-# Average rate is ~2.4
-p_test(sPNAS_a,p_name="v_S",x_selection = "mu", x_filter="sample")
+subject_names(sPNAS_a)
+
+# We can test individual participants, with the first one selected by default 
+p_test(x=sPNAS_a,x_fun=function(x){exp(x["t0"])},x_name="t0(sec)",
+       selection="alpha",digits=3)
+
+# We can also compare two participants, for example bd6t has slightly but 
+# credibly slower non-decision time than as1t.
+snams <- subject_names(sPNAS_a)
+p_test(selection="alpha",digits=3,
+  x=sPNAS_a,x_fun=function(x){exp(x["t0"])},x_name="t0(s)",x_subject=snams[2],
+  y=sPNAS_a,y_fun=function(x){exp(x["t0"])},y_name="t0(s)",y_subject=snams[1])
+# Once again we can use mapping to the same effect
+p_test(selection="alpha",digits=3,mapped=TRUE,
+  x=sPNAS_a,x_name="t0",x_subject=snams[2],
+  y=sPNAS_a,y_name="t0",y_subject=snams[1])
+
+### Extracting a data frame of parameters
+
+# Parameters can be extracted into a data frame for further analysis, by default
+# getting mu from the sample stage
+head(parameters_data_frame(sPNAS_a))
+# If desired constants can be included
+head(parameters_data_frame(sPNAS_a,include_constants=TRUE))
+# Or mapped parameters
+head(parameters_data_frame(sPNAS_a,mapped=TRUE))
+# If random effects are selected a subjects factor column is added
+head(parameters_data_frame(sPNAS_a,selection="alpha",mapped=TRUE))
 
 
-#####  FULL DDM
+
+
+
+
+#####  FULL DDM   !!!!! To be completed !!!!!  Does it fix up the misfit ?????
 
 design_a_full <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
@@ -353,15 +448,5 @@ samplers <- make_samplers(dat,design_a_full,type="standard")
 save(samplers,file="sPNAS_a_full.RData")
 
 print(load("sPNAS_a_full.RData"))
-sPNAS_a <- sPNAS_a_full_burn
-chain_n(sPNAS_a)
-plot_chains(sPNAS_a,selection="LL",layout=c(4,5),filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="epsilon",layout=c(4,5),filter="burn",subfilter=100)
-
-par(mfrow=c(2,7))
-plot_chains(sPNAS_a,selection="alpha",layout=NULL,filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="mu",layout=c(2,4),filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="variance",layout=c(2,4),filter="burn",subfilter=100)
-plot_chains(sPNAS_a,selection="correlation",layout=c(3,7),filter="burn",subfilter=100)
 
 
