@@ -400,8 +400,6 @@ p_test(sPNAS_a,x_name="a_Ea-s.a_Ea-n",selection="correlation")
 
 ### Random effect (alpha) tests
 
-subject_names(sPNAS_a)
-
 # We can test individual participants, with the first one selected by default 
 p_test(x=sPNAS_a,x_fun=function(x){exp(x["t0"])},x_name="t0(sec)",
        selection="alpha",digits=3)
@@ -428,10 +426,6 @@ head(parameters_data_frame(sPNAS_a,include_constants=TRUE))
 head(parameters_data_frame(sPNAS_a,mapped=TRUE))
 # If random effects are selected a subjects factor column is added
 head(parameters_data_frame(sPNAS_a,selection="alpha",mapped=TRUE))
-
-
-
-
 
 
 #####  FULL DDM   !!!!! To be completed !!!!!  Does it fix up the misfit ?????
