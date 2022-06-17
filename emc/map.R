@@ -29,7 +29,7 @@ mapped_name_list <- function(design,model,save_design=FALSE)
   # parameters or with unique design columns
 {
   doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
-
+  
   constants <- design$constants
   p_vector <- attr(design,"p_vector")
   mp <- mapped_par(p_vector,design)
@@ -54,12 +54,12 @@ mapped_name_list <- function(design,model,save_design=FALSE)
 }
 
 
-map_mcmc <- function(mcmc,design,model) 
+map_mcmc <- function(mcmc,design,model, include_constants = T) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
   # model parameterization. NB: Does not apply Mtransform, only Ntransform 
 {
   doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
-
+  
   if (!is.matrix(mcmc)) mcmc <- t(as.matrix(mcmc))
   map <- attr(sampled_p_vector(design),"map")
   constants <- design$constants
@@ -80,9 +80,10 @@ map_mcmc <- function(mcmc,design,model)
         paste(vars[1],apply(mp[uniq,vars[-1],drop=FALSE],1,paste,collapse="_"),sep="_")
     }
     if (dim(plist[[i]])[1]!=1) isConstant <- c(isConstant,
-      apply(plist[[i]],2,function(x){all(x[1]==x[-1])}))
+                                               apply(plist[[i]],2,function(x){all(x[1]==x[-1])}))
   }
   out <- model$Ntransform(as.mcmc(do.call(cbind,plist)))
+  if(!include_constants) out <- out[,!isConstant]
   attr(out,"isConstant") <- isConstant
   out
 }
@@ -94,14 +95,14 @@ mapped_par <- function(p_vector,design,model=NULL,
 {
   if (is.null(model)) if (is.null(design$model)) 
     stop("Must specify model as not in design") else model <- design$model
-  if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
-  dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
-                       rt_check=FALSE,compress=FALSE)
-  # ok <- !(names(dadm) %in% c("subjects","trials","R","rt","lR","lM","winner"))
-  ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
-  out <- cbind(dadm[,ok],round(get_pars(p_vector,dadm),digits))
-  if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
-  out
+    if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
+    dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
+                         rt_check=FALSE,compress=FALSE)
+    # ok <- !(names(dadm) %in% c("subjects","trials","R","rt","lR","lM","winner"))
+    ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
+    out <- cbind(dadm[,ok],round(get_pars(p_vector,dadm),digits))
+    if (model$type=="SDT")  out <- out[dadm$lR!=levels(dadm$lR)[length(levels(dadm$lR))],]
+    out
 }
 
 

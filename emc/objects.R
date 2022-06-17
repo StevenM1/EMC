@@ -8,15 +8,10 @@ thin_pmwg <- function(pmwg,thin=10)
   if (class(pmwg) != "pmwgs") stop("Not a pmwgs object")
   if (thin >= pmwg$samples$idx) stop("Thin value to large\n")
   nmc_thin <- seq(thin,pmwg$samples$idx,by=thin)
-  pmwg$samples$idx <- length(nmc_thin)
-  pmwg$samples$alpha <- pmwg$samples$alpha[,,nmc_thin,drop=FALSE]
-  pmwg$samples$theta_mu <- pmwg$samples$theta_mu[,nmc_thin,drop=FALSE]
-  pmwg$samples$theta_var <- pmwg$samples$theta_var[,,nmc_thin,drop=FALSE]
-  pmwg$samples$subj_ll <- pmwg$samples$subj_ll[,nmc_thin,drop=FALSE]
-  pmwg$samples$a_half <- pmwg$samples$a_half[,nmc_thin,drop=FALSE]
-  pmwg$samples$origin <- pmwg$samples$origin[,nmc_thin,drop=FALSE] 
+  pmwg$samples <- base::rapply(pmwg$samples, f = function(x) filter_obj(x, nmc_thin), how = "replace")
   pmwg$samples$stage <- pmwg$samples$stage[nmc_thin]
-  pmwg
+  pmwg$samples$idx <- length(nmc_thin)
+  return(pmwg)
 }
 
 
@@ -40,15 +35,10 @@ get_stage <- function(pmwg,stage="burn")
   if (class(pmwg) != "pmwgs") stop("Not a pmwgs object")
   if (!(stage %in% pmwg$samples$stage))
     stop("stage not available")
-  ok <- pmwg$samples$stage == stage
-  pmwg$samples$alpha <- pmwg$samples$alpha[,,ok,drop=FALSE]
-  pmwg$samples$theta_mu <- pmwg$samples$theta_mu[,ok,drop=FALSE]
-  pmwg$samples$theta_var <- pmwg$samples$theta_var[,,ok,drop=FALSE]
-  pmwg$samples$subj_ll <- pmwg$samples$subj_ll[,ok,drop=FALSE]
-  pmwg$samples$a_half <- pmwg$samples$a_half[,ok,drop=FALSE]
-  pmwg$samples$origin <- pmwg$samples$origin[,ok,drop=FALSE] 
-  pmwg$samples$stage <- pmwg$samples$stage[ok]
-  pmwg$samples$idx <- sum(ok)
+  idx <- which(pmwg$samples$stage == stage)
+  pmwg$samples <- base::rapply(pmwg$samples, f = function(x) filter_obj(x, idx), how = "replace")
+  pmwg$samples$stage <- pmwg$samples$stage[idx]
+  pmwg$samples$idx <- length(idx)
   pmwg
 }
 
@@ -63,26 +53,26 @@ remove_iterations <- function(pmwg,select,remove=TRUE,last_select=FALSE,filter=N
     if (is.null(filter)) {
       if (!last_select)
         select <- 1:select else
-        select <- (pmwg$samples$idx-select+1):pmwg$samples$idx
+          select <- (pmwg$samples$idx-select+1):pmwg$samples$idx
     } else {
       n <- table(pmwg$samples$stage)
       if (filter=="burn") {
         if (select>n["burn"]) stop("Removing more than available in burn")
         if (!last_select)
           select <- 1:select else
-          select <- (n["burn"]-select+1):n["burn"]
+            select <- (n["burn"]-select+1):n["burn"]
       } else if (filter=="adapt") {
         if (select>n["adapt"]) stop("Removing more than available in adapt")
         if (!last_select)
           select <- 1:select else
-          select <- (n["adapt"]-select+1):n["adapt"]
-        select <- select + n["burn"]
+            select <- (n["adapt"]-select+1):n["adapt"]
+          select <- select + n["burn"]
       } else if (filter=="sample") {
         if (select>n["sample"]) stop("Removing more than available in sample")
         if (!last_select)
           select <- 1:select else
-          select <- (n["sample"]-select+1):n["sample"]
-        select <- select + n["burn"] + n["adapt"]
+            select <- (n["sample"]-select+1):n["sample"]
+          select <- select + n["burn"] + n["adapt"]
       }
     }
   }
@@ -107,7 +97,7 @@ get_sigma <- function(samps,filter="samples",thin=1,subfilter=0)
     if (min(r)<1 || max(r)>dim(x)[d]) stop("subfilter out of range\n")
     if (d==2) x[,r,drop=FALSE] else x[,,r,drop=FALSE]
   }
-
+  
   sigma <- samps$samples$theta_var[,,samps$samples$stage==filter]
   if (!is.null(subfilter)) sigma <- shorten(sigma,subfilter,3)
   if (thin >= samps$samples$idx) stop("Thin value to large\n")
@@ -144,7 +134,7 @@ chain_shorten <- function(samplers,n)
   attr(samplers,"model_list") <- model
   samplers
 }
-  
+
 get_sigma_chains <- function(samples,filter="samples",thin=1,subfilter=0)
   # Get sigma matrix samples for chains and put in one array  
 {
@@ -155,7 +145,7 @@ get_sigma_chains <- function(samples,filter="samples",thin=1,subfilter=0)
 #### mcmc extraction ----
 
 as_Mcmc <- function(sampler,filter=stages,thin=1,subfilter=0,
-  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1])
+                    selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1])
   # replacement for pmwg package as_mccmc
   # allows for selection of subj_ll, and specifying selection as an integer
   # allows filter as single integer so can remove first filter samples
@@ -227,14 +217,14 @@ as_Mcmc <- function(sampler,filter=stages,thin=1,subfilter=0,
   } else if (selection %in% c("LL","epsilon")) {
     if (selection == "epsilon") 
       LL <- sampler$samples$epsilon[, filter,drop=FALSE] else
-      LL <- sampler$samples$subj_ll[, filter,drop=FALSE]
-    if (!is.null(subfilter)) LL <- shorten(LL,subfilter,2)
-    if (thin > dim(LL)[2]) stop("Thin to large\n")
-    out <- setNames(lapply(
-      data.frame(t(LL[,seq(thin,dim(LL)[2],by=thin),drop=FALSE])),coda::mcmc),
-    names(sampler$data)) 
-    attr(out,"selection") <- selection
-    return(out)
+        LL <- sampler$samples$subj_ll[, filter,drop=FALSE]
+      if (!is.null(subfilter)) LL <- shorten(LL,subfilter,2)
+      if (thin > dim(LL)[2]) stop("Thin to large\n")
+      out <- setNames(lapply(
+        data.frame(t(LL[,seq(thin,dim(LL)[2],by=thin),drop=FALSE])),coda::mcmc),
+        names(sampler$data)) 
+      attr(out,"selection") <- selection
+      return(out)
   }
   stop("Argument `selection` should be one of mu, variance, covariance, correlation, alpha, LL, or epsilon\n")
 }    
@@ -244,8 +234,8 @@ as_Mcmc <- function(sampler,filter=stages,thin=1,subfilter=0,
 
 
 as_mcmc.list <- function(samplers,
-  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1],
-  filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
+                         selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1],
+                         filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
   # mapped = TRUE map mu or alpha to model parameters (constants indicated by
   # attribute isConstant)
@@ -268,26 +258,27 @@ as_mcmc.list <- function(samplers,
                      thin=thin,subfilter=subfilter)
   if (mapped) {
     if (selection == "alpha") {
-      mcmcList <- lapply(mcmcList,function(x){lapply(x,map_mcmc,
-        design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])})
+      mcmcList <- lapply(mcmcList,function(x){lapply(x,map_mcmc, include_constants = include_constants,
+                                                     design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])})
     } else if (selection=="mu") {
-      mcmcList <- lapply(mcmcList,map_mcmc,
-        design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
+      mcmcList <- lapply(mcmcList,map_mcmc, include_constants = include_constants,
+                         design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
     } else warning("Can only map alpha or mu to model parameterization")
-  } else if (include_constants) {
+  } 
+  if (include_constants) {
     if (selection == "alpha") {
       mcmcList <- lapply(mcmcList,function(x){lapply(x,add_constants_mcmc,
-        constants=attr(samplers,"design_list")[[1]]$constants)})
+                                                     constants=attr(samplers,"design_list")[[1]]$constants)})
     } else if (selection=="mu") {
       mcmcList <- lapply(mcmcList,add_constants_mcmc,
-        constants=attr(samplers,"design_list")[[1]]$constants)
+                         constants=attr(samplers,"design_list")[[1]]$constants)
     }    
   }
   if (selection %in% c("LL","epsilon"))
     iter <- unlist(lapply(mcmcList,function(x){length(x[[1]])})) else 
-    if (selection == "alpha") 
-      iter <- unlist(lapply(mcmcList,function(x){dim(x[[1]])[1]})) else
-        iter <- unlist(lapply(mcmcList,function(x){dim(x)[1]}))
+      if (selection == "alpha") 
+        iter <- unlist(lapply(mcmcList,function(x){dim(x[[1]])[1]})) else
+          iter <- unlist(lapply(mcmcList,function(x){dim(x)[1]}))
   if (!all(iter[1]==iter[-1])) 
     message("Chains have different numbers of samples, using first ",min(iter))
   iter <- min(iter)
@@ -317,12 +308,12 @@ as_mcmc.list <- function(samplers,
 
 
 parameters_data_frame <- function(samples,filter="sample",thin=1,subfilter=0,
-                      mapped=FALSE,include_constants=FALSE,
-    selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[2]) 
+                                  mapped=FALSE,include_constants=FALSE,
+                                  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[2]) 
   # extracts and stacks chains into a matrix  
 {
   out <- as_mcmc.list(samples,selection=selection,filter=filter,
-    subfilter=subfilter,mapped=mapped,include_constants=include_constants)
+                      subfilter=subfilter,mapped=mapped,include_constants=include_constants)
   if (selection!="alpha") as.data.frame(do.call(rbind,out)) else {
     out <- lapply(out,function(x){do.call(rbind,x)})
     subjects <- rep(names(out),lapply(out,function(x){dim(x)[1]}))
@@ -339,22 +330,6 @@ chain_n <- function(samplers)
   do.call(rbind,lapply(samplers, function(x){
     table(factor(x$samples$stage,levels=c("burn","adapt","sample")))
   }))
-}
-
-
-check_adapt <- function(samplers,verbose=TRUE) 
-  # Checks chains to see if adapted  
-{
-  ok <- TRUE
-  for (i in 1:length(samplers)) {
-    res <- attr(samplers[[i]],"adapted")
-    if (is.null(res) || is.character(res)) {
-      ok <- FALSE
-      if (verbose) message("Chain ",i," not adapted") 
-    } else if (verbose)
-      message("Chain ",i," adapted by iteration ", res)
-  }
-  ok
 }
 
 get_design <- function(samples) 
@@ -395,14 +370,14 @@ p_names <- function(samples,mapped=FALSE,design=FALSE)
 {
   
   sp <- mp <- mapped_name_list(attr(samples,"design_list")[[1]],
-                     attr(samples,"model_list")[[1]],design)
+                               attr(samples,"model_list")[[1]],design)
   if (mapped) return(mp)
   if (class(samples)=="pmwg")
     tmp <- dimnames(samples$samples$alpha)[[1]] else
-    tmp <- dimnames(samples[[1]]$samples$alpha)[[1]]
-  type <- unlist(lapply(strsplit(tmp,"_"),function(x){x[[1]]}))
-  for (i in names(sp)) sp[[i]] <- tmp[type==i]
-  sp
+      tmp <- dimnames(samples[[1]]$samples$alpha)[[1]]
+    type <- unlist(lapply(strsplit(tmp,"_"),function(x){x[[1]]}))
+    for (i in names(sp)) sp[[i]] <- tmp[type==i]
+    sp
 } 
 
 subject_names <- function(samples) 
@@ -410,5 +385,5 @@ subject_names <- function(samples)
 {
   if (class(samples)=="pmwg") 
     names(samples$data) else 
-    names(samples[[1]]$data)
+      names(samples[[1]]$data)
 }

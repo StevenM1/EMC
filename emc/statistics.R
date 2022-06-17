@@ -9,8 +9,8 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
     if (class(pmwg_mcmc)=="pmwgs") 
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
                            thin=thin,subfilter=subfilter) else
-      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                thin=thin,subfilter=subfilter)                        
+                             pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                                       thin=thin,subfilter=subfilter)                        
   }
   if (attr(pmwg_mcmc,"selection")=="LL") 
     stop("Effective size not sensible for LL\n")
@@ -20,15 +20,15 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
     out 
   } else apply(out,2,sum) 
 }
-  
+
 
 # return_summary=FALSE;print_summary=TRUE;digits_print=2;sort_print=TRUE;
 # autoburnin=FALSE;transform=TRUE
 # selection="alpha";filter="sample";thin=1;subfilter=NULL
 # pmwg_mcmc=sVat0;selection="mu";filter="sample"
 gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
-    digits_print=2,sort_print=TRUE,autoburnin=FALSE,transform=TRUE,
-    selection="alpha",filter="sample",thin=1,subfilter=NULL,mapped=FALSE) 
+                    digits_print=2,sort_print=TRUE,autoburnin=FALSE,transform=TRUE,
+                    selection="alpha",filter="sample",thin=1,subfilter=NULL,mapped=FALSE) 
   # R hat, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
 {
@@ -64,19 +64,19 @@ gd_pmwg <- function(pmwg_mcmc,return_summary=FALSE,print_summary=TRUE,
   if (selection=="alpha") invisible(
     cbind(do.call(rbind,lapply(gd,function(x){x[[1]][,1]})),
           mpsrf=unlist(lapply(gd,function(x){x[[2]]})))) else
-    invisible(c(gd$psrf[,1],mpsrf=gd$mpsrf))
+            invisible(c(gd$psrf[,1],mpsrf=gd$mpsrf))
 }
 
 
 iat_pmwg <- function(pmwg_mcmc,
-    print_summary=TRUE,digits_print=2,sort_print=TRUE,summary_alpha=mean,
-    selection="alpha",filter="sample",thin=1,subfilter=NULL) 
+                     print_summary=TRUE,digits_print=2,sort_print=TRUE,summary_alpha=mean,
+                     selection="alpha",filter="sample",thin=1,subfilter=NULL) 
   # Integrated autocorrelation time, prints multivariate summary returns each participant unless +
   # multivariate as matrix unless !return_summary
 {
   
   IAT <- function (x,verbose=FALSE) 
-  # From LaplacesDemon
+    # From LaplacesDemon
   {
     dt <- x
     n <- length(x)
@@ -104,7 +104,7 @@ iat_pmwg <- function(pmwg_mcmc,
       Ga[2] <- sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
       lg <- 2 * m + 1
       Ga[2] <- Ga[2] + sum((dt[1:(n - lg)] - mu) * (dt[(lg + 1):n] - mu))/n
-        IAT <- IAT + Ga[1]/s2
+      IAT <- IAT + Ga[1]/s2
     }
     IAT <- -1 + 2 * IAT
     return(IAT)
@@ -119,14 +119,14 @@ iat_pmwg <- function(pmwg_mcmc,
     if (class(pmwg_mcmc)=="pmwgs") 
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
                            thin=thin,subfilter=subfilter) else
-      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                thin=thin,subfilter=subfilter)                        
+                             pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                                       thin=thin,subfilter=subfilter)                        
   }
   if ( selection=="LL" ) stop("IAT not appropriate for LL") else
-  if (selection=="alpha") {
-    out <- do.call(rbind,lapply(pmwg_mcmc,get_IAT) ) 
-    if (!is.null(summary_alpha)) out <- apply(out,2,summary_alpha)
-  } else out <- get_IAT(pmwg_mcmc)
+    if (selection=="alpha") {
+      out <- do.call(rbind,lapply(pmwg_mcmc,get_IAT) ) 
+      if (!is.null(summary_alpha)) out <- apply(out,2,summary_alpha)
+    } else out <- get_IAT(pmwg_mcmc)
   if (sort_print & selection != "alpha") out <- sort(out)
   if (print_summary) print(round(out,digits_print))
   invisible(out)
@@ -143,7 +143,7 @@ iat_pmwg <- function(pmwg_mcmc,
 # x=ddmPNASa;p_name="a_Ea-n";x_selection = "mu";x_filter="sample"
 # c_vector=c(0,1,-1,0,1,-1)/4
 # x=andrew;p_name="t0_CIc-i";x_selection="alpha";x_filter="sample";x_name="D"
-  
+
 # p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
 #                    x_name=NULL,y_name=NULL,
 #                    mu=0,alternative = c("less", "greater")[1],
@@ -252,7 +252,7 @@ p_test <- function(x,x_name,x_fun=NULL,
                    filter="sample",selection="mu",subfilter=0) 
   
 {
-
+  
   get_effect <- function(x,p_name=NULL,fun=NULL) 
     # Effect, must always be on mapped scale if lc_mat supplied.
   {
@@ -260,8 +260,8 @@ p_test <- function(x,x_name,x_fun=NULL,
     if (!is.null(fun)) return(apply(x,1,fun))
     x[,p_name]
   }
-
-
+  
+  
   if (mapped & !(selection %in% c("mu","alpha")))
     stop("Can only analyze mapped mu or alpha parameters")
   
@@ -312,7 +312,7 @@ p_test <- function(x,x_name,x_fun=NULL,
     if (x_name==y_name) 
       dimnames(tab)[[2]] <- c(paste(x_name,c(x_subject,y_subject),sep="_"),
                               paste(x_subject,y_subject,sep="-")) else
-      dimnames(tab)[[2]] <- c(x_name,y_name,paste(x_name,y_name,sep="-"))                          
+                                dimnames(tab)[[2]] <- c(x_name,y_name,paste(x_name,y_name,sep="-"))                          
   }
   if (print_table) {
     ptab <- tab
@@ -344,57 +344,57 @@ pmwg_IC <- function(samplers,filter="sample",subfilter=0,use_best_fit=FALSE,
   
   # Mean log-likelihood for each subject
   if (class(samplers)=="pmwgs") 
-      ll <- as_Mcmc(samplers,selection="LL",filter=filter,subfilter=subfilter) else
+    ll <- as_Mcmc(samplers,selection="LL",filter=filter,subfilter=subfilter) else
       ll <- as_mcmc.list(samplers,selection="LL",filter=filter,subfilter=subfilter)
-  minDs <- -2*unlist(lapply(ll,function(x){max(unlist(x))}))
-  mean_lls <- unlist(lapply(ll,function(x){mean(unlist(x))}))
-  
-  if (class(samplers)=="pmwgs") 
+    minDs <- -2*unlist(lapply(ll,function(x){max(unlist(x))}))
+    mean_lls <- unlist(lapply(ll,function(x){mean(unlist(x))}))
+    
+    if (class(samplers)=="pmwgs") 
       alpha <- as_Mcmc(samplers,selection="alpha",filter=filter,subfilter=subfilter) else
-      alpha <- as_mcmc.list(samplers,selection="alpha",filter=filter,subfilter=subfilter)                        
-  mean_pars <- lapply(alpha,function(x){apply(do.call(rbind,x),2,mean)})
-  # log-likelihood for each subject using their mean parameter vector
-  ll_func <- attr(samplers,"design_list")[[1]]$model$log_likelihood
-  data <- samplers[[1]]$data
-  mean_pars_lls <- setNames(numeric(length(mean_pars)),names(mean_pars))
-  for (sub in names(mean_pars))
-    mean_pars_lls[sub] <- ll_func(mean_pars[[sub]],dadm = data[[sub]])
-  Dmeans <- -2*mean_pars_lls
-  if (use_best_fit) minDs <- pmin(minDs,Dmeans)
-  
-  if (!is.null(subject)) {
-    Dmeans <- Dmeans[subject]
-    mean_lls <- mean_lls[subject]
-    minDs <- minDs[subject]
-  }
-  
-  # mean deviance(-2*ll of all data) 
-  mD <- sum(-2 * mean_lls)
-  # Deviance of mean
-  Dmean <- sum(Dmeans)
-  # mimimum Deviance
-  minD <- sum(minDs)
-  
-  # Use deviance of mean as best fit or use actual best fit
-  if (!use_best_fit) Dm <- Dmean else Dm <- minD
-   
-  # effective number of parameters
-  pD <- mD - Dm
-  # DIC = mean deviance + effective number of parameters
-  DIC <- mD + pD
-  # BPIC = mean deviance + 2*effective number of parameters 
-  # Note this is the "easy" BPIC, instead of the complex 2007 one
-  BPIC <- mD + 2*pD
-  out <- c(DIC = DIC, BPIC = BPIC, EffectiveN = pD,meanD=mD,Dmean=Dmean,minD=minD)
-  names(out) <- c("DIC","BPIC","EffectiveN","meanD","Dmean","minD")
-  if (print_summary) print(round(out,digits))
-  invisible(out)
+        alpha <- as_mcmc.list(samplers,selection="alpha",filter=filter,subfilter=subfilter)                        
+    mean_pars <- lapply(alpha,function(x){apply(do.call(rbind,x),2,mean)})
+    # log-likelihood for each subject using their mean parameter vector
+    ll_func <- attr(samplers,"design_list")[[1]]$model$log_likelihood
+    data <- samplers[[1]]$data
+    mean_pars_lls <- setNames(numeric(length(mean_pars)),names(mean_pars))
+    for (sub in names(mean_pars))
+      mean_pars_lls[sub] <- ll_func(mean_pars[[sub]],dadm = data[[sub]])
+    Dmeans <- -2*mean_pars_lls
+    if (use_best_fit) minDs <- pmin(minDs,Dmeans)
+    
+    if (!is.null(subject)) {
+      Dmeans <- Dmeans[subject]
+      mean_lls <- mean_lls[subject]
+      minDs <- minDs[subject]
+    }
+    
+    # mean deviance(-2*ll of all data) 
+    mD <- sum(-2 * mean_lls)
+    # Deviance of mean
+    Dmean <- sum(Dmeans)
+    # mimimum Deviance
+    minD <- sum(minDs)
+    
+    # Use deviance of mean as best fit or use actual best fit
+    if (!use_best_fit) Dm <- Dmean else Dm <- minD
+    
+    # effective number of parameters
+    pD <- mD - Dm
+    # DIC = mean deviance + effective number of parameters
+    DIC <- mD + pD
+    # BPIC = mean deviance + 2*effective number of parameters 
+    # Note this is the "easy" BPIC, instead of the complex 2007 one
+    BPIC <- mD + 2*pD
+    out <- c(DIC = DIC, BPIC = BPIC, EffectiveN = pD,meanD=mD,Dmean=Dmean,minD=minD)
+    names(out) <- c("DIC","BPIC","EffectiveN","meanD","Dmean","minD")
+    if (print_summary) print(round(out,digits))
+    invisible(out)
 }
 
 
 
 compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=FALSE,
-                    print_summary=FALSE,digits=0,digits_p=3,subject=NULL) {
+                        print_summary=FALSE,digits=0,digits_p=3,subject=NULL) {
   
   getp <- function(IC) {
     IC <- -(IC - min(IC))/2
@@ -402,8 +402,8 @@ compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=FALSE,
   }
   
   ICs <- data.frame(do.call(rbind,
-    lapply(sList,pmwg_IC,filter=filter,subfilter=subfilter,
-           use_best_fit=use_best_fit,subject=subject)))
+                            lapply(sList,pmwg_IC,filter=filter,subfilter=subfilter,
+                                   use_best_fit=use_best_fit,subject=subject)))
   DICp <- getp(ICs$DIC)
   BPICp <- getp(ICs$BPIC)
   out <- cbind.data.frame(DIC=ICs$DIC,wDIC=DICp,BPIC=ICs$BPIC,wBPIC=BPICp,ICs[,-c(1:2)])

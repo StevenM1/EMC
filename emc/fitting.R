@@ -4,10 +4,10 @@ require(abind)
 
 run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
-                      max_adapt_trys=2,particles=NA,particle_factor=100, p_accept= NULL, n_cores=1,
-                      epsilon = NULL, start_mu = NULL, start_var = NULL, mix=NULL,  
-                      pdist_update_n=50,min_unique=200,epsilon_upper_bound=15,
-                      eff_var = NULL, eff_mu = NULL) 
+                       max_adapt_trys=2,particles=NA,particle_factor=100, p_accept= NULL, n_cores=1,
+                       epsilon = NULL, start_mu = NULL, start_var = NULL, mix=NULL,  
+                       pdist_update_n=50,min_unique=200,epsilon_upper_bound=15,
+                       eff_var = NULL, eff_mu = NULL) 
   # Initializes (if needed) then runs burn, adapt and sample if iter is not 
   # NA where iter[1] = burn, iter[2] = adapt, iter[3] = sample
   # Adapt stage is run repeatedly up to max_adapt_trys times. 
@@ -19,14 +19,14 @@ run_stages <- function(sampler,iter=c(300,0,0),
     particles <- round(particle_factor*sqrt(length(sampler$par_names)))
   if (!sampler$init) {
     sampler <- init(sampler, n_cores = n_cores, 
-        epsilon = epsilon, start_mu = start_mu, start_var = start_var) 
+                    epsilon = epsilon, start_mu = start_mu, start_var = start_var) 
   }
   if (all(iter==0)) return(sampler)
   if ( iter[1] != 0 ) {
     if (verbose) message("Running burn stage")
-      sampler <- run_stage(sampler, stage = "burn",iter = iter[1], particles = particles, 
-        n_cores = n_cores, pstar = p_accept, epsilon = epsilon, verbose = verbose_run_stage,
-        min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound, mix=mix)
+    sampler <- run_stage(sampler, stage = "burn",iter = iter[1], particles = particles, 
+                         n_cores = n_cores, pstar = p_accept, epsilon = epsilon, verbose = verbose_run_stage,
+                         min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound, mix=mix)
     if (all(iter[2:3]==0)) return(sampler)
   }
   if (iter[2] != 0) {
@@ -38,10 +38,10 @@ run_stages <- function(sampler,iter=c(300,0,0),
   }
   if (verbose) message("Running sample stage")
   sampler <- run_stage(sampler, stage = "sample", iter = iter[3], epsilon = epsilon,
-        pdist_update_n=pdist_update_n,particles = particles, n_cores = n_cores, 
-        pstar = p_accept, verbose = verbose_run_stage, mix=mix, eff_mu = eff_mu,
-        eff_var = eff_var,
-        min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound)  
+                       pdist_update_n=pdist_update_n,particles = particles, n_cores = n_cores, 
+                       pstar = p_accept, verbose = verbose_run_stage, mix=mix, eff_mu = eff_mu,
+                       eff_var = eff_var,
+                       min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound)  
   sampler
 }
 
@@ -54,10 +54,10 @@ run_stages <- function(sampler,iter=c(300,0,0),
 #   epsilon = NULL; start_mu = NULL; start_var = NULL;pdist_update_n=50
 # verbose=TRUE; iter=c(3,0,0)
 run_chains <- function(samplers,iter=c(300,0,0),
-  verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
-  max_adapt_trys=10,particles=NA,particle_factor=100, p_accept= 0.7, 
-  cores_per_chain=1,cores_for_chains=NULL,min_unique=200,epsilon_upper_bound=15,
-  epsilon = NULL, start_mu = NULL, start_var = NULL,pdist_update_n=50) 
+                       verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
+                       max_adapt_trys=10,particles=NA,particle_factor=100, p_accept= 0.7, 
+                       cores_per_chain=1,cores_for_chains=NULL,min_unique=200,epsilon_upper_bound=15,
+                       epsilon = NULL, start_mu = NULL, start_var = NULL,pdist_update_n=50) 
   # applies run stages over chains preserving list attributes
 {
   source(samplers[[1]]$source)
@@ -68,14 +68,14 @@ run_chains <- function(samplers,iter=c(300,0,0),
   run_try <- 0
   repeat {
     samplers_new <- mclapply(samplers,run_stages,iter=iter,
-      verbose=verbose,verbose_run_stage=verbose_run_stage,
-      max_adapt_trys=max_adapt_trys,particles=particles,particle_factor=particle_factor, 
-      p_accept=p_accept, min_unique=min_unique, mix=mix,
-      epsilon = epsilon, start_mu = start_mu, start_var = start_var,
-      pdist_update_n=pdist_update_n,epsilon_upper_bound=epsilon_upper_bound,
-      n_cores=cores_per_chain, mc.cores = cores_for_chains)
+                             verbose=verbose,verbose_run_stage=verbose_run_stage,
+                             max_adapt_trys=max_adapt_trys,particles=particles,particle_factor=particle_factor, 
+                             p_accept=p_accept, min_unique=min_unique, mix=mix,
+                             epsilon = epsilon, start_mu = start_mu, start_var = start_var,
+                             pdist_update_n=pdist_update_n,epsilon_upper_bound=epsilon_upper_bound,
+                             n_cores=cores_per_chain, mc.cores = cores_for_chains)
     if (class(samplers_new)=="try-error" || 
-      any(lapply(samplers_new,class)=="try-error")) {
+        any(lapply(samplers_new,class)=="try-error")) {
       save(samplers,iter,particles,particle_factor,p_accept,pdist_update_n,
            epsilon_upper_bound,min_unique,file="fail_run_stage.RData")
       run_try <- run_try + 1
@@ -95,7 +95,7 @@ run_chains <- function(samplers,iter=c(300,0,0),
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                    max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
                    epsilon = NULL, verbose_run_stage = F,
-                   particles=NA,particle_factor=100, p_accept=NULL,
+                   particles=NA,particle_factor=50, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                    min_es=NULL,min_iter=NULL,max_iter=NULL) 
   # Repeatedly runs burn or sample to get subject average multivariate 
@@ -142,7 +142,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   model_list <- attr(samplers,"model_list")
   gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
                 filter="burn",mapped=mapped)
-  gd_diff <- (gd[,ncol(gd)] - max_gd)
+  gd_diff <- apply(gd, 1, max) - 1.5*max_gd
   repeat {
     run_try <- 0
     repeat {
@@ -180,7 +180,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
     ok_gd <- all(gd < max_gd)
     shorten <- !ok_gd
-    if (trys > max_trys || (ok_gd & enough)) {
+    if (trys == max_trys || (ok_gd & enough)) {
       if (verbose) {
         message("Final multivariate gelman.diag per participant")
         message("\nIterations = ",samplers[[1]]$samples$idx,", Mean mpsrf= ",
@@ -201,13 +201,13 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
 
 
 auto_burn <- function(samplers,ndiscard=200,nstart=300,
-    particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
-    mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
-    max_gd_trys=100,max_gd=1.1,
-    thorough=TRUE,mapped=FALSE, step_size = NA,
-    min_es=NULL,min_iter=NULL,max_iter=NULL,
-    epsilon = NULL, epsilon_upper_bound=15, p_accept=0.5,
-    cores_per_chain=1,cores_for_chains=NULL)
+                      particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
+                      mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
+                      max_gd_trys=100,max_gd=1.1,
+                      thorough=TRUE,mapped=FALSE, step_size = NA,
+                      min_es=NULL,min_iter=NULL,max_iter=NULL,
+                      epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,
+                      cores_per_chain=1,cores_for_chains=NULL)
   # Takes a pmwgs chains list, initializes it (see run_stages), if !burn adapts
   # and runs burn or sample until gd criterion satisfied (see run_gd for details)
 {
@@ -246,7 +246,7 @@ auto_burn <- function(samplers,ndiscard=200,nstart=300,
 adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles = NA, 
                                min_particles = 50, max_particles = 500, 
                                min_factor = 25, max_factor = 100,
-                               percent_up = 5, percent_down = 5){
+                               percent_up = 10, percent_down = 5){
   # This function adaptively tunes the particles per participant,
   # so that we can lower the number of particles is we're closer to gd_criterion,
   # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
@@ -259,7 +259,7 @@ adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles 
     gd_diff[gd_diff < 0] <- -(percent_down/100)*min_particles
     particles <- pmin(pmax(min_particles, particles + gd_diff), max_particles)
   }
-  return(list(particles = particles, particle_factor = particle_factor))
+  return(list(particles = round(particles), particle_factor = particle_factor))
 }
 
 auto_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
@@ -268,49 +268,53 @@ auto_adapt <- function(samplers,max_trys=25,epsilon = NULL,
                        n_cores_conditional = 1, min_es=NULL,min_unique = 200, 
                        step_size = 25, thin = NULL,
                        verbose=TRUE,verbose_run_stage = FALSE){
-    if(verbose) message("Running adapt stage")
-    source(samplers[[1]]$source)
-    if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
-    data_list <- attr(samplers,"data_list")  
-    design_list <- attr(samplers,"design_list")
-    model_list <- attr(samplers,"model_list")
-    trys <- 0
-    samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
+  if(verbose) message("Running adapt stage")
+  source(samplers[[1]]$source)
+  if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
+  data_list <- attr(samplers,"data_list")  
+  design_list <- attr(samplers,"design_list")
+  model_list <- attr(samplers,"model_list")
+  trys <- 0
+  samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
+                           n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
+                           particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                           verbose=FALSE,verbose_run_stage=verbose_run_stage,
+                           mc.cores=cores_for_chains)
+  repeat {
+    trys <- trys + 1
+    samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,step_size,0),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                              particles=particles,particle_factor=particle_factor,epsilon=epsilon,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage,
                              mc.cores=cores_for_chains)
-    repeat {
-      trys <- trys + 1
-      samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,step_size,0),
-                               n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
-                               particles=particles,particle_factor=particle_factor,epsilon=epsilon,
-                               verbose=FALSE,verbose_run_stage=verbose_run_stage,
-                               mc.cores=cores_for_chains)
-      test_samples <- lapply(samplers_new, extract_samples, stage = "adapt", thin = thin, samplers_new[[1]]$samples$iteration, thin_eff_only = F)
-      keys <- unique(unlist(lapply(test_samples, names)))
-      test_samples <- setNames(do.call(mapply, c(abind, lapply(test_samples, '[', keys))), keys)
-      test_samples$iteration <- sum(test_samples$iteration)
-      # Only need information like n_pars & n_subjects, so only need to pass the first chain
-      adapted <- test_adapted(samplers_new[[1]], test_samples, min_unique, n_cores_conditional, verbose_run_stage)
-      if(trys > max_trys | adapted) break
-    }
-    samplers <- samplers_new
-    attr(samplers,"data_list") <- data_list
-    attr(samplers,"design_list") <- design_list
-    attr(samplers,"model_list") <- model_list
-    return(samplers)
+    test_samples <- lapply(samplers_new, extract_samples, stage = "adapt", thin = thin, samplers_new[[1]]$samples$iteration, thin_eff_only = F)
+    keys <- unique(unlist(lapply(test_samples, names)))
+    test_samples <- setNames(do.call(mapply, c(abind, lapply(test_samples, '[', keys))), keys)
+    test_samples$iteration <- sum(test_samples$iteration)
+    # Only need information like n_pars & n_subjects, so only need to pass the first chain
+    adapted <- test_adapted(samplers_new[[1]], test_samples, min_unique, n_cores_conditional, verbose_run_stage)
+    if(trys > max_trys | adapted) break
+  }
+  samplers <- samplers_new
+  attr(samplers,"data_list") <- data_list
+  attr(samplers,"design_list") <- design_list
+  attr(samplers,"model_list") <- model_list
+  attr(samplers, "adapted") <- adapted
+  return(samplers)
 }
 
 
 auto_sample <- function(samplers,iter=NA,verbose=TRUE,
-                       epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
-                       cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
-                       n_cores_conditional = 1, step_size = 50, thin = NULL,
-                       verbose_run_stage = FALSE)
+                        epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
+                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
+                        n_cores_conditional = 1, step_size = 50, thin = NULL,
+                        verbose_run_stage = FALSE)
   # Automatically run the sample stage  
 {
-  
+  if(!attr(samplers, "adapted")){
+    warning("samplers should be adapted before you can run sample stage")
+    return(samplers)
+  }
   if(verbose) message("Running sample stage")
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -324,15 +328,15 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
       step_size <- ifelse(iter %% step_size == 0, step_size, iter %% step_size)
     } 
     test_samples <- lapply(samplers_new, extract_samples, 
-        stage = c("adapt", "sample"), thin = thin, 50*trys, thin_eff_only = FALSE)
+                           stage = c("adapt", "sample"), thin = thin, 50*trys, thin_eff_only = FALSE)
     keys <- unique(unlist(lapply(test_samples, names)))
     test_samples <- setNames(do.call(mapply, c(abind, lapply(test_samples, '[', keys))), keys)
     test_samples$iteration <- sum(test_samples$iteration)
     conditionals=mclapply(X = 1:samplers_new[[1]]$n_subjects,
-      FUN = variant_funs$get_conditionals,samples = test_samples, 
-      samplers_new[[1]]$n_pars, mc.cores = n_cores_conditional)
+                          FUN = variant_funs$get_conditionals,samples = test_samples, 
+                          samplers_new[[1]]$n_pars, mc.cores = n_cores_conditional)
     conditionals <- array(unlist(conditionals), dim = c(samplers_new[[1]]$n_pars, 
-      samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
+                                                        samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
     eff_mu <- conditionals[,1,] #First column is the means
     eff_var <- conditionals[,2:(samplers_new[[1]]$n_pars+1),] #Other columns are the variances
     samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,0,step_size),
@@ -387,8 +391,8 @@ test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional 
 }
 
 check_stuck <- function(samples,filter=c("burn","sample")[1], # dont use adapt
-                         start=1,last=TRUE,n=100, # n, from start or last n
-                         flat=0.1,dfac=3) 
+                        start=1,last=TRUE,n=90, # n, from start or last n
+                        flat=0.1,dfac=3) 
   # flat: criterion on % change in median first to last 1/3 relative to last 1/3 Let me know what you think.
   
   # dfac: bad if  median(best)-median(chain) > dfac*IQR(best)
@@ -410,15 +414,15 @@ check_stuck <- function(samples,filter=c("burn","sample")[1], # dont use adapt
   last <- apply(lls[,last,],c(1,3),median)
   isFlat <- 100*abs((last-first)/last) < flat
   # if(any(isFlat)){
-    diff <- apply(last, 1, FUN = function(x) return(max(x) - min(x)))
-    IQRs <- apply(lls, c(1,3), FUN = IQR)
-    best <- max.col(last)
-    worst <- max.col(-last)
-    n_subs <- samples[[1]]$n_subjects
-    bad_subs <- which(diff > dfac*IQRs[matrix(c(1:n_subs, best), nrow = n_subs)]) # Yay R tricks
-    if(any(bad_subs)) samples <- fix_stuck(samples, bad_subs, best, worst)
+  diff <- apply(last, 1, FUN = function(x) return(max(x) - min(x)))
+  IQRs <- apply(lls, c(1,3), FUN = IQR)
+  best <- max.col(last)
+  worst <- max.col(-last)
+  n_subs <- samples[[1]]$n_subjects
+  bad_subs <- which(diff > dfac*IQRs[matrix(c(1:n_subs, best), nrow = n_subs)]) # Yay R tricks
+  if(any(bad_subs)) samples <- fix_stuck(samples, bad_subs, best, worst)
   # }
-    
+  
   return(samples)
 }
 
