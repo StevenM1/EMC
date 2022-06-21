@@ -122,11 +122,8 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
       if (mapped) {
         psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
                              model=attr(pmwg_mcmc,"model_list")[[1]])
-        if (!is.null(attr(psamples,"isConstant"))) {
-          isConstant <- attr(psamples,"isConstant")
+        if (!is.null(attr(psamples,"isConstant")))
           psamples <- psamples[,!isConstant,drop=FALSE]
-          attr(psamples,"isConstant") <- isConstant
-        }
       }
     }
     if (is.null(psamples)) plot_prior <- FALSE
@@ -135,20 +132,15 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
                                   thin=thin,subfilter=subfilter,mapped=mapped)
-        # if (selection=="alpha") {
-        #   for (j in 1:length(pmwg_mcmc)) if (!is.null(attr(pmwg_mcmc[[j]][[1]],"isConstant"))) 
-        #     for (i in 1:length(pmwg_mcmc[[j]])) pmwg_mcmc[[j]][[i]] <- 
-        #         pmwg_mcmc[[j]][[i]][,!attr(pmwg_mcmc[[j]][[i]],"isConstant"),drop=FALSE]  
-        # } else if (!is.null(attr(pmwg_mcmc[[1]],"isConstant"))) for (i in 1:length(pmwg_mcmc)) 
-        #   pmwg_mcmc[[i]] <- pmwg_mcmc[[i]][,!attr(pmwg_mcmc[[i]],"isConstant"),drop=FALSE]
          if (mapped & !is.null(pars)) {
            pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
                             model=attr(pmwg_mcmc,"model_list")[[1]])[1,] 
-          if (!is.null(attr(pars,"isConstant"))) {
-            isConstant <- attr(pars,"isConstant")
-            pars <- pars[,!attr(pars,"isConstant"),drop=FALSE]
-            attr(pars,"isConstant") <- isConstant
-          }
+          if (!is.null(attr(pars,"isConstant"))) 
+              pars <- pars[,!attr(pars,"isConstant"),drop=FALSE]
+          # {
+          #   isConstant <- attr(pars,"isConstant")
+          #   attr(pars,"isConstant") <- isConstant
+          # }
         }
     }
   } else plot_prior <- FALSE
