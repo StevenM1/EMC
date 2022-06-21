@@ -81,7 +81,8 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # show_chains=FALSE;do_plot=TRUE;subject=NA;add_means=FALSE;
 # pars=NULL;probs=c(.025,.5,.975);bw = "nrd0"; adjust = 1
 # 
-# pmwg_mcmc=sPNAS_a_full;layout=c(2,5);selection="mu";mapped=TRUE
+# pmwg_mcmc=DDMfull;selection="alpha";filter="burn";layout=c(2,5);mapped=TRUE
+# pars <- attributes(attr(DDMfull,"data_list")[[1]])$pars
 
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
@@ -127,21 +128,17 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
       }
     }
     if (is.null(psamples)) plot_prior <- FALSE
-    if (class(pmwg_mcmc)=="pmwgs")
-      pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
-                           thin=thin,subfilter=subfilter) else {
-        pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                  thin=thin,subfilter=subfilter,mapped=mapped)
-         if (mapped & !is.null(pars)) {
-           pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
-                            model=attr(pmwg_mcmc,"model_list")[[1]])[1,] 
-          if (!is.null(attr(pars,"isConstant"))) 
-              pars <- pars[,!attr(pars,"isConstant"),drop=FALSE]
-          # {
-          #   isConstant <- attr(pars,"isConstant")
-          #   attr(pars,"isConstant") <- isConstant
-          # }
-        }
+    if (class(pmwg_mcmc)=="pmwgs") pmwg_mcmc <- as_Mcmc(pmwg_mcmc,
+      selection=selection,filter=filter,thin=thin,subfilter=subfilter) else 
+    {
+      if (mapped & !is.null(pars)) {
+        pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
+                         model=attr(pmwg_mcmc,"model_list")[[1]])
+        if (!is.null(attr(pars,"isConstant"))) 
+            pars <- pars[,!attr(pars,"isConstant"),drop=FALSE]
+      }
+      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                thin=thin,subfilter=subfilter,mapped=mapped)
     }
   } else plot_prior <- FALSE
   if (attr(pmwg_mcmc,"selection")=="LL")
