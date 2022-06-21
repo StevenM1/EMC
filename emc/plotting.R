@@ -76,15 +76,13 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 
 
 
-# show_chains=FALSE;do_plot=TRUE;subject=NA
-# pars=NULL;probs=c(.025,.5,.975);bw = "nrd0";adjust = 1
-# layout=c(2,4)
-# selection="mu";filter="sample";thin=1;subfilter=NULL
-# xlim=NULL; ylim=NULL
-# plot_prior=TRUE; n_prior=1e3; mapped=FALSE
+# layout=c(2,3); selection="alpha";filter="sample";thin=1;subfilter=0
+# mapped=FALSE;plot_prior=TRUE;n_prior=1e3;xlim=NULL;ylim=NULL;
+# show_chains=FALSE;do_plot=TRUE;subject=NA;add_means=FALSE;
+# pars=NULL;probs=c(.025,.5,.975);bw = "nrd0"; adjust = 1
 # 
-# pmwg_mcmc=samples; filter="sample";selection="mu";layout=c(2,7);mapped=TRUE
-# selection="alpha"
+# pmwg_mcmc=sPNAS_a_full;layout=c(2,5);selection="mu";mapped=TRUE
+
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
     plot_prior=TRUE,n_prior=1e3,xlim=NULL,ylim=NULL,
@@ -124,8 +122,11 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
       if (mapped) {
         psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
                              model=attr(pmwg_mcmc,"model_list")[[1]])
-        if (!is.null(attr(psamples,"isConstant"))) psamples <- 
-            psamples[,!attr(psamples,"isConstant"),drop=FALSE]
+        if (!is.null(attr(psamples,"isConstant"))) {
+          isConstant <- attr(psamples,"isConstant")
+          psamples <- psamples[,!isConstant,drop=FALSE]
+          attr(psamples,"isConstant") <- isConstant
+        }
       }
     }
     if (is.null(psamples)) plot_prior <- FALSE
@@ -134,18 +135,21 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
                            thin=thin,subfilter=subfilter) else {
         pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
                                   thin=thin,subfilter=subfilter,mapped=mapped)
-        if (selection=="alpha") {
-          for (j in 1:length(pmwg_mcmc)) if (!is.null(attr(pmwg_mcmc[[j]][[1]],"isConstant"))) 
-            for (i in 1:length(pmwg_mcmc[[j]])) pmwg_mcmc[[j]][[i]] <- 
-                pmwg_mcmc[[j]][[i]][,!attr(pmwg_mcmc[[j]][[i]],"isConstant"),drop=FALSE]  
-        } else if (!is.null(attr(pmwg_mcmc[[1]],"isConstant"))) for (i in 1:length(pmwg_mcmc)) 
-          pmwg_mcmc[[i]] <- pmwg_mcmc[[i]][,!attr(pmwg_mcmc[[i]],"isConstant"),drop=FALSE]
+        # if (selection=="alpha") {
+        #   for (j in 1:length(pmwg_mcmc)) if (!is.null(attr(pmwg_mcmc[[j]][[1]],"isConstant"))) 
+        #     for (i in 1:length(pmwg_mcmc[[j]])) pmwg_mcmc[[j]][[i]] <- 
+        #         pmwg_mcmc[[j]][[i]][,!attr(pmwg_mcmc[[j]][[i]],"isConstant"),drop=FALSE]  
+        # } else if (!is.null(attr(pmwg_mcmc[[1]],"isConstant"))) for (i in 1:length(pmwg_mcmc)) 
+        #   pmwg_mcmc[[i]] <- pmwg_mcmc[[i]][,!attr(pmwg_mcmc[[i]],"isConstant"),drop=FALSE]
          if (mapped & !is.null(pars)) {
            pars <- map_mcmc(pars,design=attr(pmwg_mcmc,"design_list")[[1]],
                             model=attr(pmwg_mcmc,"model_list")[[1]])[1,] 
-          if (!is.null(attr(pars,"isConstant"))) pars <-
-            pars[,!attr(pars,"isConstant"),drop=FALSE]
-         }
+          if (!is.null(attr(pars,"isConstant"))) {
+            isConstant <- attr(pars,"isConstant")
+            pars <- pars[,!attr(pars,"isConstant"),drop=FALSE]
+            attr(pars,"isConstant") <- isConstant
+          }
+        }
     }
   } else plot_prior <- FALSE
   if (attr(pmwg_mcmc,"selection")=="LL")
