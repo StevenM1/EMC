@@ -199,7 +199,14 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
-
+# ndiscard=80;nstart=120;
+# particles=NA; particle_factor = 50; start_mu = NULL; start_var = NULL;
+# mix = NULL; verbose=TRUE;verbose_run_stage=FALSE;
+# max_gd_trys=100;max_gd=1.1;
+# thorough=TRUE;mapped=FALSE; step_size = NA;
+# min_es=NULL;min_iter=NULL;max_iter=NULL;
+# epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
+# cores_per_chain=1;cores_for_chains=NULL
 auto_burn <- function(samplers,ndiscard=80,nstart=120,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
