@@ -403,7 +403,7 @@ make_design <- function(Flist,Ffactors,Rlevels,model,
 }
 
 
-sampled_p_vector <- function(design,model=NULL)
+sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
   # Makes an empty p_vector corresponding to model. 
   # matchfun only needed in design if uses lM factor 
 {
@@ -417,11 +417,12 @@ sampled_p_vector <- function(design,model=NULL)
       design,model,add_acc=FALSE,verbose=FALSE,rt_check=FALSE,compress=FALSE)
   sampled_p_names <- attr(dadm,"sampled_p_names")
   out <- setNames(numeric(length(sampled_p_names)),sampled_p_names)
-  # Get map
-  dat <- make_data(out,design=design,model=model,trials=1)
-  dadm <- design_model(data=dat,design=design,model=model,compress=FALSE,
-                       verbose=FALSE,rt_check=FALSE)
-  attr(out,"map") <- lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
+  if (doMap) { # Get map
+    dat <- make_data(out,design=design,model=model,trials=1)
+    dadm <- design_model(data=dat,design=design,model=model,compress=FALSE,
+                         verbose=FALSE,rt_check=FALSE)
+    attr(out,"map") <- lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
+  }
   out
 }
 
