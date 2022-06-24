@@ -460,7 +460,7 @@ design_a_full <- make_design(
 
 print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
 
-chain_n(sPNAS_a_full_samples)
+chain_n(sPNAS_a_full)
 plot_chains(sPNAS_a_full,layout=c(3,7),selection="LL")
 # random effects
 plot_chains(sPNAS_a_full,layout=c(2,5))
