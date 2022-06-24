@@ -81,8 +81,7 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # show_chains=FALSE;do_plot=TRUE;subject=NA;add_means=FALSE;
 # pars=NULL;probs=c(.025,.5,.975);bw = "nrd0"; adjust = 1
 # 
-# pmwg_mcmc=DDMfull;selection="alpha";filter="burn";layout=c(2,5);mapped=TRUE
-# pars <- attributes(attr(DDMfull,"data_list")[[1]])$pars
+# pmwg_mcmc=samples;selection="mu";filter="sample";layout=c(2,7);mapped=TRUE
 
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,

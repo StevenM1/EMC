@@ -379,6 +379,13 @@ map_p <- function(p,dadm)
 # Ffactors=list(subjects="as1t",S=levels(data$S));Rlevels=levels(data$R)
 # matchfun=matchfun;constants=c(mean=0,sd=0);model=probit
 
+# Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR, r~1,d~1)
+# Clist=list(mean=list(FW=contr.treatment,S=contr.treatment),sd=list(FW=diag(2),S=diag(2)),
+#           threshold=list(FW=contr.treatment,S=contr.treatment),r=list(contr.treatment),d=list(contr.treatment))
+# Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),FW=levels(wordfaceROC$FW))
+# Rlevels=1:6;matchfun=matchfun;model=probitExp
+# constants=c(mean=log(1),mean_FWwords=log(1))
+
 make_design <- function(Flist,Ffactors,Rlevels,model,
                         Clist=NULL,matchfun=NULL,constants=NULL) 
   # Binds together elements that make up a design a list  
