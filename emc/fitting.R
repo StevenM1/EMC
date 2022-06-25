@@ -94,7 +94,7 @@ run_chains <- function(samplers,iter=c(300,0,0),
 
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                    max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
-                   epsilon = NULL, verbose_run_stage = F,
+                   epsilon = NULL, verbose_run_stage = FALSE,
                    particles=NA,particle_factor=50, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
                    min_es=NULL,min_iter=NULL,max_iter=NULL) 
@@ -153,7 +153,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                                n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                                particles=particles,particle_factor=particle_factor,epsilon=epsilon,
-                               verbose=verbose,verbose_run_stage=verbose_run_stage,
+                               verbose=FALSE,verbose_run_stage=verbose_run_stage,
                                mc.cores=cores_for_chains)
       gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
                     filter="burn",mapped=mapped)
@@ -182,8 +182,8 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     shorten <- !ok_gd
     if (trys == max_trys || (ok_gd & enough)) {
       if (verbose) {
-        message("Final multivariate gelman.diag per participant")
-        message("\nIterations = ",samplers[[1]]$samples$idx,", Mean mpsrf= ",
+        message("\nFinal multivariate gelman.diag per participant")
+        message("Iterations = ",samplers[[1]]$samples$idx,", Mean mpsrf= ",
                 round(mean(gd),3),max_name,round(max(gd),3))
       }
       attr(samplers,"data_list") <- data_list
@@ -199,11 +199,18 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
-
-auto_burn <- function(samplers,ndiscard=200,nstart=300,
+# ndiscard=80;nstart=120;
+# particles=NA; particle_factor = 50; start_mu = NULL; start_var = NULL;
+# mix = NULL; verbose=TRUE;verbose_run_stage=FALSE;
+# max_gd_trys=100;max_gd=1.1;
+# thorough=TRUE;mapped=FALSE; step_size = NA;
+# min_es=NULL;min_iter=NULL;max_iter=NULL;
+# epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
+# cores_per_chain=1;cores_for_chains=NULL
+auto_burn <- function(samplers,ndiscard=80,nstart=120,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
-                      max_gd_trys=100,max_gd=1.1,
+                      max_gd_trys=100,max_gd=1.2,
                       thorough=TRUE,mapped=FALSE, step_size = NA,
                       min_es=NULL,min_iter=NULL,max_iter=NULL,
                       epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,
@@ -223,7 +230,7 @@ auto_burn <- function(samplers,ndiscard=200,nstart=300,
     samplers_new <- mclapply(samplers,run_stages,iter=c(nstart + ndiscard,0,0),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                              particles=particles,particle_factor=particle_factor,epsilon=epsilon,
-                             verbose=verbose,verbose_run_stage=verbose_run_stage,
+                             verbose=FALSE,verbose_run_stage=verbose_run_stage,
                              mc.cores=cores_for_chains)
     samplers <- samplers_new
     if(ndiscard!= 0) samplers <- lapply(samplers,remove_iterations,select=ndiscard+1)

@@ -428,8 +428,22 @@ head(parameters_data_frame(sPNAS_a,mapped=TRUE))
 head(parameters_data_frame(sPNAS_a,selection="alpha",mapped=TRUE))
 
 
-#####  FULL DDM   !!!!! To be completed !!!!!  Does it fix up the misfit ?????
+#####  FULL DDM   
 
+# Once trial-to-trial variability parameters are estimated the sampler can 
+# sometimes explore regions where the numerical approximation to the DDM's 
+# likelihood become inaccurate. In order to avoid this log_likelihood_ddm (in 
+# emc/likelihood.R) imposes the following restrictions on these parameters
+# (we also restrict v and a to typical regions), returning low likelihoods when
+# they are violated. 
+#     abs(v)<5 | a<2 | sv<2 | sv>.1 | SZ<.75 | SZ>.01 | st0<.2
+# They are usually appropriate for the seconds scale with s=1 fixed. For 
+# some data and/or different scalings they may have to be adjusted. Posterior
+# estiamtes should be checked to see if estimates are stacking up against these
+# bounds, indicating they might need adjustment. Alternatively, poor convergence
+# behaviour may indicate the need for further restriction.
+
+# Lets fit the full model analogous to the Wiener model fit previously.
 design_a_full <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),
@@ -438,9 +452,151 @@ design_a_full <- make_design(
   constants=c(s=log(1),DP=qnorm(0.5)),
   model=ddmTZD)
 
-samplers <- make_samplers(dat,design_a_full,type="standard")
-save(samplers,file="sPNAS_a_full.RData")
+# samplers <- make_samplers(dat,design_a_full,type="standard")
+# save(samplers,file="sPNAS_a_full.RData")
+# Fits are run by 
 
-print(load("sPNAS_a_full.RData"))
+#### Convergence ----
 
+print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
+
+chain_n(sPNAS_a_full_samples)
+plot_chains(sPNAS_a_full,layout=c(3,7),selection="LL")
+# random effects
+plot_chains(sPNAS_a_full,layout=c(2,5))
+print(round(gd_pmwg(sPNAS_a_full),2))
+# As is usual sv and particularly SZ are least efficient 
+iat_pmwg(sPNAS_a_full)
+es_pmwg(sPNAS_a_full,summary=min)
+# Same for hyper mean
+plot_chains(sPNAS_a_full,layout=c(2,5),selection="mu")
+print(round(gd_pmwg(sPNAS_a_full,selection="mu"),2))
+iat_pmwg(sPNAS_a_full,selection="mu")
+es_pmwg(sPNAS_a_full,selection="mu",summary=min)
+# variance
+plot_chains(sPNAS_a_full,layout=c(2,5),selection="variance")
+print(round(gd_pmwg(sPNAS_a_full,selection="variance"),2))
+iat_pmwg(sPNAS_a_full,selection="variance")
+es_pmwg(sPNAS_a_full,selection="variance",summary=min)
+# and correlation 
+plot_chains(sPNAS_a_full,layout=c(3,5),selection="correlation")
+print(round(gd_pmwg(sPNAS_a_full,selection="correlation"),2))
+iat_pmwg(sPNAS_a_full,selection="correlation")
+es_pmwg(sPNAS_a_full,selection="correlation",summary=min)
+# Clearly if we wished to do inference with SZ we should get more samples. 
+
+#### Fit ----
+
+# Individual fits are improved over the Wiener model 
+plot_fit(dat,ppPNAS_a_full,layout=c(2,3))
+
+# The average over subjects shows the improvement very clearly. 
+plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),lpos="right",xlim=c(.25,1.5))
+
+# Drilling down on accuracy misfit is much reduced, although it is still present
+# for speed for right responses. This suggests a model with Z~E may be warrented.
+pc <- function(d) 100*mean(d$S==d$R)
+plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),
+         stat=pc,stat_name="Accuracy (%)",xlim=c(70,95))
+
+# Mean RT is well estimated.  
+tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){mean(d$rt)},stat_name="Mean RT (s)",xlim=c(0.375,.625))
+
+# However for fast responses (10th percentile) under-prediction remains except for speed.
+tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.275,.375),
+         stat=function(d){quantile(d$rt,.1)},stat_name="10th Percentile (s)")
+
+# and for slow responses (90th percentile) clear over-prediction except for speed.
+tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.525,.975),
+         stat=function(d){quantile(d$rt,.9)},stat_name="90th Percentile (s)")
+round(tab,2)
+
+# This corresponds to under-estimation of RT variability for speed and 
+# otherwise over-estimation.
+tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){sd(d$rt)},stat_name="SD (s)",xlim=c(0.1,.355))
+
+# Error speed is well estimated except for speed where it is over-estimated.
+tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
+         stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
+
+######## Posterior parameter inference ----
+
+### Population mean (mu) tests
+
+# Priors are dominated, even for sv and SZ 
+ciPNAS_full <- plot_density(sPNAS_a_full,layout=c(2,5),selection="mu")
+
+# Comparing with the Wiener we see higher rates and overall reduced thresholds 
+round(ciPNAS_full,2)
+round(ciPNAS,2)
+
+# Priors also clearly dominated in mapped parameters
+ciPNAS_full_mapped <- plot_density(sPNAS_a_full,layout=c(2,5),selection="mu",mapped=TRUE)
+
+## Rates
+
+# There is a slight drift-rate bias to left (lower) but not credible at 95%
+p_test(x=sPNAS_a_full,x_name="v")
+# The main effect of stimulus is clearly greater than zero.
+p_test(sPNAS_a_full,x_name="v_left",mapped=TRUE)
+p_test(sPNAS_a_full,x_name="v_right",mapped=TRUE)
+# Rate variability is quite substantial (>20% of the mean)
+p_test(x=sPNAS_a_full,x_name="sv",mapped=TRUE)
+
+## Non-decision time 
+
+# t0 is now a lower bound so slightly less than in Wiener
+p_test(x=sPNAS_a_full,x_name="t0",mapped=TRUE)
+# Variability is quite substantial
+p_test(x=sPNAS_a_full,x_name="st0",mapped=TRUE)
+
+## Start-point bias
+
+# Small lower (left) bias
+p_test(x=sPNAS_a_full,x_name="Z",mapped=TRUE)
+# Small level of start-point variability (sz/2 is 11% of .47, i.e., sz = 0.1)
+p_test(x=sPNAS_a_full,x_name="SZ",mapped=TRUE)
+
+## Threshold
+
+# Although the overall threshold is reduced the effects are a bit bigger
+p_test(sPNAS_a_full,x_name="a",x_fun=function(x){exp(x["a"])})
+p_test(sPNAS_a_full,x_name="a_Ea-n")
+p_test(sPNAS_a_full,x_name="a_Ea-s")
+
+# For example we could test if the threshold for speed differs from zero
+p_test(x=sPNAS_a_full,x_name="a_speed",mapped=TRUE)
+# difference between neutral and speed.
+p_test(x=sPNAS_a_full,x_name="n-s",mapped=TRUE,x_fun=function(x){
+  diff(x[c("a_speed","a_neutral")])})
+# Average of accuracy and neutral vs. speed
+p_test(x=sPNAS_a_full,x_name="an-s",mapped=TRUE,x_fun=function(x){
+  sum(x[c("a_accuracy","a_neutral")])/2 - x["a_speed"]})
+
+### Variance/correlation
+
+ciPNAS <- plot_density(sPNAS_a_full,layout=c(2,4),selection="variance",do_plot=FALSE)
+round(ciPNAS,3)
+
+ciPNAS <- plot_density(sPNAS_a_full,layout=c(2,4),selection="correlation",do_plot=FALSE)
+round(ciPNAS,3)
+
+#### Parameter recovery study ----
+# Create a single simulated data set from that alpha means.
+new_dat <- post_predict(sPNAS_a_full,use_par="mean",n_post=1)
+
+# can we recover these?
+samplers <- make_samplers(new_dat,design_a_full,type="standard")
+# save(samplers,file="RecoveryDDMfull.RData")
+# run in RecoveryDDMfull.R
+print(load("models/DDM/DDM/examples/samples/RecoveryDDMfull.RData"))
+
+tabs <- plot_density(DDMfull,selection="alpha",layout=c(2,5),mapped=TRUE,
+                     pars=attributes(attr(DDMfull,"data_list")[[1]])$pars)
+# Poor for sv and terrible for SZ
+plot_alpha_recovery(tabs,layout=c(2,5))
+# Coverage is fairly decent even in sv and SZ
+plot_alpha_recovery(tabs,layout=c(2,5),do_rmse=TRUE,do_coverage=TRUE)
 

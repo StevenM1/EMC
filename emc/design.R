@@ -379,6 +379,13 @@ map_p <- function(p,dadm)
 # Ffactors=list(subjects="as1t",S=levels(data$S));Rlevels=levels(data$R)
 # matchfun=matchfun;constants=c(mean=0,sd=0);model=probit
 
+# Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR, r~1,d~1)
+# Clist=list(mean=list(FW=contr.treatment,S=contr.treatment),sd=list(FW=diag(2),S=diag(2)),
+#           threshold=list(FW=contr.treatment,S=contr.treatment),r=list(contr.treatment),d=list(contr.treatment))
+# Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),FW=levels(wordfaceROC$FW))
+# Rlevels=1:6;matchfun=matchfun;model=probitExp
+# constants=c(mean=log(1),mean_FWwords=log(1))
+
 make_design <- function(Flist,Ffactors,Rlevels,model,
                         Clist=NULL,matchfun=NULL,constants=NULL) 
   # Binds together elements that make up a design a list  
@@ -403,7 +410,7 @@ make_design <- function(Flist,Ffactors,Rlevels,model,
 }
 
 
-sampled_p_vector <- function(design,model=NULL)
+sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
   # Makes an empty p_vector corresponding to model. 
   # matchfun only needed in design if uses lM factor 
 {
@@ -417,11 +424,12 @@ sampled_p_vector <- function(design,model=NULL)
       design,model,add_acc=FALSE,verbose=FALSE,rt_check=FALSE,compress=FALSE)
   sampled_p_names <- attr(dadm,"sampled_p_names")
   out <- setNames(numeric(length(sampled_p_names)),sampled_p_names)
-  # Get map
-  dat <- make_data(out,design=design,model=model,trials=1)
-  dadm <- design_model(data=dat,design=design,model=model,compress=FALSE,
-                       verbose=FALSE,rt_check=FALSE)
-  attr(out,"map") <- lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
+  if (doMap) { # Get map
+    dat <- make_data(out,design=design,model=model,trials=1)
+    dadm <- design_model(data=dat,design=design,model=model,compress=FALSE,
+                         verbose=FALSE,rt_check=FALSE)
+    attr(out,"map") <- lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
+  }
   out
 }
 

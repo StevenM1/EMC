@@ -178,21 +178,15 @@ log_likelihood_race_missing <- function(p_vector,dadm,min_ll=log(1e-10))
 
 
 log_likelihood_ddm <- function(p_vector,dadm,min_ll=log(1e-10)) 
-  # DDM summed log likelihood    
+  # DDM summed log likelihood, with protection against numerical issues    
 {
-  if(p_vector["SZ"] > 0) return(min_ll * nrow(dadm))
-  if(p_vector["sv"] > 1) return(min_ll * nrow(dadm))
   pars <- get_pars(p_vector,dadm)
-  is.bad <- pars[,"a"] < .1
-  # SZ < 0 # qnorm(.5)
-  # a < 0.69 # log(2)
-  # abs(v) < 5
-  # v < 0.69 # log(2)
-  # t0 .1 and 1
-  like <- attr(dadm,"model")$dfun(dadm$rt,dadm$R,pars)[attr(dadm,"expand")]
-  like[is.na(like)] <- 0
-  like[is.bad] <- 0
-  sum(pmax(min_ll,log(like)))
+  like <- numeric(dim(dadm)[1]) 
+  bad <- abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | pars[,"sv"]<.1 | pars[,"SZ"]>.75 | pars[,"SZ"]<.01 | pars[,"st0"]>.2
+  if (any(!bad)) 
+    like[!bad] <- attr(dadm,"model")$dfun(dadm$rt[!bad],dadm$R[!bad],pars[!bad,,drop=FALSE])
+  like[!bad][is.na(like[!bad])] <- 0
+  sum(pmax(min_ll,log(like[attr(dadm,"expand")])))
 }
 
 
