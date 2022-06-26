@@ -140,8 +140,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
 # type=c("standard","diagonal","blocked","factor","factorRegression","single")[1]
 # n_chains=3; rt_resolution=0.02
 # prior_list = NULL;par_groups=NULL;n_factors=NULL;constraintMat = NULL;covariates=NULL
-# data_list=dataNAM; design_list=designNAM; model_list=NULL
-# data_list=dataNUM; design_list=designNUM;model_list=NULL
+# data_list=wordfaceROC; design_list=designFWcell;model_list=NULL
 make_samplers <- function(data_list,design_list,model_list=NULL,
   type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
   n_chains=3,rt_resolution=0.02,
@@ -179,6 +178,9 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
   rt_resolution <- rep(rt_resolution,length.out=length(data_list))
   for (i in 1:length(dadm_list)) {
     message("Processing data set ",i)
+    if (!is.null(design_list[[i]]$Ffunctions)) data_list[[i]] <- 
+        cbind.data.frame(data_list[[i]],data.frame(lapply(
+          design_list[[i]]$Ffunctions,function(f){f(data_list[[i]])})))
     dadm_list[[i]] <- design_model(data=data_list[[i]],design=design_list[[i]],
       model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
   }

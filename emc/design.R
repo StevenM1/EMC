@@ -373,27 +373,24 @@ map_p <- function(p,dadm)
 }
 
 
-# Clist=NULL;matchfun=NULL;constants=NULL
-
-# Flist=list(mean ~ S, sd ~ 1, threshold ~ lR)
-# Ffactors=list(subjects="as1t",S=levels(data$S));Rlevels=levels(data$R)
-# matchfun=matchfun;constants=c(mean=0,sd=0);model=probit
-
-# Flist=list(mean ~ FW*S, sd ~ FW*S,threshold ~ FW/lR, r~1,d~1)
-# Clist=list(mean=list(FW=contr.treatment,S=contr.treatment),sd=list(FW=diag(2),S=diag(2)),
-#           threshold=list(FW=contr.treatment,S=contr.treatment),r=list(contr.treatment),d=list(contr.treatment))
-# Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),FW=levels(wordfaceROC$FW))
-# Rlevels=1:6;matchfun=matchfun;model=probitExp
-# constants=c(mean=log(1),mean_FWwords=log(1))
+# Clist=NULL; Fcovariates=NULL
+# 
+# Flist=list(mean ~ FW*S, sd ~ FWS,threshold ~ FW/lR)
+# Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),
+#               FW=levels(wordfaceROC$FW))
+# Rlevels=1:6;matchfun=matchfun
+# constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWSwords_new=0)
+# Ffunctions=list(FWS=fws);model=probit
 
 make_design <- function(Flist,Ffactors,Rlevels,model,
-                        Clist=NULL,matchfun=NULL,constants=NULL) 
+  Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL) 
   # Binds together elements that make up a design a list  
 {
 
   if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels),Rlevels)
   design <- list(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
-       Clist=Clist,matchfun=matchfun,constants=constants,model=model)
+       Clist=Clist,matchfun=matchfun,constants=constants,
+       Fcovariates=Fcovariates,Ffunctions=Ffunctions,model=model)
   p_vector <- sampled_p_vector(design,design$model)
   if (model$type=="SDT") {
     tnams <- dimnames(attr(p_vector,"map")$threshold)[[2]]
@@ -416,20 +413,21 @@ sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
 {
   if (is.null(model)) model <- design$model
   if (is.null(model)) stop("Must supply model as not in design")
+  
+  Ffactors=c(design$Ffactors,list(R=design$Rlevels))
+  data <- as.data.frame.table(array(dim=unlist(lapply(Ffactors,length)),
+                                    dimnames=Ffactors))[,-(length(Ffactors)+1)]
+  for (i in names(design$Ffactors)) 
+    data[[i]] <- factor(data[[i]],levels=design$Ffactors[[i]])
+  if (!is.null(design$Ffunctions))
+    data <- cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
   dadm <- design_model(
-      add_accumulators(
-        data.frame(lapply(c(design$Ffactors,list(R=design$Rlevels)),function(x)
-          factor(x)[1:min(unlist(lapply(design$Ffactors,length)))])),
-        matchfun=design$matchfun,type=model$type),
+      add_accumulators(data,matchfun=design$matchfun,type=model$type),
       design,model,add_acc=FALSE,verbose=FALSE,rt_check=FALSE,compress=FALSE)
   sampled_p_names <- attr(dadm,"sampled_p_names")
   out <- setNames(numeric(length(sampled_p_names)),sampled_p_names)
-  if (doMap) { # Get map
-    dat <- make_data(out,design=design,model=model,trials=1)
-    dadm <- design_model(data=dat,design=design,model=model,compress=FALSE,
-                         verbose=FALSE,rt_check=FALSE)
-    attr(out,"map") <- lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
-  }
+  if (doMap) attr(out,"map") <- 
+    lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
   out
 }
 
