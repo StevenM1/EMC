@@ -336,8 +336,8 @@ p_test <- function(x,x_name,x_fun=NULL,
 
 # filter="sample";subfilter=0;use_best_fit=FALSE;print_summary=FALSE;digits=0
 # filter="sample"
-pmwg_IC <- function(samplers,filter="sample",subfilter=0,use_best_fit=FALSE,
-                    print_summary=FALSE,digits=0,subject=NULL)
+pmwg_IC <- function(samplers,filter="sample",subfilter=0,use_best_fit=TRUE,
+                    print_summary=TRUE,digits=0,subject=NULL)
   # Gets DIC, BPIC, effective parameters, mean deviance, and deviance of mean  
 {
   
@@ -393,8 +393,8 @@ pmwg_IC <- function(samplers,filter="sample",subfilter=0,use_best_fit=FALSE,
 
 
 
-compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=FALSE,
-                        print_summary=FALSE,digits=0,digits_p=3,subject=NULL) {
+compare_IC <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
+                        print_summary=TRUE,digits=0,digits_p=3,subject=NULL) {
   
   getp <- function(IC) {
     IC <- -(IC - min(IC))/2
@@ -402,8 +402,8 @@ compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=FALSE,
   }
   
   ICs <- data.frame(do.call(rbind,
-                            lapply(sList,pmwg_IC,filter=filter,subfilter=subfilter,
-                                   use_best_fit=use_best_fit,subject=subject)))
+    lapply(sList,pmwg_IC,filter=filter,subfilter=subfilter,
+           use_best_fit=use_best_fit,subject=subject,print_summary=FALSE)))
   DICp <- getp(ICs$DIC)
   BPICp <- getp(ICs$BPIC)
   out <- cbind.data.frame(DIC=ICs$DIC,wDIC=DICp,BPIC=ICs$BPIC,wBPIC=BPICp,ICs[,-c(1:2)])
@@ -413,6 +413,26 @@ compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=FALSE,
     tmp$wBPIC <- round(tmp$wBPIC,digits_p)
     tmp[,-c(2,4)] <- round(tmp[,-c(2,4)])
     print(tmp)
+  }
+  invisible(out)
+}
+
+compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
+                        print_summary=TRUE,digits=3,subject=NULL) {
+
+  subjects <- names(sList[[1]][[1]]$data)
+  out <- setNames(vector(mode="list",length=length(subjects)),subjects)
+  for (i in subjects) out[[i]] <- compare_IC(sList,subject=i,
+    filter=filter,subfilter=subfilter,use_best_fit=use_best_fit,print_summary=FALSE) 
+  if (print_summary) {
+    wDIC <- lapply(out,function(x)x["wDIC"])
+    wBPIC <- lapply(out,function(x)x["wBPIC"])
+    print(round(cbind(
+      do.call(rbind,lapply(wDIC,function(x){
+        setNames(data.frame(t(x)),paste("wDIC",rownames(x),sep="_"))})),
+      do.call(rbind,lapply(wBPIC,function(x){
+        setNames(data.frame(t(x)),paste("wBPIC",rownames(x),sep="_"))}))
+    ),digits))
   }
   invisible(out)
 }
