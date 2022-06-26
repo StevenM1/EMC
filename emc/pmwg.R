@@ -106,9 +106,8 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
   prior <- attr(dadms[[1]], "prior")
   ll_func <- attr(dadms[[1]], "model")$log_likelihood
   # subjects <- unique(unlist(sapply(dadms, FUN = function(x){return(unique(x$subjects))})))
-  subjects <- factor(as.vector(unique(unlist(sapply(dadms, FUN = function(x){
-    levels(x$subjects)})))))
-  # dadm_list <- vector("list", length = length(subjects))
+  subjects <- unique(factor(sapply(dadms, FUN = function(x) levels(x$subjects))))
+  # dadm_list <- vector("lis", length = length(subjects))
   # dadm_list[as.numeric(subjects)] <- dm_list(dadms[[1]])
   # dadm_list[as.numeric(subjects)] <- dm_list(dadms[[1]])
   dadm_list <- dm_list(dadms[[1]])

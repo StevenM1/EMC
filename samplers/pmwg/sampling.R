@@ -18,7 +18,7 @@ pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL, ...) {
   dadm_list <-dadm$dadm_list
   
   # Storage for the samples.
-  subjects <- as.numeric(unique(dadm$subjects))
+  subjects <- sort(as.numeric(unique(dadm$subjects)))
   samples <- variant_funs$sample_store(dadm, pars, ...)
   sampler <- list(
     data = dadm_list,

@@ -153,7 +153,7 @@ samplers <- make_samplers(dat,design_a,type="standard",
 # Once sampling is completed the script also gets posterior predictive samples
 # to enable model fit checks. By default this is based on randomly selecting 
 # iterations from the final (sample) stage, and provides posterior predictives 
-# for the random effects. Here we use one core pre participant.
+# for the random effects. Here we use one core per participant.
 # ppPNAS_a <- post_predict(sPNAS_a,n_cores=19)
 
 # Lets load in the results and look at them.
