@@ -1,3 +1,4 @@
+#### Setup ----
 rm(list=ls())
 source("emc/emc.R")
 source("models/DDM/DDM/ddmTZD.R")
@@ -70,7 +71,7 @@ dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 # intercept v = 1, v_S = 2 implies an upper rate of 3 and lower rate of -1. 
 Vmat <- matrix(c(-1,1),ncol=1,dimnames=list(NULL,""))  
 
-#### Wiener diffusion model ----
+######## Wiener diffusion model ----
 
 # Fit a Wiener diffusion model where between-trial variability parameters are set
 # to zero in "constants" (NB: this is done on the sampled scale, so qnorm (probit)
@@ -153,13 +154,14 @@ samplers <- make_samplers(dat,design_a,type="standard",
 # Once sampling is completed the script also gets posterior predictive samples
 # to enable model fit checks. By default this is based on randomly selecting 
 # iterations from the final (sample) stage, and provides posterior predictives 
-# for the random effects. Here we use one core per participant.
+# for the random effects. Here we use one core pre participant.
 # ppPNAS_a <- post_predict(sPNAS_a,n_cores=19)
 
-# Lets load in the results and look at them.
+
+#### Load Wiener fit results ----
 print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
 
-##### Check convergence
+#### Check convergence ----
 
 # We can check the state of samplers
 chain_n(sPNAS_a)
@@ -230,7 +232,7 @@ round(es_pmwg(sPNAS_a,selection="correlation"))
 iat_pmwg(sPNAS_a,selection="correlation")
 
 
-########  Fit 
+####  Fit ----
 
 # By default the plot shows results for all subjects, putting everyone on the
 # same x scale, which can make it hard to see fit for some or most subjects
@@ -287,7 +289,7 @@ tab <- plot_fit(dat,ppPNAS_a,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725)
 round(tab,2)
 
 
-######## Posterior parameter inference ----
+#### Posterior parameter inference ----
 
 ### Population mean (mu) tests
 
@@ -428,7 +430,7 @@ head(parameters_data_frame(sPNAS_a,mapped=TRUE))
 head(parameters_data_frame(sPNAS_a,selection="alpha",mapped=TRUE))
 
 
-#####  FULL DDM   
+########  FULL DDM ----   
 
 # Once trial-to-trial variability parameters are estimated the sampler can 
 # sometimes explore regions where the numerical approximation to the DDM's 
@@ -454,13 +456,14 @@ design_a_full <- make_design(
 
 # samplers <- make_samplers(dat,design_a_full,type="standard")
 # save(samplers,file="sPNAS_a_full.RData")
-# Fits are run by 
+# Fits are run by sPNAS_a_full.R 
+
+#### Load Full DDM fitting results ----
+print(load("models/DDM/DDM/examples/samples/sPNAS_a_full.RData")) 
 
 #### Convergence ----
 
-print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
-
-chain_n(sPNAS_a_full_samples)
+chain_n(sPNAS_a_full)
 plot_chains(sPNAS_a_full,layout=c(3,7),selection="LL")
 # random effects
 plot_chains(sPNAS_a_full,layout=c(2,5))
@@ -521,7 +524,7 @@ tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),
 tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
          stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
 
-######## Posterior parameter inference ----
+#### Posterior parameter inference ----
 
 ### Population mean (mu) tests
 
@@ -600,3 +603,203 @@ plot_alpha_recovery(tabs,layout=c(2,5))
 # Coverage is fairly decent even in sv and SZ
 plot_alpha_recovery(tabs,layout=c(2,5),do_rmse=TRUE,do_coverage=TRUE)
 
+######## Full DDM and rate/non-decision time effects of emphasis ----
+
+# In this example we also demonstrate "cell" coding, where there is a separate
+# estimate for each cell of the E x S design used for rates. This is not easily
+# achieved with the linear model language applied to the E and S factors, so 
+# we derive a new factor "SE" with 6 levels that combines their levels. To do
+# so we use a function that will create the factors from the Ffactors.
+se <- function(d) {factor(paste(d$S,d$E,sep="_"),levels=
+  c("left_accuracy","right_accuracy","left_neutral","right_neutral","left_speed","right_speed"))}
+# NB1: Although usually not necessary it is good practice to explicitly define 
+#      the levels of factors created in this way. 
+# NB2: Ffunctions can be used to define arbitrary new factors in this way, making
+#      model specification very flexible.
+
+# To archive cell coding we have to also remove the intercept when defining the 
+# rate equation (0+SE and SE-1 both work)
+# NB: Contrasts can be defined for Ffunctions factors. To achieve cell coding
+#     we dont need to do this as it will occur with the default contr.treatment
+#     contrast, but here we define it explicitly.
+design_avt0_full <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Clist=list(SE=diag(6)),
+  Flist=list(v~0+SE,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
+  Ffunctions = list(SE=se),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
+
+sampled_p_vector(design_avt0_full,doMap=FALSE)
+# samplers <- make_samplers(dat,design_avt0_full,type="standard")
+# save(samplers,file="sPNAS_avt0_full.RData")
+
+#### Load full DDM with rate and t0 emphasis effects ----
+print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData")) 
+
+#### Check convergence ----
+
+# We can check the state of samplers
+chain_n(sPNAS_avt0_full)
+
+# RANDOM EFFECTS (i.e., subject level)
+# First 500 not converged
+plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5))
+
+# remove from here
+plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5),subfilter=500)
+par(mfrow=c(2,8)) 
+plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL,subfilter=500)
+# bl1t a_Eneutral still moving down a little, will ignore here but a fuller
+# analysis may want to get extra samples. 
+
+# Mixing very good
+round(gd_pmwg(sPNAS_avt0_full,selection="alpha",print_summary = FALSE,subfilter=500),2)
+# Again SZ has higest inefficiency
+round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary=min,subfilter=500))
+iat_pmwg(sPNAS_avt0_full,selection="alpha",subfilter=500)
+
+
+# POPULATION EFFECTS
+
+# Population mean
+plot_chains(sPNAS_avt0_full,selection="mu",layout=c(3,6),subfilter=500)
+round(gd_pmwg(sPNAS_avt0_full,selection="mu",subfilter=500),2) 
+round(es_pmwg(sPNAS_avt0_full,selection="mu",subfilter=500))
+iat_pmwg(sPNAS_avt0_full,selection="mu",subfilter=500)
+
+# Population variance
+plot_chains(sPNAS_avt0_full,selection="variance",layout=c(3,6),subfilter=500)
+round(gd_pmwg(sPNAS_avt0_full,selection="variance",subfilter=500),2)
+round(es_pmwg(sPNAS_avt0_full,selection="variance",subfilter=500))
+iat_pmwg(sPNAS_avt0_full,selection="variance",subfilter=500)
+
+# Very large negative correlations left and right rates and high positive between
+# rights and between lefts. Demonstrates utility of S intercept/difference 
+# coding for making parameters more orthogaonal, and power of sampler to deal with highly 
+# correlated chains.
+plot_chains(sPNAS_avt0_full,selection="correlation",subfilter=500,layout=c(3,4),ylim=c(-1,1))
+round(gd_pmwg(sPNAS_avt0_full,selection="correlation",subfilter=500),2)
+round(es_pmwg(sPNAS_avt0_full,selection="correlation",subfilter=500))
+iat_pmwg(sPNAS_avt0_full,selection="correlation",subfilter=500)
+
+
+####  Fit ----
+
+# post predict did not use first 500
+plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),lpos="right",xlim=c(.25,1.5))
+plot_fits(dat,ppPNAS_avt0_full,layout=c(2,3),lpos="right")
+
+
+pc <- function(d) 100*mean(d$S==d$R)
+# Excellent fit in all cases.
+plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),
+         stat=pc,stat_name="Accuracy (%)",xlim=c(70,95))
+
+# Mean RT also excellent
+tab <- plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){mean(d$rt)},stat_name="Mean RT (s)",xlim=c(0.375,.625))
+
+# However for fast responses (10th percentile) still some under-prediction except for speed.
+tab <- plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.275,.375),
+         stat=function(d){quantile(d$rt,.1)},stat_name="10th Percentile (s)")
+round(tab,2)
+
+# but for slow responses (90th percentile) all good.
+tab <- plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.525,.975),
+         stat=function(d){quantile(d$rt,.9)},stat_name="90th Percentile (s)")
+
+# and RT variability now also good.
+tab <- plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){sd(d$rt)},stat_name="SD (s)",xlim=c(0.1,.355))
+
+
+# Also errors speed also good, with some small residual over-estimation in speed.
+tab <- plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
+         stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
+round(tab,2)
+
+#### Posterior parameter inference ----
+
+### Population mean (mu) tests
+
+# Clearly the default N(0,1) priors are somewhat inappropriate for the large
+# postivie and negative rates produced by "cell" coding.
+ciPNAS_avt0_full <- plot_density(sPNAS_avt0_full,layout=c(3,6),selection="mu",subfilter=500)
+
+# Cell coding directly gives us the traditional drift rate estimates
+round(ciPNAS_avt0_full,2)
+
+# and (by definition) the same results when mapped 
+ciPNAS_avt0_full_mapped <- plot_density(sPNAS_avt0_full,layout=c(3,6),
+                                        selection="mu",mapped=TRUE,subfilter=500)
+round(ciPNAS_avt0_full_mapped,2)
+
+### t0 E effect
+
+# Looking at the t0 effect of E there is no evidence of a accuracy-netural difference
+p_test(x=sPNAS_avt0_full,x_name="t0_accuracy",y=sPNAS_avt0_full,y_name="t0_neutral",
+       subfilter=500,mapped=TRUE)
+# But speed is clearly less by ~40ms
+p_test(x=sPNAS_avt0_full,subfilter=500,mapped=TRUE,x_name="t0: av(acc/neut)-speed",
+       x_fun=function(x){sum(x[c("t0_accuracy","t0_neutral")])/2 - x["t0_speed"]})
+
+# v E effect
+# The pattern of E effects on rates suggests lower rates for speed, perhaps 
+# indicative of reduced selective attention and hence reduced discriminative
+# quality of the evidence being processed. 
+
+fun <- function(x)
+  mean(abs(x[c("v_left_accuracy","v_left_neutral","v_right_accuracy",
+               "v_right_neutral")])) - mean(abs(x[c("v_left_speed","v_right_speed")]))
+
+p_test(x=sPNAS_avt0_full,subfilter=500,mapped=TRUE,digits=3,
+       x_name="v: av(acc/neut)-speed",x_fun=fun)
+
+# Although the effect is (barely) credible, one might also suspect over-fitting.
+# In this case it would be useful to also fit models with selective influence of 
+# E on a and t0 vs. a and v. This is left as an exercise.  
+
+
+#### Model selection ----
+
+# Which model gives the best trade off between goodness of fit and simplicity?
+
+# Information criteria (IC) approaches are based purely on posterior samples. 
+# This function produces two types, DIC and BPIC (the latter gives greater 
+# weight to simplicity), where smaller is better. 
+
+# It also provides estimates of components of DIC and BPIC :
+# 1) EffectiveN: the "effective" number of parameters (which is usually less  
+#    than the actual number in hierarchical models)
+# 2) meanD: the mean posterior deviance (which can also be used for model
+#    selection, but imposing only a weak complexity penalty)
+# 3) Dmean: the deviance of the posterior parameter mean, which is a measure
+#    of goodness of fit
+# 4) minD: an estimates of the minimum posterior deviance, the smaller of Dmean 
+#    and the deviance for all samples (note that by default DIC and BPIC uses 
+#    this value, base results on Dmean set use_best_fit=FALSE)
+pmwg_IC(sPNAS_a)
+pmwg_IC(sPNAS_a_full)
+pmwg_IC(sPNAS_avt0_full,subfilter=500)
+# NB: The nonsensical negative effective parameter count for the Wiener model is
+#     conventionally considered not to be a problem, but underlines that 
+#     EffectiveN is best interpreted only in  a relative sense. The other values
+#     are much more sensible and relative to the actual number of 19*10 = 190 
+#     and 19*16=304 alpha parameters (random effects being relevant here as 
+#     all of these calculations are based on the alpha posterior likelihoods),
+#     and are consistent with hierarchical shrinkage effects.
+
+# We see that the Wiener diffusion wins hugely in DIC/BPIC/meanD, despite its 
+# much worse goodness of fit in Dmean and Dmin (also evident in its strong 
+# qualitative failures shown graphically above). Overall this pattern suggests
+# that the Wiener model be rejected.
+
+# The following function calculates model weights, quantities on the unit 
+# interval that under some further assumptions correspond to the probability 
+# of a model being the "true" model. Here clearly the avt0 model wins strongly.
+compare_IC(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full))
+
+# This is also true on a per-subject basis except for one participant.
+compare_ICs(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full))

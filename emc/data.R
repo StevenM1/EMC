@@ -3,7 +3,7 @@
 
 # model=NULL;trials=NULL;data=NULL;expand=1;
 # mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
-# trials=10
+# trials=1; p_vector=out
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL)
@@ -26,9 +26,11 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
 
 {
   
-  missingFilter <- function(data,LT,UT,LC,UC,Rmissing) {
+  missingFilter <- function(data,LT,UT,LC,UC,Rmissing) 
+  {
     
-    makeExclude <- function(data,L=NULL,U=NULL) {
+    makeExclude <- function(data,L=NULL,U=NULL) 
+    {
       
       makeCrit <- function(data,bound) {
         exclude <- factor(data$subjects)
@@ -74,15 +76,17 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     if (mapped_p) trials <- 1
     if ( is.null(trials) )
       stop("If data is not provided need to specify number of trials")
-    design$Ffactors$trials <- 1:trials
-    data <- as.data.frame.table(array(
-      dim=unlist(lapply(design$Ffactors,length)),dimnames=design$Ffactors))
-    data$trials <- as.numeric(as.character(data$trials))
+    
+    Ffactors=c(design$Ffactors,list(trials=1:trials))
+    data <- as.data.frame.table(array(dim=unlist(lapply(Ffactors,length)),
+                                    dimnames=Ffactors))
     for (i in names(design$Ffactors)) 
       data[[i]] <- factor(data[[i]],levels=design$Ffactors[[i]])
     names(data)[dim(data)[2]] <- "R"
     data$R <- factor(data$R,levels=design$Rlevels)
     data$trials <- as.numeric(as.character(data$trials))
+    if (!is.null(design$Ffunctions)) data <- 
+      cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
     LT <- UT <- LC <- UC <- Rmissing <- NULL
   } else {
     LT <- attr(data,"LT"); UT <- attr(data,"UT")

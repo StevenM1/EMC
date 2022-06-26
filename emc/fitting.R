@@ -1,7 +1,7 @@
 #### Fitting automation
 require(parallel)
-require(abind)
 
+require(abind)
 run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
                        max_adapt_trys=2,particles=NA,particle_factor=100, p_accept= NULL, n_cores=1,
@@ -357,6 +357,7 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   attr(samplers,"data_list") <- data_list
   attr(samplers,"design_list") <- design_list
   attr(samplers,"model_list") <- model_list
+  attr(samplers, "adapted") <- TRUE
   return(samplers)
 }
 
