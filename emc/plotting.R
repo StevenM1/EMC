@@ -81,7 +81,7 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # show_chains=FALSE;do_plot=TRUE;subject=NA;add_means=FALSE;
 # pars=NULL;probs=c(.025,.5,.975);bw = "nrd0"; adjust = 1
 # 
-# pmwg_mcmc=samples;selection="mu";filter="sample";layout=c(2,7);mapped=TRUE
+# pmwg_mcmc=sPNAS_avt0_full;selection="mu";filter="sample";layout=c(2,8);mapped=TRUE
 
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
@@ -123,7 +123,7 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
         psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
                              model=attr(pmwg_mcmc,"model_list")[[1]])
         if (!is.null(attr(psamples,"isConstant")))
-          psamples <- psamples[,!isConstant,drop=FALSE]
+          psamples <- psamples[,!attr(psamples,"isConstant"),drop=FALSE]
       }
     }
     if (is.null(psamples)) plot_prior <- FALSE
