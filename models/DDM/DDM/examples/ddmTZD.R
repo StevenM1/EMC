@@ -153,7 +153,7 @@ samplers <- make_samplers(dat,design_a,type="standard",
 # Once sampling is completed the script also gets posterior predictive samples
 # to enable model fit checks. By default this is based on randomly selecting 
 # iterations from the final (sample) stage, and provides posterior predictives 
-# for the random effects. Here we use one core per participant.
+# for the random effects. Here we use one core pre participant.
 # ppPNAS_a <- post_predict(sPNAS_a,n_cores=19)
 
 # Lets load in the results and look at them.
@@ -622,43 +622,20 @@ print(load("sPNAS_avt0_full.RData"))
 # We can check the state of samplers
 chain_n(sPNAS_avt0_full)
 
-# Lets first look at the burn samples
-plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5),filter="burn")
-par(mfrow=c(2,7))
-plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL,filter="burn")
-# R hat indicates mostly good mixing
-gd_pmwg(sPNAS_avt0_full,selection="alpha",filter="burn")
-# Default shows multivariate version over parameters. An invisible return
-# provides full detail, here printed and rounded, again very good
-round(gd_pmwg(sPNAS_avt0_full,selection="alpha",filter="burn",print_summary = FALSE),2)
-
-
-# Focus on the sample stage from here (the default setting of filter) 
-
 # RANDOM EFFECTS (i.e., subject level)
 # Participant likelihoods all fat flat hairy caterpillars
-plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5))
+plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5),subfilter=500)
 # Plot random effects (default selection="alpha"), again they look good
 par(mfrow=c(2,7)) # one row per participant
-plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL)
+plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL,subfilter=500)
 
 # MIXING 
 # R hat indicates excellent mixing
 round(gd_pmwg(sPNAS_avt0_full,selection="alpha",print_summary = FALSE),2)
 
 # SAMPLING EFFICIENCY
-# Actual number samples = 3 chains x 533 per chain = 1599. 
-# The average effective number shows autocorrelation is quite low
-round(es_pmwg(sPNAS_avt0_full,selection="alpha"))
-# Sometimes you might want to look at worst case summary
-round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary_avt0lpha=min))
-# To get per subject details
-round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary_avt0lpha=NULL))
-# Integrated autocorrelation time (IAT) provides a summary of efficiency, a
-# value of 1 means perfect efficiency, larger values indicate the approximate 
-# factor by which iterations need to be increased to get a nominal value 
-# i.e., Effective size ~ True size / IAT. 
-iat_pmwg(sPNAS_avt0_full,selection="alpha")
+round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary=min,subfilter=500))
+iat_pmwg(sPNAS_avt0_full,selection="alpha",subfilter=500)
 
 
 # POPULATION EFFECTS
