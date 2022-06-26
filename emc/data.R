@@ -127,8 +127,7 @@ post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
   # hyper=FALSE draws from alphas (participant level)
   # hyper=TRUE draws from hyper 
 {
-  
-  # Will need update for joint
+
   data <- attr(samples,"data_list")
   design <- attr(samples,"design_list")
   model <- attr(samples,"model_list")
@@ -140,7 +139,7 @@ post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
   }
   post_out <- vector("list", length = length(data))
   for(j in 1:length(data)){
-    if(jointModel) samples <- lapply(all_samples, single_out_joint, j)
+    if(jointModel) samples <- single_out_joint(all_samples, j)
     subjects <- levels(data[[j]]$subjects)
     
     if (hyper) {
