@@ -159,7 +159,7 @@ samplers <- make_samplers(dat,design_a,type="standard",
 # Lets load in the results and look at them.
 print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
 
-##### Check convergence
+#### Check convergence ----
 
 # We can check the state of samplers
 chain_n(sPNAS_a)
@@ -230,7 +230,7 @@ round(es_pmwg(sPNAS_a,selection="correlation"))
 iat_pmwg(sPNAS_a,selection="correlation")
 
 
-########  Fit 
+####  Fit ----
 
 # By default the plot shows results for all subjects, putting everyone on the
 # same x scale, which can make it hard to see fit for some or most subjects
@@ -287,7 +287,7 @@ tab <- plot_fit(dat,ppPNAS_a,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725)
 round(tab,2)
 
 
-######## Posterior parameter inference ----
+#### Posterior parameter inference ----
 
 ### Population mean (mu) tests
 
@@ -428,7 +428,7 @@ head(parameters_data_frame(sPNAS_a,mapped=TRUE))
 head(parameters_data_frame(sPNAS_a,selection="alpha",mapped=TRUE))
 
 
-#####  FULL DDM   
+####  FULL DDM ----   
 
 # Once trial-to-trial variability parameters are estimated the sampler can 
 # sometimes explore regions where the numerical approximation to the DDM's 
@@ -454,7 +454,7 @@ design_a_full <- make_design(
 
 # samplers <- make_samplers(dat,design_a_full,type="standard")
 # save(samplers,file="sPNAS_a_full.RData")
-# Fits are run by 
+# Fits are run by sPNAS_a_full.R 
 
 #### Convergence ----
 
@@ -521,7 +521,7 @@ tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),
 tab <- plot_fit(dat,ppPNAS_a_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
          stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
 
-######## Posterior parameter inference ----
+#### Posterior parameter inference ----
 
 ### Population mean (mu) tests
 
@@ -599,4 +599,150 @@ tabs <- plot_density(DDMfull,selection="alpha",layout=c(2,5),mapped=TRUE,
 plot_alpha_recovery(tabs,layout=c(2,5))
 # Coverage is fairly decent even in sv and SZ
 plot_alpha_recovery(tabs,layout=c(2,5),do_rmse=TRUE,do_coverage=TRUE)
+
+#### Full DDM and rate/non-decison time effects of emphasis
+se <- function(d) {factor(paste(d$S,d$E,sep="_"))}
+design_avt0_full <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Clist=list(SE=diag(6)),
+  Flist=list(v~0+SE,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
+  Ffunctions = list(SE=se),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
+
+sampled_p_vector(design_avt0_full,doMap=FALSE)
+# samplers <- make_samplers(dat,design_avt0_full,type="standard")
+# save(samplers,file="sPNAS_avt0_full.RData")
+
+print(load("sPNAS_avt0_full.RData"))
+
+#### Check convergence ----
+
+# We can check the state of samplers
+chain_n(sPNAS_avt0_full)
+
+# Lets first look at the burn samples
+plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5),filter="burn")
+par(mfrow=c(2,7))
+plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL,filter="burn")
+# R hat indicates mostly good mixing
+gd_pmwg(sPNAS_avt0_full,selection="alpha",filter="burn")
+# Default shows multivariate version over parameters. An invisible return
+# provides full detail, here printed and rounded, again very good
+round(gd_pmwg(sPNAS_avt0_full,selection="alpha",filter="burn",print_summary = FALSE),2)
+
+
+# Focus on the sample stage from here (the default setting of filter) 
+
+# RANDOM EFFECTS (i.e., subject level)
+# Participant likelihoods all fat flat hairy caterpillars
+plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5))
+# Plot random effects (default selection="alpha"), again they look good
+par(mfrow=c(2,7)) # one row per participant
+plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL)
+
+# MIXING 
+# R hat indicates excellent mixing
+round(gd_pmwg(sPNAS_avt0_full,selection="alpha",print_summary = FALSE),2)
+
+# SAMPLING EFFICIENCY
+# Actual number samples = 3 chains x 533 per chain = 1599. 
+# The average effective number shows autocorrelation is quite low
+round(es_pmwg(sPNAS_avt0_full,selection="alpha"))
+# Sometimes you might want to look at worst case summary
+round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary_avt0lpha=min))
+# To get per subject details
+round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary_avt0lpha=NULL))
+# Integrated autocorrelation time (IAT) provides a summary of efficiency, a
+# value of 1 means perfect efficiency, larger values indicate the approximate 
+# factor by which iterations need to be increased to get a nominal value 
+# i.e., Effective size ~ True size / IAT. 
+iat_pmwg(sPNAS_avt0_full,selection="alpha")
+
+
+# POPULATION EFFECTS
+# Similar analyses as above for random effects
+
+# Population mean
+plot_chains(sPNAS_avt0_full,selection="mu",layout=c(3,6))
+round(gd_pmwg(sPNAS_avt0_full,selection="mu"),2) 
+round(es_pmwg(sPNAS_avt0_full,selection="mu"))
+iat_pmwg(sPNAS_avt0_full,selection="mu")
+# Can also print autocorrelation functions for each chain (can also be done for
+# alpha)
+par(mfrow=c(3,7))
+plot_avt0cfs(sPNAS_avt0_full,selection="mu",layout=NULL)
+
+# Population variance
+plot_chains(sPNAS_avt0_full,selection="variance",layout=c(2,4))
+round(gd_pmwg(sPNAS_avt0_full,selection="variance"),2)
+round(es_pmwg(sPNAS_avt0_full,selection="variance"))
+iat_pmwg(sPNAS_avt0_full,selection="variance")
+
+# There are p*(p-1)/2 correlations, where p = number of parameters.  
+plot_chains(sPNAS_avt0_full,selection="correlation",layout=c(3,7),ylim=c(-1,1))
+# All are estimated quite well without strong autocorrelation.
+round(gd_pmwg(sPNAS_avt0_full,selection="correlation"),2)
+round(es_pmwg(sPNAS_avt0_full,selection="correlation"))
+iat_pmwg(sPNAS_avt0_full,selection="correlation")
+
+
+####  Fit ----
+
+# By default the plot shows results for all subjects, putting everyone on the
+# same x scale, which can make it hard to see fit for some or most subjects
+plot_fit(dat,ppPNA_avt0_full,layout=c(2,3))
+
+# You could specify your own limits (e.g,. the data range) and move the legend)
+plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),xlim=c(.25,1.5),lpos="right")
+
+# Or plot for a single subject, e.g., the first 
+plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),subject="as1t")
+
+# This function (note the "s" in plot_fits) does the x scaling per subject
+plot_fits(dat,ppPNA_avt0_full,layout=c(2,3),lpos="right")
+
+# Can also show the average over subjects as subjects is like any other factor,
+# so just omit it. We see that the fit is OK but has various misses. 
+plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),lpos="right",xlim=c(.25,1.5))
+
+# We can also use plot_fit to examine specific aspects of fit by supplying a 
+# function that calculates a particular statistic for the data. For example to
+# look at accuracy we might use (where d is a data frame containing the observed
+# data or or posterior predictives) this to get percent correct
+pc <- function(d) 100*mean(d$S==d$R)
+# Drilling down on accuracy we see the biggest misfit is in speed for right
+# responses by > 5%.
+plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),
+         stat=pc,stat_name="Accuracy (%)",xlim=c(70,95))
+
+# Conversely for mean RT the biggest misses are over-estimation of RT by 50ms
+# or more in the accuracy and neutral conditions
+tab <- plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){mean(d$rt)},stat_name="Mean RT (s)",xlim=c(0.375,.625))
+round(tab,2)
+
+# However for fast responses (10th percentile) there is global under-prediction.
+tab <- plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.275,.375),
+         stat=function(d){quantile(d$rt,.1)},stat_name="10th Percentile (s)")
+round(tab,2)
+
+# and for slow responses (90th percentile) global over-prediction .
+tab <- plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.525,.975),
+         stat=function(d){quantile(d$rt,.9)},stat_name="90th Percentile (s)")
+round(tab,2)
+
+# This corresponds to global under-estimation of RT variability.
+tab <- plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){sd(d$rt)},stat_name="SD (s)",xlim=c(0.1,.355))
+round(tab,2)
+
+
+# Errors tend to be much faster than the models for all conditions.
+tab <- plot_fit(dat,ppPNA_avt0_full,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
+         stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
+round(tab,2)
+
+
 
