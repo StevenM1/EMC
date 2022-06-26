@@ -155,16 +155,23 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                                particles=particles,particle_factor=particle_factor,epsilon=epsilon,
                                verbose=FALSE,verbose_run_stage=verbose_run_stage,
                                mc.cores=cores_for_chains)
-      gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
+      if (!class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")) 
+        gd <- Inf else
+        gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
                     filter="burn",mapped=mapped)
-      if (is.finite(gd[[1]])) break else
-        if (verbose) message("gelman diag try error", run_try)
+      if (all(is.finite(gd))) break else {
+        run_try <- run_try + 1
+        message("gelman diag try error ", run_try)
+        if (run_try > max_trys) stop("Gave up after ",max_trys," gelman diag errors.")
+      }
     }
     samplers <- samplers_new
     trys <- trys+1
     if (shorten) {
       samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
-      gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
+      if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
+        gd_short <- Inf else
+        gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
                           filter="burn",mapped=mapped)
       if (mean(gd_short) < mean(gd)) {
         gd <- gd_short
@@ -206,7 +213,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
 # thorough=TRUE;mapped=FALSE; step_size = NA;
 # min_es=NULL;min_iter=NULL;max_iter=NULL;
 # epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
-# cores_per_chain=1;cores_for_chains=NULL
+# cores_per_chain=10;cores_for_chains=NULL
 auto_burn <- function(samplers,ndiscard=80,nstart=120,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
