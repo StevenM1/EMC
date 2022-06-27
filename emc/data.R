@@ -97,8 +97,8 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   }
   if (!is.factor(data$subjects)) data$subjects <- factor(data$subjects)
   if ( is.null(model$p_types) ) stop("model$p_types must be specified")
-  if ( is.null(model$transform) ) transform <- identity
-  if ( is.null(model$Mtransform) ) Mtransform <- identity
+  if ( is.null(model$transform) ) model$transform <- identity
+  if ( is.null(model$Mtransform) ) mdoel$Mtransform <- identity
   data <- design_model(
     add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
