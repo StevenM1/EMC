@@ -22,7 +22,9 @@ probit <- list(
     # transform parameters except v back to real line 
     # pars is a matrix output by map_p_vector  
   {
-    probit$Ntransform(pars)
+    pars <- probit$Ntransform(pars)
+    attr(pars,"ok") <- rep(TRUE,dim(pars)[1])
+    pars
   },
   # p_vector transform
   transform = function(x) {
