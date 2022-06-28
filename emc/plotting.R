@@ -624,3 +624,46 @@ plot_fits <- function(data,pp,factors=NULL,
     plot_fit(data,pp,subject=i,factors,stat,stat_name,ci,do_plot,xlim,ylim,layout,mfcol,
              probs,data_lwd,fit_lwd,qp_cex,q_points,pqp_cex,lpos,
              matchfun,signalFactor,zROC=qfun,lim,rocfit_cex)
+
+
+
+check_run <- function(samples,pdf_name="sample_check.pdf",pp=NULL,
+                      layout=c(3,5),width=NULL,height=NULL) {
+  pdf(pdf_name,width=width,height=height)
+    plot_chains(samples,selection="LL",layout=layout)
+    par(mfrow=layout) 
+    plot_chains(samples,selection="alpha",layout=NULL)
+    plot_chains(samples,selection="mu",layout=layout)
+    plot_chains(samples,selection="variance",layout=layout)
+    plot_chains(samples,selection="correlation",layout=layout,ylim=c(-1,1))
+  dev.off()
+  cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!! ALPHA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+  cat("R-hat\n")
+  print(round(gd_pmwg(samples,selection="alpha",print_summary = FALSE),2))
+  cat("Integrated autocorrelation time\n")
+  print(iat_pmwg(samples,selection="alpha"))
+  cat("Effectvie Size\n")
+  print(round(es_pmwg(samples,selection="alpha",summary=min)))
+  cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!! MU !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+  cat("R-hat\n")
+  print(round(gd_pmwg(samples,selection="mu"),2)) 
+  cat("Integrated autocorrelation time\n")
+  print(iat_pmwg(samples,selection="mu"))
+  cat("Effectvie Size\n")
+  print(round(es_pmwg(samples,selection="mu")))
+  cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!! VARIANCE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+  cat("R-hat\n")
+  print(round(gd_pmwg(samples,selection="variance"),2))
+  cat("Integrated autocorrelation time\n")
+  print(iat_pmwg(samples,selection="variance"))
+  cat("Effectvie Size\n")
+  print(round(es_pmwg(samples,selection="variance")))
+  cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!! CORRELATION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+  cat("R-hat\n")
+  print(round(gd_pmwg(samples,selection="correlation"),2))
+  cat("Integrated autocorrelation time\n")
+  print(iat_pmwg(samples,selection="correlation"))
+  cat("Effectvie Size\n")
+  print(round(es_pmwg(samples,selection="correlation")))
+}
+
