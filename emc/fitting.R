@@ -198,6 +198,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       attr(samplers,"data_list") <- data_list
       attr(samplers,"design_list") <- design_list
       attr(samplers,"model_list") <- model_list
+      if (ok_gd) attr(samplers,"burnt") <- max_gd else attr(samplers,"burnt") <- NA 
       return(samplers)
     }
     if (verbose) {
@@ -216,7 +217,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
 # min_es=NULL;min_iter=NULL;max_iter=NULL;
 # epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
 # cores_per_chain=10;cores_for_chains=NULL
-auto_burn <- function(samplers,ndiscard=80,nstart=120,
+auto_burn <- function(samplers,ndiscard=100,nstart=300,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
                       max_gd_trys=100,max_gd=1.2,
@@ -296,6 +297,7 @@ auto_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
+  burnt <- attr(samplers,"burnt")
   trys <- 0
   samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
                            n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
@@ -321,6 +323,7 @@ auto_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   attr(samplers,"data_list") <- data_list
   attr(samplers,"design_list") <- design_list
   attr(samplers,"model_list") <- model_list
+  attr(samplers,"burnt") <- burnt
   attr(samplers, "adapted") <- adapted
   return(samplers)
 }
@@ -343,6 +346,8 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
+  burnt <- attr(samplers,"burnt")
+  adapted <- attr(samplers,"adapted")
   samplers_new <- samplers
   n_steps <- ceiling(iter/step_size)
   for(step in 1:n_steps){
@@ -372,7 +377,8 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   attr(samplers,"data_list") <- data_list
   attr(samplers,"design_list") <- design_list
   attr(samplers,"model_list") <- model_list
-  attr(samplers, "adapted") <- TRUE
+  attr(samplers,"burnt") <- burnt
+  attr(samplers, "adapted") <- adapted
   return(samplers)
 }
 
