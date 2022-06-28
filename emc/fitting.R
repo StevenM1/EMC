@@ -142,21 +142,21 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   model_list <- attr(samplers,"model_list")
   gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
                 filter="burn",mapped=mapped)
-  if (all(is.infinite(gd[[1]]))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
+  if (all(is.infinite(gd))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
   repeat {
     run_try <- 0
     repeat {
       new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
       particle_factor <- new_particle_n$particle_factor
       particles <- new_particle_n$particles
-      if(any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
+      if(!is.na(gd_diff) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
       samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                                n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                                particles=particles,particle_factor=particle_factor,epsilon=epsilon,
                                verbose=FALSE,verbose_run_stage=verbose_run_stage,
                                mc.cores=cores_for_chains)
       if (!class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")) 
-        gd <- Inf else
+        gd <- matrix(Inf) else
         gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
                     filter="burn",mapped=mapped)
       if (all(is.finite(gd))) break else {
@@ -170,7 +170,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     if (shorten) {
       samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
       if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
-        gd_short <- Inf else
+        gd_short <- matrix(Inf) else
         gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
                           filter="burn",mapped=mapped)
       if (mean(gd_short) < mean(gd)) {
@@ -184,7 +184,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
     if (is.null(attr(enough,"es"))) es_message <- NULL else
       es_message <- paste(", Effective samples =",round(attr(enough,"es")))
-    if (all(is.infinite(gd[[1]]))) {
+    if (all(is.infinite(gd))) {
       gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
       ok_gd <- all(gd < max_gd)
       shorten <- !ok_gd
@@ -259,6 +259,7 @@ auto_burn <- function(samplers,ndiscard=80,nstart=120,
 }
 
 
+# min_particles = 50; max_particles = 500;min_factor = 25; max_factor = 100; percent_up = 10; percent_down = 5
 adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles = NA, 
                                min_particles = 50, max_particles = 500, 
                                min_factor = 25, max_factor = 100,
@@ -266,7 +267,7 @@ adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles 
   # This function adaptively tunes the particles per participant,
   # so that we can lower the number of particles is we're closer to gd_criterion,
   # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
-  if (is.na(gd_diff)) {
+  if (any(is.na(gd_diff))) {
     if (is.na(particles)) 
       return(list(particles=100,particle_factor = particle_factor)) else
       return(list(particles=particles,particle_factor = particle_factor))
