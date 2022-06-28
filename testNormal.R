@@ -53,16 +53,23 @@ gd_pmwg(samples, filter = "burn")
 
 ppNormals <- post_predict(samples,n_cores=6, filter = "burn")
 
-
-ciNormals <- plot_density(samples,layout=c(2,4),selection="mu", filter = "burn", do_plot=FALSE)
-debug(mapped_par)
-mapped_par(ciNormals[2,1:2], design1)
-
+samples1 <- single_out_joint(samples, 1)
+ciNormals <- plot_density(samples1,layout=c(2,4),selection="mu", filter = "burn", do_plot=T)
+mapped_par(ciNormals[2,], design1)
 plot_fit(data1,ppNormals[[1]],layout=c(2,3))
+
+head(parameters_data_frame(samples1, filter = "burn"))
+head(parameters_data_frame(samples1,include_constants =TRUE, filter = "burn"))
+head(parameters_data_frame(samples1,selection="alpha",mapped=TRUE, filter = "burn"))
+
+iat_pmwg(samples,selection="variance", filter = "burn")
+es_pmwg(samples,selection="variance",summary=min, filter = "burn")
+
+p_test(samples,x_name="1-mean", filter = "burn")
+
 
 source("emc/emc.R")
 
-# debug(auto_burn)
 burned <- auto_burn(sampler,nstart = 100, ndiscard = 20, cores_per_chain = 10, cores_for_chains = 1, verbose_run_stage = T, step_size = 50)
 adapted <- auto_adapt(burned, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
 sampled <- auto_sample(adapted, iter = 100, cores_for_chains = 1, cores_per_chain = 10, verbose_run_stage = T)
