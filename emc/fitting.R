@@ -142,7 +142,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   model_list <- attr(samplers,"model_list")
   gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
                 filter="burn",mapped=mapped)
-  gd_diff <- apply(gd, 1, max) - 1.5*max_gd
+  if (all(is.infinite(gd[[1]]))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
   repeat {
     run_try <- 0
     repeat {
@@ -184,9 +184,11 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
     if (is.null(attr(enough,"es"))) es_message <- NULL else
       es_message <- paste(", Effective samples =",round(attr(enough,"es")))
-    gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
-    ok_gd <- all(gd < max_gd)
-    shorten <- !ok_gd
+    if (all(is.infinite(gd[[1]]))) {
+      gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
+      ok_gd <- all(gd < max_gd)
+      shorten <- !ok_gd
+    } else ok_gd <- FALSE
     if (trys == max_trys || (ok_gd & enough)) {
       if (verbose) {
         message("\nFinal multivariate gelman.diag per participant")
@@ -264,6 +266,11 @@ adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles 
   # This function adaptively tunes the particles per participant,
   # so that we can lower the number of particles is we're closer to gd_criterion,
   # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
+  if (is.na(gd_diff)) {
+    if (is.na(particles)) 
+      return(list(particles=100,particle_factor = particle_factor)) else
+      return(list(particles=particles,particle_factor = particle_factor))
+  }
   if(is.na(particles)){
     gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_factor
     gd_diff[gd_diff < 0] <- -(percent_down/100)*max_factor
