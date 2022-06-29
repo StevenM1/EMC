@@ -383,7 +383,8 @@ map_p <- function(p,dadm)
 # Ffunctions=list(FWS=fws);model=probit
 
 make_design <- function(Flist,Ffactors,Rlevels,model,
-  Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL) 
+  Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
+  report_p_vector=TRUE) 
   # Binds together elements that make up a design a list  
 {
 
@@ -403,6 +404,7 @@ make_design <- function(Flist,Ffactors,Rlevels,model,
     }
   }
   attr(design,"p_vector") <- p_vector
+  if (report_p_vector) print(p_vector)
   design
 }
 

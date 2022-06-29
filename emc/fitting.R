@@ -142,29 +142,36 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   model_list <- attr(samplers,"model_list")
   gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
                 filter="burn",mapped=mapped)
-  gd_diff <- apply(gd, 1, max) - 1.5*max_gd
+  if (all(is.finite(gd))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
   repeat {
     run_try <- 0
     repeat {
       new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
       particle_factor <- new_particle_n$particle_factor
       particles <- new_particle_n$particles
-      if(any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
+      if(!is.na(gd_diff) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
       samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                                n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                                particles=particles,particle_factor=particle_factor,epsilon=epsilon,
                                verbose=FALSE,verbose_run_stage=verbose_run_stage,
                                mc.cores=cores_for_chains)
-      gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
+      if (!class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")) 
+        gd <- matrix(Inf) else
+        gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
                     filter="burn",mapped=mapped)
-      if (is.finite(gd[[1]])) break else
-        if (verbose) message("gelman diag try error", run_try)
+      if (all(is.finite(gd))) break else {
+        run_try <- run_try + 1
+        message("gelman diag try error ", run_try)
+        if (run_try > max_trys) stop("Gave up after ",max_trys," gelman diag errors.")
+      }
     }
     samplers <- samplers_new
     trys <- trys+1
     if (shorten) {
       samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
-      gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
+      if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
+        gd_short <- matrix(Inf) else
+        gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
                           filter="burn",mapped=mapped)
       if (mean(gd_short) < mean(gd)) {
         gd <- gd_short
@@ -177,9 +184,11 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
     enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
     if (is.null(attr(enough,"es"))) es_message <- NULL else
       es_message <- paste(", Effective samples =",round(attr(enough,"es")))
-    gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
-    ok_gd <- all(gd < max_gd)
-    shorten <- !ok_gd
+    if (all(is.finite(gd))) {
+      gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
+      ok_gd <- all(gd < max_gd)
+      shorten <- !ok_gd
+    } else ok_gd <- FALSE
     if (trys == max_trys || (ok_gd & enough)) {
       if (verbose) {
         message("\nFinal multivariate gelman.diag per participant")
@@ -189,6 +198,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       attr(samplers,"data_list") <- data_list
       attr(samplers,"design_list") <- design_list
       attr(samplers,"model_list") <- model_list
+      if (ok_gd) attr(samplers,"burnt") <- max_gd else attr(samplers,"burnt") <- NA 
       return(samplers)
     }
     if (verbose) {
@@ -206,8 +216,8 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
 # thorough=TRUE;mapped=FALSE; step_size = NA;
 # min_es=NULL;min_iter=NULL;max_iter=NULL;
 # epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
-# cores_per_chain=1;cores_for_chains=NULL
-auto_burn <- function(samplers,ndiscard=80,nstart=120,
+# cores_per_chain=10;cores_for_chains=NULL
+auto_burn <- function(samplers,ndiscard=100,nstart=300,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
                       max_gd_trys=100,max_gd=1.2,
@@ -250,6 +260,7 @@ auto_burn <- function(samplers,ndiscard=80,nstart=120,
 }
 
 
+# min_particles = 50; max_particles = 500;min_factor = 25; max_factor = 100; percent_up = 10; percent_down = 5
 adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles = NA, 
                                min_particles = 50, max_particles = 500, 
                                min_factor = 25, max_factor = 100,
@@ -257,6 +268,11 @@ adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles 
   # This function adaptively tunes the particles per participant,
   # so that we can lower the number of particles is we're closer to gd_criterion,
   # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
+  if (any(is.na(gd_diff))) {
+    if (is.na(particles)) 
+      return(list(particles=100,particle_factor = particle_factor)) else
+      return(list(particles=particles,particle_factor = particle_factor))
+  }
   if(is.na(particles)){
     gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_factor
     gd_diff[gd_diff < 0] <- -(percent_down/100)*max_factor
@@ -281,6 +297,7 @@ auto_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
+  burnt <- attr(samplers,"burnt")
   trys <- 0
   samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
                            n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
@@ -306,6 +323,7 @@ auto_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   attr(samplers,"data_list") <- data_list
   attr(samplers,"design_list") <- design_list
   attr(samplers,"model_list") <- model_list
+  attr(samplers,"burnt") <- burnt
   attr(samplers, "adapted") <- adapted
   return(samplers)
 }
@@ -328,6 +346,8 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
+  burnt <- attr(samplers,"burnt")
+  adapted <- attr(samplers,"adapted")
   samplers_new <- samplers
   n_steps <- ceiling(iter/step_size)
   for(step in 1:n_steps){
@@ -357,7 +377,8 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   attr(samplers,"data_list") <- data_list
   attr(samplers,"design_list") <- design_list
   attr(samplers,"model_list") <- model_list
-  attr(samplers, "adapted") <- TRUE
+  attr(samplers,"burnt") <- burnt
+  attr(samplers, "adapted") <- adapted
   return(samplers)
 }
 
