@@ -44,10 +44,10 @@ data2 <- make_data(p_vector= p_mat2,design=design2,trials=200)
 
 
 dadm2 <- design_model(data2,design2)
-sampler <- make_samplers(list(dadm1, dadm2), list(design1, design2), type = "standard")
+sampler <- make_samplers(list(dadm1, dadm2), list(design1, design2), type = "single")
 
-samples <- run_chains(sampler, iter = c(25, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
-plot_chains(samples, filter = "burn", selection = "mu", plot_acf = T)
+samples <- run_chains(sampler, iter = c(100, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
+plot_chains(samples, filter = "burn", selection = "alpha", plot_acf = F)
 
 gd_pmwg(samples, filter = "burn")
 
