@@ -2,6 +2,7 @@
 
 
 es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
+                    print_summary=TRUE,sort_print=TRUE,
                     filter="sample",thin=1,subfilter=NULL)
   # Effective size 
 {
@@ -17,8 +18,15 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
   out <- do.call(rbind,lapply(pmwg_mcmc,effectiveSize))
   if (attr(pmwg_mcmc,"selection")=="alpha") {
     if (!is.null(summary_alpha)) out <- apply(out,2,summary_alpha)
-    out 
-  } else apply(out,2,sum) 
+    if (print_summary) if (sort_print) print(round(sort(out))) else 
+                                       print(round(out))
+    invisible(out) 
+  } else {
+    out <- apply(out,2,sum)
+    if (print_summary) if (sort_print) print(round(sort(out))) else 
+                                       print(round(out))
+    invisible(out) 
+  }
 }
 
 
@@ -133,107 +141,6 @@ iat_pmwg <- function(pmwg_mcmc,
 }
 
 #### Posterior parameter tests ----
-
-# y=NULL;natural=TRUE;x_name=NULL;y_name=NULL; c_vector=NULL
-# mu=0;alternative = c("less", "greater")[1];
-# probs = c(0.025,.5,.975);digits=2;p_digits=3;print_table=TRUE;
-# x_filter="sample";x_selection="alpha";x_subfilter=1;
-# y_filter="sample";y_selection="alpha";y_subfilter=1
-# 
-# x=ddmPNASa;p_name="a_Ea-n";x_selection = "mu";x_filter="sample"
-# c_vector=c(0,1,-1,0,1,-1)/4
-# x=andrew;p_name="t0_CIc-i";x_selection="alpha";x_filter="sample";x_name="D"
-
-# p_test <- function(x,y=NULL,p_name,natural=TRUE,c_vector=NULL,
-#                    x_name=NULL,y_name=NULL,
-#                    mu=0,alternative = c("less", "greater")[1],
-#                    probs = c(0.025,.5,.975),digits=2,p_digits=3,print_table=TRUE,
-#                    x_filter="sample",x_selection="alpha",x_subfilter=1,
-#                    y_filter="sample",y_selection="alpha",y_subfilter=1) {
-# 
-#   
-# 
-#   get_effect <- function(x,x_vector,x_name,p_name,Ntransform=NULL,c_vector=NULL) 
-#     # Effect, on natural scale if Ntransform supplied, and always on natural 
-#     # if c_vector supplied.
-#   {
-#     if (is.null(x_name)) 
-#       x <- do.call(rbind,x) else
-#       x <- do.call(rbind,x[[x_name]])
-#     p_root <- strsplit(p_name,"_")[[1]]
-#     if (!is.null(c_vector)) { 
-#       design <- attr(c_vector,"design")
-#       model <- design$model
-#       design$Ffactors$subjects <- design$Ffactors$subjects[1]
-#       dadm <- design_model(make_data(x[1,],design,model,trials=1),design,model,
-#                            rt_check=FALSE,compress=FALSE)
-#       cvals <- apply(x,1,function(x){get_pars(x,dadm)[,p_root[1]]})
-#       # if (!is.null(Ntransform)) {
-#       #   cvals <- t(cvals)
-#       #   dimnames(cvals)[[2]] <- rep(p_root[1],dim(cvals)[2])
-#       #   cvals <- t(Ntransform(cvals))
-#       # }
-#       return((c_vector %*% cvals)[1,])  
-#     }
-#     if (length(p_root)==1) { # intercept 
-#      if (!is.null(Ntransform)) {
-#       return(Ntransform(x[,p_root,drop=FALSE])[,1])    
-#      } else return(x[,p_root]) 
-#     } else p_root <- p_root[1]
-#     cv <- attr(x_vector,"map")[[p_root]][,p_name] # Contrast vector
-#     cpos <- cv>0
-#     if (!any(cpos)) cpos <- Ntransform(x[,p_root,drop=FALSE]) else
-#       cpos <- Ntransform(x[,p_root,drop=FALSE] + sum(cv[cpos])*x[,p_name,drop=FALSE])
-#     cneg <- cv<0
-#     if (!any(cneg)) cneg  <- Ntransform(x[,p_root,drop=FALSE]) else
-#       cneg <- Ntransform(x[,p_root,drop=FALSE] + sum(cv[cneg])*x[,p_name,drop=FALSE])
-#     cpos - cneg
-#   }
-# 
-# 
-#   if (class(x[[1]])!="pmwgs") stop("x must be a list of pmwgs objects") 
-#   design <- attr(x,"design_list")[[1]]
-#   if (!is.null(c_vector)) attr(c_vector,"design") <- design
-#   x_vector <- sampled_p_vector(design)
-#   if (!natural) Ntransform <- NULL else 
-#     Ntransform <- attr(x,"design_list")[[1]]$model$Ntransform
-#   x <- as_mcmc.list(x,selection=x_selection,filter=x_filter,subfilter=x_subfilter)
-#   if (x_selection != "alpha") x_name <- NULL else
-#     if (is.null(x_name)) x_name <- 1 else
-#     if (!(x_name %in% names(x))) stop("Subject x_name not in x")
-#   x <- get_effect(x,x_vector,x_name,p_name,Ntransform,c_vector)
-#   if (is.null(y)) {
-#     p <- mean(x<mu)
-#     if (alternative=="greater") p <- 1-p
-#     tab <- cbind(quantile(x,probs),c(NA,mu,NA))
-#     attr(tab,alternative) <- p
-#     dimnames(tab)[[2]] <- c(p_name,"mu")
-#   } else {
-#     if (class(y[[1]])!="pmwgs") stop("y must be a list of pmwgs objects") 
-#     y_vector <- sampled_p_vector(attr(y,"design_list")[[1]])
-#     y <- as_mcmc.list(y,selection=y_selection,filter=y_filter,subfilter=y_subfilter)
-#     if (y_selection != "alpha") y_name <- NULL else
-#       if (is.null(y_name)) y_name <- 1 else
-#         if (!(y_name %in% names(y))) stop("Subject y_name not in y")
-#     y <- get_effect(y,y_vector,y_name,p_name,Ntransform)
-#     if (length(x)>length(y)) x <- x[1:length(y)] else y <- y[1:length(x)]
-#     d <- x-y
-#     p <- mean(d<0)
-#     if (alternative=="greater") p <- 1-p
-#     tab <- cbind(quantile(x,probs),quantile(y,probs),quantile(d,probs))
-#     attr(tab,alternative) <- p
-#     dimnames(tab)[[2]] <- c(paste(p_name,c(x_name,y_name),sep="_"),
-#                             paste(x_name,y_name,sep="-"))
-#   }
-#   if (print_table) {
-#     ptab <- tab
-#     ptab <- round(ptab,digits)
-#     attr(ptab,alternative) <- round(attr(ptab,alternative),p_digits)
-#     print(ptab)
-#   }
-#   invisible(tab)
-# }
-
 
 
 # x_fun=NULL;y=NULL;y_name=x_name;y_fun=NULL;
@@ -401,9 +308,13 @@ compare_IC <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
     exp(IC)/sum(exp(IC))
   }
   
-  ICs <- data.frame(do.call(rbind,
-    lapply(sList,pmwg_IC,filter=filter,subfilter=subfilter,
-           use_best_fit=use_best_fit,subject=subject,print_summary=FALSE)))
+  if (length(subfilter==1)) subfilter <- rep(subfilter,length.out=length(sList))
+  if (length(subfilter)!=length(sList)) 
+    stop("subfilter must be the same length as sList")
+  ICs <- setNames(vector(mode="list",length=length(sList)),names(sList))
+  for (i in 1:length(ICs)) ICs[[i]] <- pmwg_IC(sList[[i]],filter=filter,
+    subfilter=subfilter[i],use_best_fit=use_best_fit,subject=subject,print_summary=FALSE) 
+  ICs <- data.frame(do.call(rbind,ICs))
   DICp <- getp(ICs$DIC)
   BPICp <- getp(ICs$BPIC)
   out <- cbind.data.frame(DIC=ICs$DIC,wDIC=DICp,BPIC=ICs$BPIC,wBPIC=BPICp,ICs[,-c(1:2)])
@@ -420,6 +331,9 @@ compare_IC <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
 compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
                         print_summary=TRUE,digits=3,subject=NULL) {
 
+  if (length(subfilter==1)) subfilter <- rep(subfilter,length.out=length(sList))
+  if (length(subfilter)!=length(sList)) 
+    stop("subfilter must be the same length as sList")
   subjects <- names(sList[[1]][[1]]$data)
   out <- setNames(vector(mode="list",length=length(subjects)),subjects)
   for (i in subjects) out[[i]] <- compare_IC(sList,subject=i,
