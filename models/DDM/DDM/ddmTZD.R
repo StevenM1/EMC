@@ -51,7 +51,7 @@ ddmTZD <- list(
     pars <- cbind(pars,z=pars[,"a"]*pars[,"Z"],
       sz = 2*pars[,"SZ"]*pars[,"a"]*apply(cbind(pars[,"Z"],1-pars[,"Z"]),1,min))
     pars <- cbind(pars, d = pars[,"t0"]*(2*pars[,"DP"]-1))
-    attr(pars,"ok") <- abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | pars[,"sv"]<.1 | pars[,"SZ"]>.75 | pars[,"SZ"]<.01 | pars[,"st0"]>.2
+    attr(pars,"ok") <- !(abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | pars[,"sv"]<.1 | pars[,"SZ"]>.75 | pars[,"SZ"]<.01 | pars[,"st0"]>.2)
     pars
   },
   # p_vector transform, sets s as a scaling parameter

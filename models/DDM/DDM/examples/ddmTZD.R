@@ -802,4 +802,39 @@ pmwg_IC(sPNAS_avt0_full,subfilter=500)
 compare_IC(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full))
 
 # This is also true on a per-subject basis except for one participant.
-compare_ICs(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full))
+compare_ICs(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=c(0,500))
+
+
+design_at0_full <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Flist=list(v~S,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
+
+samplers <- make_samplers(dat,design_at0_full,type="standard")
+# save(samplers,file="sPNAS_at0_full.RData")
+
+se <- function(d) {factor(paste(d$S,d$E,sep="_"),levels=
+  c("left_accuracy","right_accuracy","left_neutral","right_neutral","left_speed","right_speed"))}
+design_av_full <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Clist=list(SE=diag(6)),
+  Flist=list(v~0+SE,a~E,sv~1, t0~1, st0~1, s~1, Z~1, SZ~1, DP~1),
+  Ffunctions = list(SE=se),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
+
+samplers <- make_samplers(dat,design_av_full,type="standard")
+# save(samplers,file="sPNAS_av_full.RData")
+
+print(load("sPNAS_at0_full.RData"))
+
+# SZ was slow to converge in mu, needed to 750, so ran 1750 to get 1000 left
+check_run(sPNAS_at0_full,subfilter=750)
+
+pmwg_IC(sPNAS_at0_full,subfilter=750)
+
+compare_ICs(list(avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,a=sPNAS_a_full),subfilter=c(0,750,500))
+

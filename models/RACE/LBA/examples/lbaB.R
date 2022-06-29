@@ -8,25 +8,16 @@ print( load("Data/PNAS.RData"))
 dat <- data[,c("s","E","S","R","RT")]
 names(dat)[c(1,5)] <- c("subjects","rt")
 levels(dat$R) <- levels(dat$S)
+# NB: This data has been truncated at 0.25s and 1.5s
 
-dat$subjects <- factor(as.numeric(factor(dat$subjects)))
-
-# # NB: This data has been truncated at 0.25s and 1.5s
-# par(mfcol=c(2,3))
-# sacc <- plot_defective_density(dat,correct_fun=function(dat)dat$S==dat$R,xlim=c(0,1.5))
-# round(sort(sacc),2)
-
-# Average and difference matrix
+# Average rate = intercept, and rate d = difference (match-mismatch) contrast
 ADmat <- matrix(c(-1/2,1/2),ncol=1,dimnames=list(NULL,"d"))  
 
-# Accuracy - Speed, Neutral - Speed
-Emat <- contr.sum(3)/2
-dimnames(Emat) <- list(NULL,c("as","ns"))
+Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
+dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 
-# # Could also do: Av acc/neut vs. speed and acc vs. neut
-# Emat <- matrix(c(1/4,1/4,-1/2,1/2,-1/2,0),nrow=3,dimnames=list(NULL,c("anS","an")))
 
-design <- make_design(
+design_B <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
@@ -34,11 +25,11 @@ design <- make_design(
   constants=c(sv=log(1)),
   model=lbaB)
 
-design <- make_design(
+design_Bvt0 <- make_design(
   Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
-  Flist=list(v~lM,sv~1,B~lR*E,A~1,t0~1),
+  Flist=list(v~lM,sv~1,B~lR*E,A~1,t0~E),
   constants=c(sv=log(1)),
   model=lbaB)
 
