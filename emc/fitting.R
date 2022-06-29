@@ -149,7 +149,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
       particle_factor <- new_particle_n$particle_factor
       particles <- new_particle_n$particles
-      if(!is.na(gd_diff) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
+      if(!any(is.na(gd_diff)) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
       samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                                n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                                particles=particles,particle_factor=particle_factor,epsilon=epsilon,
