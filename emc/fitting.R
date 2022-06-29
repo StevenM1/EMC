@@ -382,6 +382,15 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   return(samplers)
 }
 
+run_IS2 <- function(samples, filter = "sample", IS_samples = 1000, 
+                    stepsize_particles = 500, max_particles = 5000, n_cores = 1, df = 5){
+  variant <- basename(samples[[1]]$source)
+  source(paste0("samplers/IS2/variants/", variant))
+  samples_merged <- merge_samples(samples)
+  IS2(samples_merged, filter, IS_samples, stepsize_particles, max_particles, n_cores, df)
+}
+
+
 test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional = 1, 
                          verbose = FALSE)
 {

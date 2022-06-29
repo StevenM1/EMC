@@ -11,241 +11,113 @@ library(corpcor) #RJI_change: not sure if this was included before
 #library(matrixcalc)
 
 
-IS2_full <- function(samples, filter, IS_samples = 250, n_particles = 250, n_cores = 1, df = 3){
-  data <- samples$data
+IS2 <- function(samples, filter, IS_samples = 1000, stepsize_particles = 500, max_particles = 5000, n_cores = 1, df = 5){
   ###### set up variables #####
-  # number of particles, samples, subjects, random effects etc
-  n_randeffect=samples$n_pars
-  n_subjects = samples$n_subjects
-  n_iter = length(samples$samples$stage[samples$samples$stage== filter])
-  length_draws = samples$samples$idx # length of the full transformed random effect vector and/or parameter vector
-  v_alpha = 2  
-  pars = samples$par_names
+  info <- add_info_base(samples)
+  all_pars <- variant_funs$get_all_pars(samples, filter, info)
+  muX<-apply(all_pars$X,2,mean)
+  varX<-cov(all_pars$X)
   
-  # grab the filtered stage of PMwG
-  # store the random effects
-  alpha <- samples$samples$alpha[,,samples$samples$stage==filter]
-  # store the mu
-  theta <- samples$samples$theta_mu[,samples$samples$stage==filter]
-  # store the cholesky transformed sigma
-  sig <- samples$samples$theta_var[,,samples$samples$stage==filter]
-  # the a-half is used in  calculating the Huang and Wand (2013) prior. 
-  # The a is a random sample from inv gamma which weights the inv wishart. The mix of inverse wisharts is the prior on the correlation matrix
-  a_half <- log(samples$samples$a_half[,samples$samples$stage==filter])
-  
-  unwind=function(x,reverse=FALSE) {
-    
-    if (reverse) {
-      ## if ((n*n+n)!=2*length(x)) stop("Wrong sizes in unwind.")
-      n=sqrt(2*length(x)+0.25)-0.5 ## Dim of matrix.
-      out=array(0,dim=c(n,n))
-      out[lower.tri(out,diag=TRUE)]=x
-      diag(out)=exp(diag(out))
-      out=out%*%t(out)
-      # out[is.na(out)]<-1e-10
-      # out[is.infinite(out)]<-1e-10
-    } else {
-      y=t(base::chol(x))
-      diag(y)=log(diag(y))
-      out=y[lower.tri(y,diag=TRUE)]
-    }
-    return(out)
-  }
-  
-  robust_diwish = function (W, v, S) { #RJI_change: this function is to protect against weird proposals in the diwish function, where sometimes matrices weren't pos def
-    if (!is.matrix(S)) 
-      S <- matrix(S)
-    if (nrow(S) != ncol(S)) {
-      stop("S not square in diwish().\n")
-    }
-    if (!is.matrix(W)) 
-      W <- matrix(W)
-    if (nrow(W) != ncol(W)) {
-      stop("W not square in diwish().\n")
-    }
-    if (nrow(S) != ncol(W)) {
-      stop("W and X of different dimensionality in diwish().\n")
-    }
-    if (v < nrow(S)) {
-      stop("v is less than the dimension of S in  diwish().\n")
-    }
-    p <- nrow(S)
-    gammapart <- sum(lgamma((v + 1 - 1:p)/2))
-    ldenom <- gammapart + 0.5 * v * p * log(2) + 0.25 * p * (p - 1) * log(pi)
-    if (corpcor::is.positive.definite(W, tol=1e-8)){
-      cholW<-base::chol(W)
-    }else{
-      return(1e-10)
-    }
-    if (corpcor::is.positive.definite(S, tol=1e-8)){
-      cholS <- base::chol(S)
-    }else{
-      return(1e-10)
-    }
-    
-    #cholW <- tryCatch(chol(W),error= return(1e-10))   
-    halflogdetS <- sum(log(diag(cholS)))
-    halflogdetW <- sum(log(diag(cholW)))
-    invW <- chol2inv(cholW)
-    exptrace <- sum(S * invW)
-    lnum <- v * halflogdetS - (v + p + 1) * halflogdetW - 0.5 * exptrace
-    lpdf <- lnum - ldenom
-    return(exp(lpdf))
-  }
-  
-  #unwound sigma
-  pts2.unwound = apply(sig,3,unwind)
-  n.params<- n_randeffect+nrow(pts2.unwound)+n_randeffect
-  all_samples=array(dim=c(n_subjects,n.params,n_iter))
-  mu_tilde=array(dim = c(n_subjects,n.params))
-  sigma_tilde=array(dim = c(n_subjects,n.params,n.params))
-  
-  for (j in 1:n_subjects){
-    all_samples[j,,] = rbind(alpha[,j,],theta[,],pts2.unwound[,])
-    # calculate the mean for re, mu and sigma
-    mu_tilde[j,] =apply(all_samples[j,,],1,mean)
-    # calculate the covariance matrix for random effects, mu and sigma
-    sigma_tilde[j,,] = cov(t(all_samples[j,,]))
-  }
-  
-  for(i in 1:n_subjects){ #RJI_change: this bit makes sure that the sigma tilde is pos def
-    if(!corpcor::is.positive.definite(sigma_tilde[i,,], tol=1e-8)){
-      sigma_tilde[i,,]<-corpcor::make.positive.definite(sigma_tilde[i,,], tol=1e-6)
-    }
-  }
-  
-  X <- cbind(t(theta),t(pts2.unwound),t(a_half)) 
-  
-  #perm = as.numeric(Sys.getenv("PBS_ARRAY_INDEX"))
-  muX<-apply(X,2,mean)
-  sigmaX<-var(X)
-
-  # generates the 10,000 IS proposals given the mix
-  prop_theta=mvtnorm::rmvt(IS_samples,sigma = sigmaX, df=df, delta=muX) #RJI_change: uses mix of t dists to generate proposals
-  
-  group_dist = function(random_effect = NULL, parameters, sample = FALSE, n_samples = NULL, n_randeffect){
-    param.theta.mu <- parameters[1:n_randeffect]
-    ##scott would like it to ask for n(unwind) rather than doing the calculation for how many it actually needs, you should just input the length of the unwound object
-    param.theta.sig.unwound <- parameters[(n_randeffect+1):(length(parameters)-n_randeffect)] 
-    param.theta.sig2 <- unwind(param.theta.sig.unwound, reverse = TRUE)
-    if (sample){
-      return(mvtnorm::rmvnorm(n_samples, param.theta.mu,param.theta.sig2))
-    }else{
-      logw_second<-mvtnorm::dmvnorm(random_effect, param.theta.mu,param.theta.sig2,log=TRUE)
-      return(logw_second)
-    }
-  }
-  
-  prior_dist = function(parameters, prior_parameters = samples$prior, n_randeffect){ ###mod notes: the samples$prior needs to be fixed/passed in some other time
-    param.theta.mu <- parameters[1:n_randeffect]
-    param.theta.sig.unwound <- parameters[(n_randeffect+1):(length(parameters)-n_randeffect)] ##scott would like it to ask for n(unwind)
-    param.theta.sig2 <- unwind(param.theta.sig.unwound, reverse = TRUE)
-    param.a <- exp(parameters[((length(parameters)-n_randeffect)+1):(length(parameters))])
-    v_alpha=2
-    log_prior_mu=mvtnorm::dmvnorm(param.theta.mu, mean = prior_parameters$theta_mu_mean, sigma = prior_parameters$theta_mu_var, log =TRUE)
-    log_prior_sigma = log(robust_diwish(param.theta.sig2, v=v_alpha+ n_randeffect-1, S = 2*v_alpha*diag(1/param.a)))  #exp of a-half -> positive only
-    log_prior_a = sum(invgamma::dinvgamma(param.a,scale = 0.5,shape=1,log=TRUE))
-    logw_den2 <- sum(log(1/param.a)) # Jacobian determinant of transformation of log of the a-half
-    logw_den3 <- log(2^n_randeffect)+sum((n_randeffect:1+1)*log(diag(param.theta.sig2))) # Jacobian determinant of cholesky factors of cov matrix
-    
-    return(log_prior_mu + log_prior_sigma + log_prior_a + logw_den3 - logw_den2)
-  }
-  
-  #importance_particles <- array(dim=c(IS_samples,n_particles,n_subjects))
-  
-  get_logp=function(prop_theta,data,n_subjects,n_particles,n_randeffect,mu_tilde,sigma_tilde,i, group_dist=group_dist){
-    # make an array for the density
-    logp=array(dim=c(n_particles,n_subjects))
-    # for each subject, get 1000 IS samples (particles) and find log weight of each
-    for (j in 1:n_subjects){
-      # generate the particles from the conditional MVnorm AND mix of group level proposals
-      wmix <- 0.95
-      n1=rbinom(n=1,size=n_particles,prob=wmix)
-      if (n1<2) n1=2
-      if (n1>(n_particles-2)) n1=n_particles-2 ## These just avoid degenerate arrays.
-      n2=n_particles-n1
-      # do conditional MVnorm based on the proposal distribution
-      conditional = condMVNorm::condMVN(mean=mu_tilde[j,],sigma=sigma_tilde[j,,],dependent.ind=c(1:n_randeffect),
-                                        given.ind=c((n_randeffect+1):n.params),X.given=prop_theta[i,c(1:(n.params-n_randeffect))])
-      particles1 <- mvtnorm::rmvnorm(n1, conditional$condMean,conditional$condVar)
-      # # mix of proposal params and conditional
-      particles2 <- group_dist(n_samples=n_particles, parameters = prop_theta[i,],sample=TRUE, n_randeffect=n_randeffect)
-      particles <- rbind(particles1,particles2)
-      for (k in 1:n_particles){
-        x <-particles[k,]
-        # names for ll function to work
-        # mod notes: this is the bit the prior effects
-        names(x)<-pars
-        # do lba log likelihood with given parameters for each subject, gets density of particle from ll func
-        logw_first=samples$ll_func(x,dadm = data[[j]]) #mod notes: do we pass this in or the whole samples object????
-        # below gets second part of equation 5 numerator ie density under prop_theta
-        # particle k and big vector of things
-        logw_second <- group_dist(random_effect = particles[k,], parameters = prop_theta[i,], sample= FALSE, n_randeffect = n_randeffect) #mod notes: group dist
-        # below is the denominator - ie mix of density under conditional and density under pro_theta
-        logw_third <- log(wmix*dmvnorm(particles[k,], conditional$condMean, conditional$condVar) + (1-wmix) * exp(logw_second)) #mod notes: fine?
-        #logw_third <- log(logw_second) #mod notes: fine?
-        # does equation 5
-        logw=(logw_first+logw_second)-logw_third
-        # assign to correct row/column
-        if(is.numeric(logw)){ #RJI_change: protection against weird errors
-          logp[k,j]=logw
-        }else{
-          logp[k,j]=1e-10
-        }
-        #importance_particles[i,k,j]<-logw
-      }
-    }
-    # we use this part to centre the logw before adding back on at the end. This avoids inf and -inf values
-    sub_max = apply(logp,2,max)
-    logw = t(t(logp) - sub_max)
-    w = exp(logw)
-    subj_logp = log(apply(w,2,mean))+sub_max #means
-    
-    
-    # sum the logp and return 
-    if(is.nan(sum(subj_logp))){ #RJI_change: this protects against bad particles. Need to check if this should be -Inf or 0 (log scale dependent). i think this is correct though
-      return(1e-10)
-    }else{
-      return(sum(subj_logp))
-    }
-  }
-  
-  compute_lw=function(prop_theta,data,n_subjects,n_particles,n_randeffect,mu_tilde,sigma_tilde,i, prior_dist=prior_dist, samples=samples){
-    
-    logp.out <- get_logp(prop_theta, data, n_subjects, n_particles, n_randeffect, mu_tilde, sigma_tilde, i, group_dist = group_dist)
-    #do equation 10
-    logw_num <- logp.out[1]+prior_dist(parameters = prop_theta[i,], prior_parameters = samples$prior, n_randeffect)
-    logw_den <- mvtnorm::dmvt(prop_theta[i,], delta=muX, sigma=sigmaX,df=df, log = TRUE) #RJI_change: no longer the mix, just the density of multi t
-    logw <- logw_num-logw_den # this is the equation 10
-    return(c(logw))
-    ##NOTE: we should leave a note if variance is shit - variance is given by the logp function (currently commented out)
-  }
-  
-  ##### make it work
-  
-  #makes an array to store the IS samples
-  tmp<-array(dim=c(IS_samples))
-  
+  prop_theta=mvtnorm::rmvt(IS_samples,sigma = varX, df=df, delta=muX)
+  # out <- numeric(nrow(prop_theta))
+  # for(i in 1:nrow(prop_theta)){
+  #   out[i] <- variant_funs$prior_dist(parameters = prop_theta[i,], all_pars$info)
+  # }
   #do the sampling
-  if (n_cores>1){
-    tmp <- mclapply(X=1:IS_samples,mc.cores = n_cores, FUN = compute_lw, prop_theta = prop_theta,data = data,n_subjects= n_subjects,n_particles = n_particles,
-                    n_randeffect = n_randeffect,mu_tilde=mu_tilde,sigma_tilde = sigma_tilde, prior_dist=prior_dist, samples=samples)
-  } else{
-    for (i in 1:IS_samples){
-      cat(i)
-      # save.image("tmpbug10.RData")
-      tmp[i]<-compute_lw(prop_theta, data, n_subjects, n_particles, n_randeffect, mu_tilde, sigma_tilde, i, prior_dist=prior_dist, samples=samples)
-    }
-  }
+  logw_num <- mclapply(X=1:IS_samples, 
+                       FUN = compute_lw_num, 
+                       prop_theta = prop_theta,
+                       stepsize_particles = stepsize_particles,
+                       max_particles = max_particles,
+                       mu_tilde=all_pars$mu_tilde,
+                       var_tilde = all_pars$var_tilde, 
+                       info = all_pars$info,
+                       mc.cores = n_cores)
+  logw_den <- mvtnorm::dmvt(prop_theta, delta=muX, sigma=varX,df=df, log = TRUE)
   
-  
-  finished <- tmp
-  tmp<-unlist(tmp)
-  max.lw <- max(tmp)
-  mean.centred.lw <- mean(exp(tmp-max.lw)) #takes off the max and gets mean (avoids infs)
+  finished <- unlist(logw_num) - logw_den
+  max.lw <- max(finished)
+  mean.centred.lw <- mean(exp(finished-max.lw)) #takes off the max and gets mean (avoids infs)
   lw <- log(mean.centred.lw)+max.lw #puts max back on to get the lw
-  lw
+  return(list(lw = lw, finished = finished))
 }
 
+get_sub_weights <- function(stepsize_particles, condMean, condVar, prop_theta, info, sub){
+  wmix = c(.05, .95)
+  n1=rbinom(n=1,size=stepsize_particles,prob=wmix)
+  if (n1<2) n1=2
+  if (n1>(stepsize_particles-2)) n1=stepsize_particles-2 ## These just avoid degenerate arrays.
+  n2=stepsize_particles-n1
+  data <- info$data
+  particles1 <- mvtnorm::rmvnorm(n1, condMean,condVar)
+  # Group level
+  particles2 <- variant_funs$group_dist(n_samples=n2, parameters = prop_theta,
+                                        sample=TRUE, info = info)
+  particles <- rbind(particles1,particles2)
+  # names for ll function to work
+  colnames(particles) <- info$par_names
+  # do lba log likelihood with given parameters for each subject, gets density of particle from ll func
+  lw_first <- apply(particles, 1, info$ll_func, dadm = data[[sub]])
+  # below gets second part of equation 5 numerator ie density under prop_theta
+  lw_second <- apply(particles, 1, variant_funs$group_dist, prop_theta, FALSE, NULL, info)
+  # below is the denominator - ie mix of density under conditional and density under pro_theta
+  lw_third <- log(wmix*pmax(1e-25 * info$n_randeffect, dmvnorm(particles, condMean, condVar)) + (1-wmix) * exp(lw_second)) 
+  # does equation 5
+  lw <- lw_first+lw_second-lw_third
+  return(lw)
+}
 
+get_logp=function(prop_theta,stepsize_particles, max_particles, mu_tilde,var_tilde, info){
+  # Unload for legibility
+  n_subjects <- info$n_subjects
+  var_opt_sub <- 1/n_subjects
+  
+  # for each subject, get N IS samples (particles) and find log weight of each
+  lw_subs <- numeric(n_subjects)
+  for (j in 1:n_subjects){
+    var_z_sub <- 999 # just a place holder > var_opt_sub
+    n_total <- 0
+    lw <- numeric()
+    # generate the particles from the conditional MVnorm AND mix of group level proposals
+    conditional = condMVNorm::condMVN(mean=mu_tilde[j,],sigma=var_tilde[j,,],
+                                      dependent.ind=c(1:info$n_randeffect),
+                                      given.ind=info$given.ind,
+                                      X.given=prop_theta[info$X.given_ind],
+                                      check.sigma = F)
+    while((var_z_sub > var_opt_sub) & n_total < max_particles){
+      n_total <- n_total + stepsize_particles
+      lw_tmp <- get_sub_weights(stepsize_particles = stepsize_particles, condMean = conditional$condMean,
+                                condVar = conditional$condVar, prop_theta = prop_theta,
+                                info = info, sub = j)
+      
+      # lw <- -weights(psis(-lw, log = F)) # default args are log=TRUE, normalize=TRUE
+      lw <- c(lw, lw_tmp)
+      max_lw <- max(lw)
+      var_z_sub = sum(exp(2*(lw-max_lw)))/(sum(exp(lw-max_lw)))^2-1/n_total
+    }
+    weight <- exp(lw-max_lw)
+    lw_subs[j] <- max_lw+log(mean(weight))
+  }
+  # sum the logp and return 
+  return(sum(lw_subs))
+}
+
+compute_lw_num=function(i, prop_theta,stepsize_particles, max_particles, mu_tilde,var_tilde,info){
+  logp.out <- get_logp(prop_theta[i,], stepsize_particles, max_particles, mu_tilde, var_tilde, info)
+  logw_num <- logp.out+variant_funs$prior_dist(parameters = prop_theta[i,], info)
+  return(logw_num)
+}
+
+add_info_base <- function(samples){
+  info <- list(
+    n_randeffect = samples$n_pars,
+    n_subjects = samples$n_subjects,
+    par_names = samples$par_names,
+    data = samples$data,
+    ll_func = samples$ll_func,
+    prior = samples$prior,
+    hyper = attributes(samples)
+  )
+  return(info)
+}
 

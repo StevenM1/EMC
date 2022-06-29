@@ -105,7 +105,16 @@ get_sigma <- function(samps,filter="samples",thin=1,subfilter=0)
   sigma[,,nmc_thin]  
 }
 
-
+merge_samples <- function(samples){
+  out_samples <- samples[[1]]
+  # Only thing that differs between the chains is the samples$samples
+  sampled_objects <- lapply(samples, FUN = function(x) return(x$samples))
+  keys <- unique(unlist(lapply(sampled_objects, names)))
+  sampled_objects <- setNames(do.call(mapply, c(abind, lapply(sampled_objects, '[', keys))), keys)
+  sampled_objects$iteration <- sum(sampled_objects$iteration)
+  out_samples$samples <- sampled_objects
+  return(out_samples)
+}
 
 #### pmwg object list functions ----
 
