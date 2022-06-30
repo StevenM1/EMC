@@ -11,10 +11,12 @@ library(corpcor) #RJI_change: not sure if this was included before
 #library(matrixcalc)
 
 
-IS2 <- function(samples, filter, IS_samples = 1000, stepsize_particles = 500, max_particles = 5000, n_cores = 1, df = 5){
+IS2 <- function(samples, filter = "sample", subfilter = 0, IS_samples = 1000, stepsize_particles = 500, max_particles = 5000, n_cores = 1, df = 5){
   ###### set up variables #####
   info <- add_info_base(samples)
-  all_pars <- variant_funs$get_all_pars(samples, filter, info)
+  idx <- which(samples$samples$stage == filter)
+  if(subfilter != 0) idx <- idx[-c(1:subfilter)]
+  all_pars <- variant_funs$get_all_pars(samples, idx, info)
   muX<-apply(all_pars$X,2,mean)
   varX<-cov(all_pars$X)
   
