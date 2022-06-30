@@ -44,11 +44,10 @@ data2 <- make_data(p_vector= p_mat2,design=design2,trials=200)
 
 
 dadm2 <- design_model(data2,design2)
-sampler <- make_samplers(list(dadm1, dadm2), list(design1, design2), type = "single")
+sampler <- make_samplers(list(dadm1, dadm2), list(design1, design2), type = "standard")
 
 samples <- run_chains(sampler, iter = c(100, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
 plot_chains(samples, filter = "burn", selection = "alpha", plot_acf = F)
-
 gd_pmwg(samples, filter = "burn")
 
 ppNormals <- post_predict(samples,n_cores=6, filter = "burn")
@@ -67,6 +66,7 @@ es_pmwg(samples,selection="variance",summary=min, filter = "burn")
 
 p_test(samples,x_name="1-mean", filter = "burn")
 
+run_IS2(samples, filter = "burn", IS_samples = 10, max_particles = 500, n_cores = 6)
 
 source("emc/emc.R")
 
