@@ -135,7 +135,7 @@ iat_pmwg <- function(pmwg_mcmc,
       out <- do.call(rbind,lapply(pmwg_mcmc,get_IAT) ) 
       if (!is.null(summary_alpha)) out <- apply(out,2,summary_alpha)
     } else out <- get_IAT(pmwg_mcmc)
-  if (sort_print & selection != "alpha") out <- sort(out)
+  if (sort_print & !(selection == "alpha" & is.null(summary_alpha))) out <- sort(out)
   if (print_summary) print(round(out,digits_print))
   invisible(out)
 }
