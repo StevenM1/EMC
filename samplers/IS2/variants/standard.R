@@ -1,13 +1,13 @@
 source("samplers/IS2/IS2.R")
 
-get_all_pars_standard <- function(samples, filter, info){
+get_all_pars_standard <- function(samples, idx, info){
   n_subjects <- samples$n_subjects
-  n_iter = length(samples$samples$stage[samples$samples$stage== filter])
+  n_iter = length(samples$samples$stage[idx])
   # Exctract relevant objects
-  alpha <- samples$samples$alpha[,,samples$samples$stage==filter]
-  theta_mu <- samples$samples$theta_mu[,samples$samples$stage==filter]
-  theta_var <- samples$samples$theta_var[,,samples$samples$stage==filter]
-  a_half <- log(samples$samples$a_half[,samples$samples$stage==filter])
+  alpha <- samples$samples$alpha[,,idx]
+  theta_mu <- samples$samples$theta_mu[,idx]
+  theta_var <- samples$samples$theta_var[,,idx]
+  a_half <- log(samples$samples$a_half[,idx])
   theta_var.unwound = apply(theta_var,3,unwind)
   # Set up
   n_params<- samples$n_pars+nrow(theta_var.unwound)+samples$n_pars

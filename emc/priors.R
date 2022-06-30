@@ -3,7 +3,7 @@ prior_samples_alpha <- function(theta_mu,theta_var,n=1e3)
   # (mixture over hyper posterior samples)
 {
   t(sapply(sample.int(dim(theta_mu)[2],n,TRUE),function(x){
-    rmvnorm(1,theta_mu[x,],theta_var[,,x])
+    mvtnorm::rmvnorm(1,theta_mu[x,],theta_var[,,x])
   }))
 }
 
@@ -13,7 +13,7 @@ prior_samples <- function(samps,type=c("mu","variance","covariance","correlation
   # or for single at subject level (in which case type="mu")
 {
   if (type=="mu") {
-    out <- rmvnorm(n, mean = samps$prior$theta_mu_mean,
+    out <- mvtnorm::rmvnorm(n, mean = samps$prior$theta_mu_mean,
                       sigma = samps$prior$theta_mu_var)
     dimnames(out)[[2]] <- samps$par_names
     return(out) 

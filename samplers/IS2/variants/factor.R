@@ -1,14 +1,14 @@
 source("samplers/IS2/IS2.R")
 
-get_all_pars_factor <- function(samples, filter, info){
+get_all_pars_factor <- function(samples, idx, info){
   n_subjects <- samples$n_subjects
-  n_iter = length(samples$samples$stage[samples$samples$stage== filter])
+  n_iter = length(samples$samples$stage[idx])
   # Extract relevant objects
-  alpha <- samples$samples$alpha[,,samples$samples$stage== filter]
-  theta_mu <- samples$samples$theta_mu[,samples$samples$stage== filter]
-  lambda <- samples$samples$lambda_untransf[,,samples$samples$stage==filter, drop = F]
-  psi_inv <- samples$samples$theta_psi_inv[,,samples$samples$stage==filter, drop = F]
-  sig_err_inv <- samples$samples$theta_sig_err_inv[,,samples$samples$stage==filter]
+  alpha <- samples$samples$alpha[,,idx]
+  theta_mu <- samples$samples$theta_mu[,idx]
+  lambda <- samples$samples$lambda_untransf[,,idx, drop = F]
+  psi_inv <- samples$samples$theta_psi_inv[,,idx, drop = F]
+  sig_err_inv <- samples$samples$theta_sig_err_inv[,,idx]
   
   constraintMat <- info$hyper$constraintMat
   n_factors <- samples$n_factors

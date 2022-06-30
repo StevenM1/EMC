@@ -382,12 +382,12 @@ auto_sample <- function(samplers,iter=NA,verbose=TRUE,
   return(samplers)
 }
 
-run_IS2 <- function(samples, filter = "sample", IS_samples = 1000, 
+run_IS2 <- function(samples, filter = "sample", subfilter = 0, IS_samples = 1000, 
                     stepsize_particles = 500, max_particles = 5000, n_cores = 1, df = 5){
   variant <- basename(samples[[1]]$source)
   source(paste0("samplers/IS2/variants/", variant))
   samples_merged <- merge_samples(samples)
-  IS2(samples_merged, filter, IS_samples, stepsize_particles, max_particles, n_cores, df)
+  IS2(samples_merged, filter, subfilter = subfilter, IS_samples, stepsize_particles, max_particles, n_cores, df)
 }
 
 
@@ -463,6 +463,16 @@ check_stuck <- function(samples,filter=c("burn","sample")[1], # dont use adapt
   
   return(samples)
 }
+
+std_error_IS2 <- function(IS_samples, n_bootstrap = 50000){
+  log_marglik_boot= array(dim = n_bootstrap)
+  for (i in 1:n_bootstrap){
+    log_weight_boot = sample(IS_samples, length(IS_samples), replace = TRUE) #resample with replacement from the lw
+    log_marglik_boot[i] <- median(log_weight_boot)
+  }
+  return(sd(log_marglik_boot))
+} 
+
 
 fix_stuck <- function(samples, bad_subs, best, worst){
   # This function takes the bad subjects and replaces the last entry of the 
