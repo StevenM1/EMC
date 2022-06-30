@@ -787,7 +787,7 @@ design_av_full <- make_design(
 # save(samplers,file="sPNAS_av_full.RData")
 
 print(load("models/DDM/DDM/examples/samples/sPNAS_at0_full.RData"))
-print(load("sPNAS_av_full.RData"))
+print(load("models/RACE/LBA/examples/samples/sPNAS_av_full.RData"))
 
 # SZ was slow to converge in mu, needed to 750 for at0 and 500 for av, so ran 
 # enough samples to get 1000 left 1000 left without these. 

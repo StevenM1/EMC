@@ -60,10 +60,7 @@ add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE")
   datar[order(apply(datar[,c(factors,"lR")],1,paste,collapse="")),]
 }
 
-# tmp <- lapply(designNAM$Flist,make_dm,da=daNAM)
-# tmp1 <- lapply(designNUM$Flist,make_dm,da=daNUM)
-# form=designNAM$Flist[[2]];da=daNAM; Clist=NULL
-# form=designNUM$Flist[[2]];da=daNUM; Clist=NULL
+# form=design$Flist[[1]]
 make_dm <- function(form,da,Clist=NULL) 
   # Makes a design matrix based on formula form from augmented data frame da
 {
@@ -92,10 +89,10 @@ make_dm <- function(form,da,Clist=NULL)
     nl <- length(levs)
     if (class(Clist[[i]])[1]=="function") 
       contrasts(da[[i]]) <- do.call(Clist[[i]],list(n=levs)) else {
-        if (!is.matrix(Clist[[i]]) || !all(dim(Clist[[i]]==c(nl,nl-1))))
+        if (!is.matrix(Clist[[i]]) || dim(Clist[[i]])[1]!=nl)
           stop("Clist for",i,"not a",nl,"x",nl-1,"matrix")
         dimnames(Clist[[i]])[[1]] <- levs
-        contrasts(da[[i]]) <- Clist[[i]] 
+        contrasts(da[[i]],how.many=dim(Clist[[i]])[2]) <- Clist[[i]] 
       }
   }
   out <- model.matrix(form,da)
@@ -109,7 +106,7 @@ make_dm <- function(form,da,Clist=NULL)
 }
 
 
-# model=NULL; prior = NULL;add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
+# prior = NULL;rt_resolution=0.02;verbose=TRUE;
 # 
 # add_acc=FALSE;verbose=FALSE;rt_check=FALSE;compress=FALSE
 
@@ -120,7 +117,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   # da is augmented data (from add_accumulators), must have all of the factors  
   #   and covariates that are used in formulas
   # Clist is a list of either a single unnamed contrast (as in the default)
-  #   lists, one for each model$p_type. 
+  #   lists, one for each model$p_type (allowed to have some p_types missing). 
   # These elements of model define the paramaterization being used
   #   ptypes defines the parameter types for which designs must be specified
   #   transform if a function acting on p_vector before mapping
@@ -293,7 +290,16 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   if (class(design$Clist) != "list") stop("Clist must be a list")
   if (class(design$Clist[[1]])[1] !="list") # same contrasts for all p_types
     design$Clist <- setNames(lapply(1:length(model$p_types),
-                              function(x)design$Clist),model$p_types)
+                              function(x)design$Clist),model$p_types) else {
+    missing_p_types <- model$p_types[!(model$p_types %in% names(Clist))]
+    if (length(missing_p_types)>0) {
+      nok <- length(design$Clist)
+      for (i in 1:length(missing_p_types)) {
+        design$Clist[[missing_p_types[i]]] <- list(contr.treatment)
+        names(design$Clist)[nok+i] <- missing_p_types[i]
+      } 
+    }
+  }
   for (i in model$p_types) attr(design$Flist[[i]],"Clist") <- design$Clist[[i]]
   out <- lapply(design$Flist,make_dm,da=da)
   if (!is.null(rt_resolution) & !is.null(da$rt)) da$rt <- round(da$rt/rt_resolution)*rt_resolution
@@ -373,14 +379,15 @@ map_p <- function(p,dadm)
 }
 
 
-# Clist=NULL; Fcovariates=NULL
+# Fcovariates=NULL; Ffunctions=NULL
 # 
-# Flist=list(mean ~ FW*S, sd ~ FWS,threshold ~ FW/lR)
-# Ffactors=list(subjects=levels(wordfaceROC$subjects),S=levels(wordfaceROC$S),
-#               FW=levels(wordfaceROC$FW))
-# Rlevels=1:6;matchfun=matchfun
-# constants=c(mean=0,mean_FWwords=0,sd=0,sd_FWSwords_new=0)
-# Ffunctions=list(FWS=fws);model=probit
+# Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E))
+# Rlevels=levels(dat$R);matchfun=function(d)d$S==d$lR
+# Clist=list(v=list(E=E_AVan_s_mat,lM=ADmat),sv=list(lM=ADmat),
+#              B=list(E=Emat,lR=ADmat),t0=list(E=E_AVan_s_mat))
+#   Flist=list(v~E*lM,sv~lM,B~lR*E,A~1,t0~E)
+#   constants=c(sv=log(1))
+#   model=lbaB
 
 make_design <- function(Flist,Ffactors,Rlevels,model,
   Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
