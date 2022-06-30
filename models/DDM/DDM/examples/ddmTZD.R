@@ -463,30 +463,20 @@ print(load("models/DDM/DDM/examples/samples/sPNAS_a_full.RData"))
 
 #### Convergence ----
 
-chain_n(sPNAS_a_full)
-plot_chains(sPNAS_a_full,layout=c(3,7),selection="LL")
-# random effects
-plot_chains(sPNAS_a_full,layout=c(2,5))
-print(round(gd_pmwg(sPNAS_a_full),2))
-# As is usual sv and particularly SZ are least efficient 
-iat_pmwg(sPNAS_a_full)
-es_pmwg(sPNAS_a_full,summary=min)
-# Same for hyper mean
-plot_chains(sPNAS_a_full,layout=c(2,5),selection="mu")
-print(round(gd_pmwg(sPNAS_a_full,selection="mu"),2))
-iat_pmwg(sPNAS_a_full,selection="mu")
-es_pmwg(sPNAS_a_full,selection="mu",summary=min)
-# variance
-plot_chains(sPNAS_a_full,layout=c(2,5),selection="variance")
-print(round(gd_pmwg(sPNAS_a_full,selection="variance"),2))
-iat_pmwg(sPNAS_a_full,selection="variance")
-es_pmwg(sPNAS_a_full,selection="variance",summary=min)
-# and correlation 
-plot_chains(sPNAS_a_full,layout=c(3,5),selection="correlation")
-print(round(gd_pmwg(sPNAS_a_full,selection="correlation"),2))
-iat_pmwg(sPNAS_a_full,selection="correlation")
-es_pmwg(sPNAS_a_full,selection="correlation",summary=min)
-# Clearly if we wished to do inference with SZ we should get more samples. 
+# As we start to look at more models, and more complex models, it is 
+# convenient to be able to run a standard set of checks, as follows. By
+# default this function looks at the sample stage (use filter="burn" to look at
+# the burn stage) and pauses after printing out results for each type of
+# parameter (interactive=FALSE to turn this off), printing out gd, iat and es.
+check_run(sPNAS_a_full)
+# It also saves a pdf (by default pdf_name"check_run.pdf", width and height 
+# arguments can be used to change default page size) of chain plots (by
+# default layout = c(3,4)). These results together show that all of the sample
+# stage is well converged, and that sv and particularly SZ are not efficiently
+# sampled. Clearly if we wished to do inference with SZ we should get more 
+# samples to obtain a sufficient effective size. Note that printed outputs are
+# sorted so it is easy to pickup extreme cases, and by default es_stat="min" to
+# summarize the effective size of random effects.
 
 #### Fit ----
 
@@ -587,7 +577,9 @@ ciPNAS <- plot_density(sPNAS_a_full,layout=c(2,4),selection="correlation",do_plo
 round(ciPNAS,3)
 
 #### Parameter recovery study ----
-# Create a single simulated data set from that alpha means.
+# The full DDM model is notoriously difficult to sample. Here we check how well 
+# its parameters can be recovered in the present design. To do so we create a 
+# single simulated data set from that alpha means.
 new_dat <- post_predict(sPNAS_a_full,use_par="mean",n_post=1)
 
 # can we recover these?
@@ -603,7 +595,7 @@ plot_alpha_recovery(tabs,layout=c(2,5))
 # Coverage is fairly decent even in sv and SZ
 plot_alpha_recovery(tabs,layout=c(2,5),do_rmse=TRUE,do_coverage=TRUE)
 
-######## Full DDM and rate/non-decision time effects of emphasis ----
+######## Full DDM and threshold, rate, and non-decision time effects of emphasis ----
 
 # In this example we also demonstrate "cell" coding, where there is a separate
 # estimate for each cell of the E x S design used for rates. This is not easily
@@ -640,50 +632,13 @@ print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData"))
 
 #### Check convergence ----
 
-# We can check the state of samplers
-chain_n(sPNAS_avt0_full)
-
-# RANDOM EFFECTS (i.e., subject level)
-# First 500 not converged
-plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5))
-
-# remove from here
-plot_chains(sPNAS_avt0_full,selection="LL",layout=c(4,5),subfilter=500)
-par(mfrow=c(2,8)) 
-plot_chains(sPNAS_avt0_full,selection="alpha",layout=NULL,subfilter=500)
-# bl1t a_Eneutral still moving down a little, will ignore here but a fuller
-# analysis may want to get extra samples. 
-
-# Mixing very good
-round(gd_pmwg(sPNAS_avt0_full,selection="alpha",print_summary = FALSE,subfilter=500),2)
-# Again SZ has higest inefficiency
-round(es_pmwg(sPNAS_avt0_full,selection="alpha",summary=min,subfilter=500))
-iat_pmwg(sPNAS_avt0_full,selection="alpha",subfilter=500)
-
-
-# POPULATION EFFECTS
-
-# Population mean
-plot_chains(sPNAS_avt0_full,selection="mu",layout=c(3,6),subfilter=500)
-round(gd_pmwg(sPNAS_avt0_full,selection="mu",subfilter=500),2) 
-round(es_pmwg(sPNAS_avt0_full,selection="mu",subfilter=500))
-iat_pmwg(sPNAS_avt0_full,selection="mu",subfilter=500)
-
-# Population variance
-plot_chains(sPNAS_avt0_full,selection="variance",layout=c(3,6),subfilter=500)
-round(gd_pmwg(sPNAS_avt0_full,selection="variance",subfilter=500),2)
-round(es_pmwg(sPNAS_avt0_full,selection="variance",subfilter=500))
-iat_pmwg(sPNAS_avt0_full,selection="variance",subfilter=500)
-
-# Very large negative correlations left and right rates and high positive between
-# rights and between lefts. Demonstrates utility of S intercept/difference 
-# coding for making parameters more orthogaonal, and power of sampler to deal with highly 
-# correlated chains.
-plot_chains(sPNAS_avt0_full,selection="correlation",subfilter=500,layout=c(3,4),ylim=c(-1,1))
-round(gd_pmwg(sPNAS_avt0_full,selection="correlation",subfilter=500),2)
-round(es_pmwg(sPNAS_avt0_full,selection="correlation",subfilter=500))
-iat_pmwg(sPNAS_avt0_full,selection="correlation",subfilter=500)
-
+# In this more complicated case there is some initial non-stationarity in over 
+# the first 500 iterations of the sample stage. 
+check_run(sPNAS_avt0_full)
+# Hence we re-run on only the last 1000. This looks good but lower efficiency
+# for a_neutral as well as SZ indicates the need for more samples for parameter
+# inference.
+check_run(sPNAS_avt0_full,subfilter=500)
 
 ####  Fit ----
 
@@ -725,7 +680,7 @@ round(tab,2)
 ### Population mean (mu) tests
 
 # Clearly the default N(0,1) priors are somewhat inappropriate for the large
-# postivie and negative rates produced by "cell" coding.
+# positive and negative rates produced by "cell" coding.
 ciPNAS_avt0_full <- plot_density(sPNAS_avt0_full,layout=c(3,6),selection="mu",subfilter=500)
 
 # Cell coding directly gives us the traditional drift rate estimates
@@ -799,11 +754,13 @@ pmwg_IC(sPNAS_avt0_full,subfilter=500)
 # The following function calculates model weights, quantities on the unit 
 # interval that under some further assumptions correspond to the probability 
 # of a model being the "true" model. Here clearly the avt0 model wins strongly.
-compare_IC(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full))
+compare_IC(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=c(500,0))
 
 # This is also true on a per-subject basis except for one participant.
 compare_ICs(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=c(0,500))
 
+# However, one might question whether we need both v and t0, so lets fit
+# simpler models that drop one or the other.
 
 design_at0_full <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
@@ -812,7 +769,7 @@ design_at0_full <- make_design(
   constants=c(s=log(1),DP=qnorm(0.5)),
   model=ddmTZD)
 
-samplers <- make_samplers(dat,design_at0_full,type="standard")
+# samplers <- make_samplers(dat,design_at0_full,type="standard")
 # save(samplers,file="sPNAS_at0_full.RData")
 
 se <- function(d) {factor(paste(d$S,d$E,sep="_"),levels=
@@ -826,15 +783,22 @@ design_av_full <- make_design(
   constants=c(s=log(1),DP=qnorm(0.5)),
   model=ddmTZD)
 
-samplers <- make_samplers(dat,design_av_full,type="standard")
+# samplers <- make_samplers(dat,design_av_full,type="standard")
 # save(samplers,file="sPNAS_av_full.RData")
 
-print(load("sPNAS_at0_full.RData"))
+print(load("models/DDM/DDM/examples/samples/sPNAS_at0_full.RData"))
+print(load("sPNAS_av_full.RData"))
 
-# SZ was slow to converge in mu, needed to 750, so ran 1750 to get 1000 left
+# SZ was slow to converge in mu, needed to 750 for at0 and 500 for av, so ran 
+# enough samples to get 1000 left 1000 left without these. 
+# All looks good with a_neutral now much more efficient
 check_run(sPNAS_at0_full,subfilter=750)
+check_run(sPNAS_av_full,subfilter=500,layout=c(3,5))
 
-pmwg_IC(sPNAS_at0_full,subfilter=750)
-
-compare_ICs(list(avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,a=sPNAS_a_full),subfilter=c(0,750,500))
+# avt0 still wins overall
+compare_IC(list(avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,av=sPNAS_av_full,a=sPNAS_a_full),
+            subfilter=c(500,750,500,0))
+# But now there are 5 more equivocal cases, largely favoring the at0 model.
+compare_ICs(list(avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,av=sPNAS_av_full,a=sPNAS_a_full),
+            subfilter=c(500,750,500,0))
 
