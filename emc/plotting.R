@@ -627,13 +627,13 @@ plot_fits <- function(data,pp,factors=NULL,
 
 
 
-check_run <- function(samples,pdf_name="check_run.pdf",
+check_run <- function(samples,pdf_name="check_run.pdf",interactive=TRUE,
                       filter="sample",subfilter=0,es_stat="min",
-                      layout=c(3,5),width=NULL,height=NULL) {
+                      layout=c(3,4),width=NULL,height=NULL) {
   print(chain_n(samples))
   pdf(pdf_name,width=width,height=height)
     plot_chains(samples,selection="LL",layout=layout,filter=filter,subfilter=subfilter)
-    readline("Enter for mu check")
+  if (interactive) readline("Enter for mu check")
   cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!! MU !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
   cat("\nR-hat\n")
   print(round(gd_pmwg(samples,selection="mu",filter=filter,subfilter=subfilter,print_summary = FALSE),2))
@@ -642,7 +642,7 @@ check_run <- function(samples,pdf_name="check_run.pdf",
   cat("\nEffectvie Size\n")
   es_pmwg(samples,selection="mu",filter=filter,subfilter=subfilter,summary==es_stat)
     plot_chains(samples,selection="mu",layout=layout,filter=filter,subfilter=subfilter)
-  readline("Enter for variance check")
+  if (interactive) readline("Enter for variance check")
   cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!! VARIANCE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
   cat("\nR-hat\n")
   print(round(gd_pmwg(samples,selection="variance",filter=filter,subfilter=subfilter,print_summary = FALSE),2))
@@ -651,7 +651,7 @@ check_run <- function(samples,pdf_name="check_run.pdf",
   cat("\nEffectvie Size\n")
   round(es_pmwg(samples,selection="variance",filter=filter,subfilter=subfilter,summary==es_stat))
     plot_chains(samples,selection="variance",layout=layout,filter=filter,subfilter=subfilter)
-    readline("Enter for correlation check")
+  if (interactive) readline("Enter for correlation check")
   cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!! CORRELATION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
   cat("\nR-hat\n")
   print(round(gd_pmwg(samples,selection="correlation",filter=filter,subfilter=subfilter,print_summary = FALSE),2))
@@ -660,7 +660,7 @@ check_run <- function(samples,pdf_name="check_run.pdf",
   cat("\nEffectvie Size\n")
   round(es_pmwg(samples,selection="correlation",filter=filter,subfilter=subfilter,summary==es_stat))
     plot_chains(samples,selection="correlation",layout=layout,ylim=c(-1,1),filter=filter,subfilter=subfilter)
-    readline("Enter for alpha check")
+  if (interactive) readline("Enter for alpha check")
   cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!! ALPHA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
   cat("\nR-hat\n")
   print(round(gd_pmwg(samples,selection="alpha",filter=filter,subfilter=subfilter,print_summary = FALSE),2))
@@ -668,8 +668,7 @@ check_run <- function(samples,pdf_name="check_run.pdf",
   iat_pmwg(samples,selection="alpha",filter=filter,subfilter=subfilter)
   cat("\nEffectvie Size\n")
   round(es_pmwg(samples,selection="alpha",summary=es_stat,filter=filter,subfilter=subfilter))
-    par(mfrow=layout) 
-    plot_chains(samples,selection="alpha",layout=NULL,filter=filter,subfilter=subfilter)
+    plot_chains(samples,selection="alpha",layout=layout,filter=filter,subfilter=subfilter)
   message("\n\nGraphical checks available in ",pdf_name)
   dev.off()
 }
