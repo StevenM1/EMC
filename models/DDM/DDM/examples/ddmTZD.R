@@ -475,8 +475,8 @@ check_run(sPNAS_a_full)
 # stage is well converged, and that sv and particularly SZ are not efficiently
 # sampled. Clearly if we wished to do inference with SZ we should get more 
 # samples to obtain a sufficient effective size. Note that printed outputs are
-# sorted so it is easy to pickup extreme cases, and by default es_stat="min" to
-# summarize the effective size of random effects.
+# sorted so it is easy to pickup extreme cases, and that both the minimum and 
+# mean are used to summarize the effective size of random effects.
 
 #### Fit ----
 
@@ -754,10 +754,12 @@ pmwg_IC(sPNAS_avt0_full,subfilter=500)
 # The following function calculates model weights, quantities on the unit 
 # interval that under some further assumptions correspond to the probability 
 # of a model being the "true" model. Here clearly the avt0 model wins strongly.
-compare_IC(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=c(500,0))
+# NB: subfilter can be either a single digit, used for all, or a list of the
+#     same length as the list of objects.
+compare_IC(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=list(500,0))
 
 # This is also true on a per-subject basis except for one participant.
-compare_ICs(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=c(0,500))
+compare_ICs(list(avt0=sPNAS_avt0_full,a=sPNAS_a_full),subfilter=list(0,500))
 
 # However, one might question whether we need both v and t0, so lets fit
 # simpler models that drop one or the other.
