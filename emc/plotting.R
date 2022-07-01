@@ -628,7 +628,7 @@ plot_fits <- function(data,pp,factors=NULL,
 
 
 check_run <- function(samples,pdf_name="check_run.pdf",interactive=TRUE,
-                      filter="sample",subfilter=0,es_stat="min",
+                      filter="sample",subfilter=0,
                       layout=c(3,4),width=NULL,height=NULL) {
   print(chain_n(samples))
   pdf(pdf_name,width=width,height=height)
@@ -666,8 +666,11 @@ check_run <- function(samples,pdf_name="check_run.pdf",interactive=TRUE,
   print(round(gd_pmwg(samples,selection="alpha",filter=filter,subfilter=subfilter,print_summary = FALSE),2))
   cat("\nIntegrated autocorrelation time\n")
   iat_pmwg(samples,selection="alpha",filter=filter,subfilter=subfilter)
-  cat("\nEffectvie Size\n")
-  round(es_pmwg(samples,selection="alpha",summary=es_stat,filter=filter,subfilter=subfilter))
+  cat("\nEffectvie Size (minimum)\n")
+  round(es_pmwg(samples,selection="alpha",summary=min,filter=filter,subfilter=subfilter))
+    plot_chains(samples,selection="alpha",layout=layout,filter=filter,subfilter=subfilter)
+  cat("\nEffectvie Size (mean)\n")
+  round(es_pmwg(samples,selection="alpha",summary=mean,filter=filter,subfilter=subfilter))
     plot_chains(samples,selection="alpha",layout=layout,filter=filter,subfilter=subfilter)
   message("\n\nGraphical checks available in ",pdf_name)
   dev.off()

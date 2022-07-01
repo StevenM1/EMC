@@ -331,7 +331,7 @@ parameters_data_frame <- function(samples,filter="sample",thin=1,subfilter=0,
 }
 
 
-#### Get information about chains lists
+#### Get information about chains lists ----
 
 chain_n <- function(samplers) 
   # Length of stages for each chain
