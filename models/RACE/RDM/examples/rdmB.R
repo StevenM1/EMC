@@ -1,6 +1,4 @@
 rm(list=ls())
-library(mvtnorm)
-library(coda)
 source("emc/emc.R")
 source("models/RACE/RDM/rdmB.R")
 
@@ -12,55 +10,54 @@ levels(dat$R) <- levels(dat$S)
 # Average and difference matrix
 ADmat <- matrix(c(-1/2,1/2),ncol=1,dimnames=list(NULL,"d"))  
 
-# Accuracy - Speed, Neutral - Speed
-Emat <- contr.sum(3)/2
-dimnames(Emat) <- list(NULL,c("as","ns"))
+Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
+dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 
-ns <- length(levels(dat$subjects))
-design <- make_design(
+design_B <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
   Flist=list(v~lM,B~lR*E,A~1,t0~1),
   model=rdmB)
 
-# Design has a p_vector attribute that can be filled in with values to simulate
-# data, and which itself has a "map" attribute that defines the nature of each
-# parameter
-attr(design,"p_vector")
-#         v     v_lMd         B     B_lRd     B_Eas     B_Ens B_lRd:Eas B_lRd:Ens         A        t0 
-#         0         0         0         0         0         0         0         0         0         0 
-# attr(,"map")
-# attr(,"map")$v
-#   v v_lMd
-# 1 1   0.5
-# 3 1  -0.5
-# 
-# attr(,"map")$B
-#   B B_lRd B_Eas B_Ens B_lRd:Eas B_lRd:Ens
-# 1 1  -0.5   0.5   0.0     -0.25      0.00
-# 3 1   0.5   0.5   0.0      0.25      0.00
-# 2 1  -0.5   0.0   0.5      0.00     -0.25
-# 4 1   0.5   0.0   0.5      0.00      0.25
-# 
-# attr(,"map")$A
-# [1] 1
-# 
-# attr(,"map")$t0
-# [1] 1
+rdm_B <- make_samplers(dat,design_B,type="standard",rt_resolution=.02)
+save(rdm_B,file="rdmPNAS_B.RData")
 
-# Full (variance-covariance) fits ----
 
-# Combine data and design, define type of PMWG sampler and rt_resolution
-# By default three chains are created (n_chains). Can also define priors_list
-# (if none supplied defaults are used) and extras required by certian types
-# (par_groups, n_factors, contraintMat, covariates)
-samplers <- make_samplers(dat,design,type="standard",rt_resolution=.02)
-# save(samplers,file="testRDM.RData")
+design_Bvt0<- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~lM*E,B~lR*E,A~1,t0~E),
+  model=rdmB)
 
-# I only look at the standard number of particles here in one of my test runs
-print(load("testRDM.RData"))
+rdm_Bvt0<- make_samplers(dat,design_Bvt0,type="standard",rt_resolution=.02)
+save(rdm_Bvt0,file="rdmPNAS_Bvt0.RData")
 
+design_Bt0<- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~lM,B~lR*E,A~1,t0~E),
+  model=rdmB)
+
+rdm_Bt0 <- make_samplers(dat,design_Bt0,type="standard",rt_resolution=.02)
+save(rdm_Bt0,file="rdmPNAS_Bt0.RData")
+
+design_Bv<- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~lM*E,B~lR*E,A~1,t0~1),
+  model=rdmB)
+
+rdm_Bv <- make_samplers(dat,design_Bv,type="standard",rt_resolution=.02)
+save(rdm_Bv,file="rdmPNAS_Bv.RData")
+
+
+print(load("rdmPNAS_B.RData"))
+
+check_run(rdm_B)
 
 # How many iterations
 chain_n(samples)

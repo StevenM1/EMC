@@ -82,7 +82,7 @@ design_Bvt0_sv <- make_design(
 # anything useful). Looking at estimates, most issues were around the a_n 
 # contrast, which might not be surprising given this had a weak manifest
 # effect. Here we fit this model again but dropping the a_n contrast for the
-# E effects on sv and t0, instead estimating an intercept and the difference
+# E effects on v and t0, instead estimating an intercept and the difference
 # between the average of accuracy and neutral and speed, a 14 parameter model. 
 E_AVan_s_mat <- matrix(c(1/4,1/4,-1/2),nrow=3)
 dimnames(E_AVan_s_mat) <- list(NULL,c("an-s"))
@@ -211,8 +211,11 @@ tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.
 
 ### Population mean (mu) tests
 
-# Priors all strongly dominated.
+# Priors all well dominated except some rate parameters
 ciPNAS_Bv_sv <- plot_density(sPNAS_Bv_sv,layout=c(3,5),selection="mu",subfilter=2000)
+# On the natural scale it is evident this is because the mismatch (FALSE) rates
+# are least well updated, due to the fairly low error rates (errors give the
+# most information about FALSE rates).
 ciPNAS_Bv_sv_mapped <- plot_density(sPNAS_Bv_sv,layout=c(3,6),
                                         selection="mu",mapped=TRUE)
 # Looking at parameters both with and without mapping
@@ -261,40 +264,56 @@ p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
 # Again recall the map used with 
 get_map(sPNAS_Bv_sv)$v
 
-# v_lMd tests the quality of selective attention, rate match - rate mismatch
-p_test(x=sPNAS_Bv_sv,x_name="v_lMd",subfilter=2000)
-
 # v_Ea-n v_Ea-s indicate that processing rate (the average of matching and 
 # mismatching rates) is least in accuracy, slightly greater in neutral and 
 # the highest in speed.
 p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n",subfilter=2000)
 p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s",subfilter=2000)
 
-# Here we compare neutral of speed on the natural scale, showing that
-# speed has a faster average rate.
+# Here we show that processing is faster in the speed condition.
 p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="average v: speed-neutral",
   x_fun=function(x){mean(x[c("v_speed_TRUE","v_speed_FALSE")]) - 
                     mean(x[c("v_neutral_TRUE","v_neutral_FALSE")])})
 
-# v E effect
-# The pattern of E effects on rates suggests lower rates for speed, perhaps 
-# indicative of reduced selective attention and hence reduced discriminative
-# quality of the evidence being processed. 
+# v_lMd tests the quality of selective attention, rate match - rate mismatch
+p_test(x=sPNAS_Bv_sv,x_name="v_lMd",subfilter=2000)
 
-fun <- function(x)
-  mean(abs(x[c("v_left_accuracy","v_left_neutral","v_right_accuracy",
-               "v_right_neutral")])) - mean(abs(x[c("v_left_speed","v_right_speed")]))
+# v_Ea-n tests if quality neutral - quality accuracy (i.e, 
+# (2.55 - -0.14) - (2.71  - 0.24) = 0.22)
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n:lMd",subfilter=2000)
 
-p_test(x=sPNAS_Bv_sv,mapped=TRUE,digits=3,
-       x_name="v: av(acc/neut)-speed",x_fun=fun)
+# The difference is ~5 times larger for accuracy - speed
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",subfilter=2000)
 
-# Although the effect is (barely) credible, one might also suspect over-fitting.
-# In this case it would be useful to also fit models with selective influence of 
-# E on a and t0 vs. a and v. This is left as an exercise.  
+# The neutral - speed difference is also highly credible, and
+# can be tested in the mapped form
+p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="quality: accuracy-neutral",
+  x_fun=function(x){diff(x[c("v_neutral_FALSE","v_neutral_TRUE")]) - 
+                    diff(x[c("v_speed_FALSE","v_speed_TRUE")])})
+# Or from the sampled parameters (i.e., 1.12 - .22)
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",y=sPNAS_Bv_sv,y_name="v_Ea-n:lMd",
+       subfilter=2000,digits=3)
 
+# These results suggest it may be the threshold (B) effect with only speed
+# differing from the two other conditions. As an exercise you could fit 
+# this slightly simpler form of the Bv_sv model, and even explore adding to 
+# that an effect of t0 on E, perhaps having and E effect with only one degree
+# of freedom. Some guidance on the latter is provided by the Bt0_sv model,
+# although it is probably best to explore different possibilities as the t0 and
+# v effects may interact.
+print(round(plot_density(sPNAS_Bt0_sv,layout=c(3,6),selection="mu",mapped=TRUE),2))
 
+#### Model selection with Bayes factors
 
+print(load("is2.RData"))
+do.call(c,is2_sPNAS_Bv_sv)
+do.call(c,is2_sPNAS_avt0_full)
+do.call(c,is2_sPNAS_avt0_full_nocell)
 
+std_error_IS2 <- std_error_IS2(IS_samples)
+median(IS_samples)
+
+source("models/DDM/DDM/ddmTZD.R")
 design_avt0_full_nocell <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),

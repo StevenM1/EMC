@@ -15,7 +15,9 @@ IS2 <- function(samples, filter = "sample", subfilter = 0, IS_samples = 1000, st
   ###### set up variables #####
   info <- add_info_base(samples)
   idx <- which(samples$samples$stage == filter)
-  if(subfilter != 0) idx <- idx[-c(1:subfilter)]
+  if (length(subfilter)==1) {
+    if(subfilter > 0) idx <- idx[-c(1:subfilter)]
+  } else idx <- idx[subfilter]
   all_pars <- variant_funs$get_all_pars(samples, idx, info)
   muX<-apply(all_pars$X,2,mean)
   varX<-cov(all_pars$X)

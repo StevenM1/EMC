@@ -484,3 +484,41 @@ fix_stuck <- function(samples, bad_subs, best, worst){
   return(samples)
 }
 
+
+run_emc <- function(file_name,nsample=1000, ...) 
+  # Combined auto fitting functions, getting and saving samples to disk.
+  # NB: samples must be first object in file_name
+{
+  oname <- load(file_name)
+
+  if (is.null(attr(get(oname[1]),"burnt")) || is.na(attr(get(oname[1]),"burnt"))) {
+    assign(oname[1],auto_burn(get(oname[1]), ...))
+    save(list=oname,file=file_name)
+  }
+  if (is.null(attr(get(oname[1]),"adapted")) && !is.na(attr(get(oname[1]),"burnt"))) {
+    assign(oname[1],auto_adapt(get(oname[1]), ...))
+    save(list=oname,file=file_name)
+  }
+  if (!is.null(attr(get(oname[1]),"adapted")) && attr(get(oname[1]),"adapted")) {
+    assign(oname[1],auto_sample(get(oname[1]),iter=nsample, ...))
+    save(list=oname,file=file_name)
+  }
+}
+
+# all_par <- c(particles=NA, particle_factor = 50, mix = NULL, 
+# epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,cores_per_chain=1,
+# cores_for_chains=NULL,verbose=TRUE,verbose_run_stage = FALSE)
+# 
+# # step_size = NA (in burn, but = 25 in adapt and 50 sample)
+# 
+# burn_adapt <- c(min_es=NULL)
+# 
+# adapt_sample_par <- c(n_cores_conditional = 1,thin = NULL)
+# 
+# auto_burn_par <- c(ndiscard=100,nstart=300,start_mu = NULL, start_var = NULL,
+# max_gd_trys=100,max_gd=1.2,thorough=TRUE,mapped=FALSE, min_iter=NULL,max_iter=NULL)
+# 
+# auto_adapt_par <- c(max_trys=25, min_unique = 200) 
+# 
+# auto_sample_par <- c(iter=NA) 
+  

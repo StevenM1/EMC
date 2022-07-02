@@ -1,6 +1,15 @@
+require(lme4)
+require(magic)
 require(coda)
-require(mvtnorm)
 require(MCMCpack)
+require(invgamma)
+require(mixtools)
+require(corpcor)
+require(condMVNorm)
+require(parallel)
+require(rtdists)
+require(mvtnorm)
+
 source("emc/objects.R")    # pmwg object manipulation + mcmc creation functions
 source("emc/statistics.R") # chain statistics
 source("emc/plotting.R")   # chain and data plotting
