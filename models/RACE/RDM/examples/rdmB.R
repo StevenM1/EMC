@@ -55,10 +55,10 @@ rdm_Bv <- make_samplers(dat,design_Bv,type="standard",rt_resolution=.02)
 save(rdm_Bv,file="rdmPNAS_Bv.RData")
 
 
-print(load("rdmPNAS_B.RData"))
-print(load("rdmPNAS_Bt0.RData"))
-print(load("rdmPNAS_Bv.RData"))
-print(load("rdmPNAS_Bvt0.RData"))
+print(load("models/RACE/RDM/examples/samples/rdmPNAS_B.RData"))
+print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bt0.RData"))
+print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bv.RData"))
+print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0.RData"))
 
 check_run(rdm_B)
 check_run(rdm_Bt0,subfilter=500)
