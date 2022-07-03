@@ -297,31 +297,3 @@ p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",y=sPNAS_Bv_sv,y_name="v_Ea-n:lMd",
        subfilter=2000,digits=3)
 
 
-#### Model selection with Bayes factors
-
-print(load("is2.RData"))
-do.call(c,is2_sPNAS_Bv_sv)
-do.call(c,is2_sPNAS_avt0_full)
-do.call(c,is2_sPNAS_avt0_full_nocell)
-
-std_error_IS2 <- std_error_IS2(IS_samples)
-median(IS_samples)
-
-source("models/DDM/DDM/ddmTZD.R")
-design_avt0_full_nocell <- make_design(
-  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
-  Rlevels=levels(dat$R),
-  Flist=list(v~S*E,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
-  constants=c(s=log(1),DP=qnorm(0.5)),
-  model=ddmTZD)
-
-samplers <- make_samplers(dat,design_avt0_full_nocell,type="standard")
-save(samplers,file="sPNAS_avt0_full_nocell.RData")
-
-print(load("sPNAS_avt0_full_nocell.RData"))
-# Nicely converged after 500
-check_run(sPNAS_avt0_full_nocell,subfilter=500)
-
-# Little difference between two parameterizations and full length Bvsv model 
-compare_IC(list(avt0=sPNAS_avt0_full,avt0_nocell=sPNAS_avt0_full_nocell,Bvsv=sPNAS_Bv_sv),
-           subfilter=list(500,500,2000))
