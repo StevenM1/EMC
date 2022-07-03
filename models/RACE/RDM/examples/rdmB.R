@@ -54,6 +54,30 @@ design_Bv<- make_design(
 rdm_Bv <- make_samplers(dat,design_Bv,type="standard",rt_resolution=.02)
 save(rdm_Bv,file="rdmPNAS_Bv.RData")
 
+# All of these models are run in  a single file, run_rdm.R using the run_emc
+# function. This function is given the name of the file containing the samplers
+# object and any arguments to its constituent functions (auto_burn, auto_adapt
+# and auto_sample). For example the first model was fit with 8 cores per chain
+# and so 24 cores in total given the default of 3 chains. 
+#
+# run_emc("rdmPNAS_B.RData",cores_per_chain=8)
+#
+# If any stage failsrun_check stops, saving the progress so far. The only 
+# argument unique to this function is nsample, which determines the number of 
+# iterations performed if the sample stage is reached (by default 1000).
+#
+# After the convergence checking reported below extra samples were obtained for
+# some models that converged slowly, so all had 1000 converged samples. This was
+# done by adding another run_emc call with nsamples set appropriately (run_emc
+# recognizes that burn and adapt stages are complete and so just adds on the
+# extra samples at the end). 
+#
+# Finally for the selected model extra samples were added to obtain 5000 
+# iterations, so posterior inference was reliable, and posterior predictives 
+# were obtained. (NB: if the file is run several times some lines must be 
+# commented out or unwanted sample stage iteration will be added)
+
+#### Check convergence ----
 
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_B.RData"))
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bt0.RData"))
@@ -64,7 +88,6 @@ check_run(rdm_B)
 check_run(rdm_Bt0,subfilter=500)
 check_run(rdm_Bv,subfilter=1500)
 check_run(rdm_Bvt0,subfilter=1500)
-
 
 #### Model selection ----
 
