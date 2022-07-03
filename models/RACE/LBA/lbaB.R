@@ -1,4 +1,4 @@
-# lba_B parameterization with sv=1 scaling
+# lba_B parameterization 
 
 source("models/RACE/LBA/lba.R")
 
