@@ -182,7 +182,7 @@ table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]})))
 # both models fit well but the small overestimation of error RT in the speed
 # condition evident in the DDM is no longer evident.
 source("models/DDM/DDM/ddmTZD.R")
-compare_IC(list(avt0=sPNAS_avt0_full,Bvsv=sPNAS_Bv_sv),subfilter=c(500,2000))
+compare_IC(list(avt0=sPNAS_avt0_full,Bvsv=sPNAS_Bv_sv),subfilter=list(500,2000))
 
 # For the remaining analysis add 4000 iterations to Bvsv model
 
@@ -212,7 +212,7 @@ tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.
 ### Population mean (mu) tests
 
 # Priors all well dominated except some rate parameters
-ciPNAS_Bv_sv <- plot_density(sPNAS_Bv_sv,layout=c(3,5),selection="mu",subfilter=2000)
+ciPNAS_Bv_sv <- plot_density(sPNAS_Bv_sv,layout=c(3,6),selection="mu",subfilter=2000)
 # On the natural scale it is evident this is because the mismatch (FALSE) rates
 # are least well updated, due to the fairly low error rates (errors give the
 # most information about FALSE rates).
@@ -234,18 +234,21 @@ round(ciPNAS_Bv_sv_mapped,2)
 get_map(sPNAS_Bv_sv)$B
 
 # B_lRd tests threshold right - threshold left, although not quite credible
-# it indicates slighly higher right thresholds (i.e., a bias to respond left)
+# it indicates slightly higher right thresholds (i.e., a bias to respond left)
 p_test(x=sPNAS_Bv_sv,x_name="B_lRd",subfilter=2000)
 
-# v_Ea-n v_Ea-s test processing speed (i.e., rate averaged
-# over match and mismatch, here on the log scale) of accuracy - neutral and
-# accuracy - speed. Accuracy has a lower processing speed in both cases
-p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n",subfilter=2000)
-p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s",subfilter=2000)
+# B_Ea-n and B_Ea-s measure differences in response caution (i.e., thresholds
+# averaged over left and right accumulators), accuracy-neutral and accuracy-speed 
+# respectively. Caution for accuracy is clearly higher than speed, but not 
+# credibly greater than neutral.
+p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
+p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
 #
-# Here we construct a test (on the natural scale) showing the processing speed
+# Here we construct a test showing the processing speed
 # advantage is greater for speed than neutral
-
+p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="average B: neutral-speed",
+  x_fun=function(x){mean(x[c("B_left_neutral","B_right_neutral")]) - 
+                    mean(x[c("B_left_speed","B_right_speed")])})
 
 # No evidence of a difference between accuracy and neutral thresholds
 p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
@@ -253,11 +256,10 @@ p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
 # But thresholds clearly higher for speed (by about 0.2 on the natural scale)
 p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
 
-# The remaining terms test interactions with bias (i.e., lR), neither of which
-# are credible. 
-#
-# Overall this suggests a simpler additive model threshold model, B~E+lR, and
-# possibly that the single average(a,n) vs. speed contrast may be sufficient.
+# The remaining terms test interactions with bias (i.e., lR), with evidence of
+# a small but just credibly stronger bias to respond left (i.e., a lower threshold
+# for the left accumulator) for speed than accuracy.
+p_test(x=sPNAS_Bv_sv,x_name="B_lRd:Ea-s",subfilter=1500,digits=2)
 
 ### v effects
 
@@ -294,14 +296,6 @@ p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="quality: accuracy-neutral",
 p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",y=sPNAS_Bv_sv,y_name="v_Ea-n:lMd",
        subfilter=2000,digits=3)
 
-# These results suggest it may be the threshold (B) effect with only speed
-# differing from the two other conditions. As an exercise you could fit 
-# this slightly simpler form of the Bv_sv model, and even explore adding to 
-# that an effect of t0 on E, perhaps having and E effect with only one degree
-# of freedom. Some guidance on the latter is provided by the Bt0_sv model,
-# although it is probably best to explore different possibilities as the t0 and
-# v effects may interact.
-print(round(plot_density(sPNAS_Bt0_sv,layout=c(3,6),selection="mu",mapped=TRUE),2))
 
 #### Model selection with Bayes factors
 
