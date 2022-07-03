@@ -1,6 +1,4 @@
 rm(list=ls())
-library(mvtnorm)
-library(coda)
 source("emc/emc.R")
 source("models/RACE/LBA/lbaB.R")
 
@@ -17,6 +15,9 @@ Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
 dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 
 
+# Here we fit a series of models
+
+# Only B affected by E
 design_B <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
@@ -24,285 +25,303 @@ design_B <- make_design(
   Flist=list(v~lM,sv~1,B~E,A~1,t0~1),
   constants=c(sv=log(1)),
   model=lbaB)
+# samplers <- make_samplers(dat,design_B,type="standard",rt_resolution=.02)
+# save(samplers,file="sPNAS_B.RData")
 
+# B, v and t0 affected by E
 design_Bvt0 <- make_design(
   Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
-  Flist=list(v~lM,sv~1,B~lR*E,A~1,t0~E),
+  Flist=list(v~E*lM,sv~1,B~lR*E,A~1,t0~E),
   constants=c(sv=log(1)),
   model=lbaB)
+# samplers <- make_samplers(dat,design_Bvt0,type="standard",rt_resolution=.02)
+# save(samplers,file="sPNAS_Bvt0.RData")
 
-# Design has a p_vector attribute that can be filled in with values to simulate
-# data, and which itself has a "map" attribute that defines the nature of each
-# parameter
-attr(design,"p_vector")
-#         v     v_lMd         B     B_lRd     B_Eas     B_Ens B_lRd:Eas B_lRd:Ens         A        t0 
-#         0         0         0         0         0         0         0         0         0         0 
-# attr(,"map")
-# attr(,"map")$v
-#   v v_lMd
-# 1 1   0.5
-# 3 1  -0.5
-# 
-# attr(,"map")$sv
-# [1] 1
-# 
-# attr(,"map")$B
-#   B B_lRd B_Eas B_Ens B_lRd:Eas B_lRd:Ens
-# 1 1  -0.5   0.5   0.0     -0.25      0.00
-# 3 1   0.5   0.5   0.0      0.25      0.00
-# 2 1  -0.5   0.0   0.5      0.00     -0.25
-# 4 1   0.5   0.0   0.5      0.00      0.25
-# 
-# attr(,"map")$A
-# [1] 1
-# 
-# attr(,"map")$t0
-# [1] 1
+# Up to now we set sv=1 to establish a scale. Now we fit a series of models 
+# where sv differs between matching and mismatching accumulators, with its 
+# intercept fixed at 1 to establish scaling. Typically allowing this difference
+# greatly improves fit and results in sv_TRUE (i.e., match) > sv_FALSE.
 
-# Full (variance-covariance) fits ----
+# First, allowing E to affect B and t0
+design_Bt0_sv <- make_design(
+  Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~lM,sv~lM,B~lR*E,A~1,t0~E),
+  constants=c(sv=log(1)),
+  model=lbaB)
+# samplers <- make_samplers(dat,design_Bt0_sv,type="standard",rt_resolution=.02)
+# save(samplers,file="sPNAS_Bt0_sv.RData")
 
-# Combine data and design, define type of PMWG sampler and rt_resolution
-# By default three chains are created (n_chains). Can also define priors_list
-# (if none supplied defaults are used) and extras required by certian types
-# (par_groups, n_factors, contraintMat, covariates)
-samplers <- make_samplers(dat,design,type="standard",rt_resolution=.02)
-# save(samplers,file="testStandard.RData")
+# Now E affects B and v
+design_Bv_sv <- make_design(
+  Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~E*lM,sv~lM,B~lR*E,A~1,t0~1),
+  constants=c(sv=log(1)),
+  model=lbaB)
+# samplers <- make_samplers(dat,design_Bv_sv,type="standard",rt_resolution=.02)
+# save(samplers,file="sPNAS_Bv_sv.RData")
 
+# Now all three
+design_Bvt0_sv <- make_design(
+  Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~E*lM,sv~lM,B~lR*E,A~1,t0~E),
+  constants=c(sv=log(1)),
+  model=lbaB)
+# samplers <- make_samplers(dat,design_Bvt0_sv,type="standard",rt_resolution=.02)
+# save(samplers,file="sPNAS_Bvt0_sv.RData")
 
-print(load("testStandard.RData"))
+# The last model fails to converge (or rather some parameter were so strongly 
+# autocorrelated it would have taken an impractically large run to produce 
+# anything useful). Looking at estimates, most issues were around the a_n 
+# contrast, which might not be surprising given this had a weak manifest
+# effect. Here we fit this model again but dropping the a_n contrast for the
+# E effects on v and t0, instead estimating an intercept and the difference
+# between the average of accuracy and neutral and speed, a 14 parameter model. 
+E_AVan_s_mat <- matrix(c(1/4,1/4,-1/2),nrow=3)
+dimnames(E_AVan_s_mat) <- list(NULL,c("an-s"))
 
+design_Bvt0_sv_NOa_n <- make_design(
+  Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(v=list(E=E_AVan_s_mat,lM=ADmat),sv=list(lM=ADmat),
+             B=list(E=Emat,lR=ADmat),t0=list(E=E_AVan_s_mat)),
+  Flist=list(v~E*lM,sv~lM,B~lR*E,A~1,t0~E),
+  constants=c(sv=log(1)),
+  model=lbaB)
+# samplers <- make_samplers(dat,design_Bvt0_sv_NOa_n,type="standard",rt_resolution=.02)
+# save(samplers,file="sPNAS_Bvt0_sv_NOa_n.RData")
 
-# How many iterations
-chain_n(samples)
-#      burn adapt sample
-# [1,] 1471    99    500
-# [2,] 1471    91    500
-# [3,] 1471   101    500
-     
-# Lets look at some chains, default do no thinning (thin argument) and 
-# dont remove early samples (subfilter argument)
+# Fits then run in batch mode. For the sv=1 models we used the same sort of 
+# script as for the DDM. For the others we used a slightly smarter script that
+# only fits the next stage if the previous one worked, e.g., for the Bvsv model:
+#
+# Here it tests if burn in had been done previously 
+#
+# if (is.null(attr(samplers,"burnt")) || is.na(attr(samplers,"burnt"))) {
+#   sPNAS_Bv_sv <- auto_burn(samplers,cores_per_chain=4)
+#   save(sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
+# }
+#
+# Here it checks if adaptation was already done
+#
+# if (is.null(attr(sPNAS_Bv_sv,"adapted")) && !is.na(attr(sPNAS_Bv_sv,"burnt"))) {
+#   sPNAS_Bv_sv <- auto_adapt(sPNAS_Bv_sv,cores_per_chain=4)
+#   save(sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
+# }
+#
+# Here it only moves on to sampling of adaptation was successful
+#
+# if (!is.null(attr(sPNAS_Bv_sv,"adapted")) && attr(sPNAS_Bv_sv,"adapted")) {
+#   sPNAS_Bv_sv <- auto_sample(sPNAS_Bv_sv,iter=2000,cores_per_chain=4)
+#   save(sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
+# }
+#
+# This was run later after choosing this as the best model and knowing that
+# the first 2000 iterations of the sample run had to be discareded, giving
+# 5000*3 = 15000 good samples to work with.
+#
+# sPNAS_Bv_sv <- auto_sample(sPNAS_Bv_sv,iter=4000,cores_per_chain=10)
+# save(sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
+# ppPNAS_Bv_sv <- post_predict(sPNAS_Bv_sv,n_cores=19,subfilter=2000)
+# save(ppPNAS_Bv_sv,sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
 
-# Pick which you want to look at, below I first go through burn
-filter <- c("burn","adapt","sample")[1]
-# filter <- c("burn","adapt","sample")[3]
-
-# As advertised auto_burn works, this function print multivariate values
-gd <- gd_pmwg(as_mcmc.list(samples,selection="alpha",filter=filter))
-#   12    7   11    2    8    4    3   17   15    9    6   13   19    5   18    1   10   16   14 
-# 1.01 1.01 1.01 1.02 1.02 1.02 1.02 1.02 1.03 1.03 1.03 1.03 1.04 1.04 1.05 1.05 1.06 1.08 1.10 
-
-# Here it is for sample, with pdist_update_n=50 (the default in run_stages), maybe with more samples
-# this would work out ... but pretty clear the adapt stage pulls chains apart so there will be
-# time to settle back in and not clear what the gain is over just burn in this case ... will have
-# to explore different cases and how this goes with fewer particles, the advertised advantage
-# of the final stage ...
-#   11    7    6    5   10    2    9    3   12   18    8   17   15    1   16    4   19   14   13 
-# 1.06 1.07 1.07 1.08 1.09 1.11 1.13 1.14 1.14 1.15 1.16 1.18 1.19 1.20 1.20 1.23 1.27 1.38 1.56 
-
-# Getting back to burn ...
-
-# Print the save for a more detailed summary
-print(round(gd,2))
-#       v v_lMd    B B_lRd B_Eas B_Ens B_lRd:Eas B_lRd:Ens    A   t0 mpsrf
-# 1  1.01  1.01 1.05  1.01  1.02  1.00      1.00      1.00 1.00 1.07  1.05
-# 2  1.01  1.00 1.01  1.00  1.00  1.00      1.00      1.00 1.01 1.00  1.02
-# 3  1.00  1.00 1.00  1.01  1.00  1.01      1.02      1.01 1.00 1.01  1.02
-# 4  1.01  1.01 1.03  1.01  1.02  1.03      1.01      1.01 1.00 1.02  1.02
-# 5  1.02  1.02 1.10  1.00  1.04  1.04      1.01      1.02 1.01 1.03  1.04
-# 6  1.01  1.00 1.05  1.00  1.01  1.03      1.01      1.01 1.02 1.04  1.03
-# 7  1.01  1.00 1.05  1.00  1.02  1.03      1.01      1.01 1.00 1.01  1.01
-# 8  1.00  1.01 1.02  1.00  1.01  1.01      1.00      1.01 1.00 1.03  1.02
-# 9  1.00  1.00 1.01  1.01  1.01  1.00      1.02      1.02 1.01 1.00  1.03
-# 10 1.02  1.01 1.05  1.02  1.02  1.02      1.01      1.03 1.02 1.06  1.06
-# 11 1.01  1.00 1.01  1.00  1.00  1.00      1.01      1.01 1.01 1.01  1.01
-# 12 1.00  1.00 1.00  1.00  1.00  1.00      1.00      1.02 1.00 1.00  1.01
-# 13 1.01  1.01 1.02  1.01  1.02  1.02      1.01      1.02 1.00 1.01  1.03
-# 14 1.00  1.02 1.07  1.03  1.00  1.01      1.01      1.00 1.05 1.13  1.10
-# 15 1.00  1.00 1.02  1.00  1.01  1.01      1.01      1.01 1.00 1.03  1.03
-# 16 1.00  1.01 1.05  1.02  1.00  1.00      1.01      1.02 1.06 1.07  1.08
-# 17 1.01  1.01 1.05  1.01  1.04  1.04      1.02      1.01 1.00 1.01  1.02
-# 18 1.01  1.00 1.02  1.00  1.02  1.02      1.01      1.03 1.00 1.01  1.05
-# 19 1.00  1.01 1.01  1.01  1.01  1.01      1.00      1.03 1.00 1.01  1.04
-
-# Likelihoods look good
-plotChains(as_mcmc.list(samples,selection="LL",filter=filter),layout=c(2,5))
-# Some evidence in hypers that not quite there at start
-plotChains(as_mcmc.list(samples,selection="mu",filter=filter),layout=c(2,5))
-plotChains(as_mcmc.list(samples,selection="variance",filter=filter),layout=c(2,5))
-plotChains(as_mcmc.list(samples,selection="covariance",filter=filter),layout=c(3,5))
-# For that an neatness you might remove the first 71 as follows then re-run the above
-samples <- chain_shorten(samples,71)
-# Can see some evidence of one chain wandering off at the end, with really clear
-# case for s4 alpha
-plotChains(as_mcmc.list(samples,selection="alpha",filter=filter),layout=c(2,5))
-# Lets clean that up too and keep just 1000 burn
-samples <- chain_shorten(samples,1001:1400)
-
-# Sometimes shortening like this will hurt R hat, lets check (have not got around
-# to implementing this for hyper yet).
-gd <- gd_pmwg(as_mcmc.list(samples,selection="alpha",filter=filter))
-#   12    2   11    3    7    8   13    4    6   17    5   15    9   18   19   10    1   16   14 
-# 1.01 1.02 1.02 1.02 1.02 1.02 1.03 1.03 1.04 1.05 1.05 1.05 1.06 1.06 1.06 1.08 1.10 1.11 1.19 
-
-# Multivariate can often be sensitive like this, detailed view attributes it to
-# s14 t0 wandering off a bit, it comes back so I think this is OK for now
-round(gd,2)
-#       v v_lMd    B B_lRd B_Eas B_Ens B_lRd:Eas B_lRd:Ens    A   t0 mpsrf
-# 1  1.02  1.01 1.11  1.02  1.04  1.02      1.02      1.01 1.01 1.14  1.10
-# 2  1.01  1.00 1.00  1.00  1.00  1.01      1.00      1.01 1.01 1.01  1.02
-# 3  1.01  1.00 1.01  1.01  1.00  1.02      1.01      1.01 1.00 1.02  1.02
-# 4  1.01  1.01 1.02  1.01  1.02  1.02      1.01      1.01 1.01 1.02  1.03
-# 5  1.01  1.01 1.02  1.00  1.00  1.02      1.02      1.02 1.01 1.04  1.05
-# 6  1.01  1.00 1.03  1.00  1.02  1.00      1.00      1.01 1.01 1.05  1.04
-# 7  1.00  1.00 1.01  1.00  1.01  1.00      1.02      1.01 1.00 1.01  1.02
-# 8  1.00  1.00 1.02  1.00  1.00  1.00      1.01      1.01 1.00 1.03  1.02
-# 9  1.01  1.01 1.02  1.02  1.02  1.01      1.02      1.04 1.03 1.01  1.06
-# 10 1.02  1.01 1.06  1.02  1.03  1.02      1.02      1.05 1.02 1.08  1.08
-# 11 1.01  1.00 1.01  1.00  1.01  1.01      1.00      1.01 1.01 1.02  1.02
-# 12 1.00  1.00 1.00  1.00  1.00  1.00      1.00      1.03 1.00 1.00  1.01
-# 13 1.01  1.02 1.02  1.00  1.02  1.03      1.02      1.01 1.01 1.01  1.03
-# 14 1.02  1.02 1.17  1.07  1.01  1.04      1.01      1.00 1.06 1.26  1.19
-# 15 1.00  1.00 1.02  1.00  1.01  1.01      1.04      1.01 1.00 1.04  1.05
-# 16 1.00  1.02 1.07  1.02  1.02  1.00      1.00      1.02 1.10 1.09  1.11
-# 17 1.01  1.02 1.02  1.02  1.02  1.02      1.04      1.01 1.01 1.02  1.05
-# 18 1.01  1.01 1.04  1.01  1.04  1.06      1.01      1.03 1.00 1.03  1.06
-# 19 1.01  1.01 1.03  1.01  1.02  1.03      1.00      1.04 1.01 1.02  1.06
+#### Load model results ----
+print(load("models/RACE/LBA/examples/samples/sPNAS_B.RData")) 
+print(load("models/RACE/LBA/examples/samples/sPNAS_Bvt0.RData"))
+print(load("models/RACE/LBA/examples/samples/sPNAS_Bt0_sv.RData"))
+print(load("models/RACE/LBA/examples/samples/sPNAS_Bv_sv.RData"))
+print(load("models/RACE/LBA/examples/samples/sPNAS_Bvt0_sv.RData")) # Failed model, forced to adapt and sample 
+print(load("models/RACE/LBA/examples/samples/sPNAS_Bvt0_sv_NOa_n.RData"))
 
 
-# Note you could also look at acf on a chain by chain basis, for example for chain
-# one 
-plotChains(as_mcmc.list(samples,selection="alpha",filter=filter),
-           plot_acf=TRUE,acf_chain=1,layout=c(2,5))
-# Generally very good except s13 is a little high in places. Hypers can also be
-# looked at, mu is great, variance and covariance a bit higher in places but not
-# so bad. Leave that as an exercise
+#### Check convergence ----
 
-# Effective samples of, but probably would want more for posterior CIs
-round(es_pmwg(as_mcmc.list(samples,selection="alpha",filter=filter)))
-# Definitely need more for B interactions!
-round(es_pmwg(as_mcmc.list(samples,selection="mu",filter=filter)))
-round(es_pmwg(as_mcmc.list(samples,selection="variance",filter=filter)))
-round(es_pmwg(as_mcmc.list(samples,selection="covariance",filter=filter)))
+# Aim to get 1000 good samples as a basis for model comparison (but note this
+# is not enough for inference on some parameters)
+check_run(sPNAS_B)
+# Slow to converge, but there by 4500
+check_run(sPNAS_Bvt0,subfilter = 4500,layout=c(3,3))
+# Low efficiency for t0_Ea-n, t0, and B_lRd:Ea-n
+check_run(sPNAS_Bt0_sv,subfilter=2000,layout=c(3,5))
+# B_lRd:Ea-n, B_Ea-n, v_Ea-n, v_Ea-n:lMd all inefficient. Some slow-wave
+# oscillations, definitely need longer series if using the parameter estimates
+# (even though likely stationary after 2000)
+check_run(sPNAS_Bv_sv,subfilter=2000,layout=c(3,5))
+# After extensive burn (although not achieving Rhat < 1.2), adaptation was quick 
+# but chains were very poor. Decided not to pursue further.
+check_run(sPNAS_Bvt0_sv,subfilter=1000)
+# Burned in quickly and converged well after 1000, B_lRd:Ea-n and especially 
+# t0_Ean-s quite inefficient
+check_run(sPNAS_Bvt0_sv_NOa_n,subfilter=1000,layout=c(3,5)) 
+
+#### Model selection ----
+
+# Comparing all 5 models, clearly need sv (NB: use only 1000 from Bvsv after
+# convergence, more added for parameter inference as this is the winning model)
+compare_IC(list(B=sPNAS_B,Bvt0=sPNAS_Bvt0,Bt0sv=sPNAS_Bt0_sv,Bvsv=sPNAS_Bv_sv,
+  Bvt0sv=sPNAS_Bvt0_sv_NOa_n),subfilter=list(0,4500,2000,2001:3000,1000))
+ICs <- compare_ICs(list(B=sPNAS_B, Bvt0=sPNAS_Bvt0, Bt0sv=sPNAS_Bt0_sv, 
+  Bvsv=sPNAS_Bv_sv, Bvt0sv=sPNAS_Bvt0_sv_NOa_n),subfilter=list(0,4500,2000,2001:3000,1000))
+#
+# The latter function returns a list of matrices for each participant, so can use
+# that to count winners as follows. 
+table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$DIC)]})))
+table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]})))
+# Mostly Bvsv winning, second Bvt0sv with no Ea_n, and one clear Bt0sv. Could
+# try the simpler E contrast with the Bvsv model, but leave that as an exercise.
+
+# Comparing with the best DDM (16 parameter) model to the best (15 parameter)
+# LBA model the latter has a slight edge. This is born out in testing fit,
+# both models fit well but the small overestimation of error RT in the speed
+# condition evident in the DDM is no longer evident.
+source("models/DDM/DDM/ddmTZD.R")
+compare_IC(list(avt0=sPNAS_avt0_full,Bvsv=sPNAS_Bv_sv),subfilter=list(500,2000))
+
+# For the remaining analysis add 4000 iterations to Bvsv model
+
+####  Fit of winning (Bvsv) model ----
+
+# post predict did not use first 2000, so inference based on 5000*3 samples
+plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),lpos="right",xlim=c(.25,1.5))
+plot_fits(dat,ppPNAS_Bv_sv,layout=c(2,3),lpos="right")
+
+# No evidence of any misfit
+pc <- function(d) 100*mean(d$S==d$R)
+plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),
+         stat=pc,stat_name="Accuracy (%)",xlim=c(70,95))
+tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){mean(d$rt)},stat_name="Mean RT (s)",xlim=c(0.375,.625))
+tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.275,.4),
+         stat=function(d){quantile(d$rt,.1)},stat_name="10th Percentile (s)")
+tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.525,.975),
+         stat=function(d){quantile(d$rt,.9)},stat_name="90th Percentile (s)")
+tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),
+         stat=function(d){sd(d$rt)},stat_name="SD (s)",xlim=c(0.1,.355))
+tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
+         stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
+
+#### Posterior parameter inference ----
+
+### Population mean (mu) tests
+
+# Priors all well dominated except some rate parameters
+ciPNAS_Bv_sv <- plot_density(sPNAS_Bv_sv,layout=c(3,6),selection="mu",subfilter=2000)
+# On the natural scale it is evident this is because the mismatch (FALSE) rates
+# are least well updated, due to the fairly low error rates (errors give the
+# most information about FALSE rates).
+ciPNAS_Bv_sv_mapped <- plot_density(sPNAS_Bv_sv,layout=c(3,6),
+                                        selection="mu",mapped=TRUE)
+# Looking at parameters both with and without mapping
+round(ciPNAS_Bv_sv,2)
+round(ciPNAS_Bv_sv_mapped,2)
+
+# For simpler estimates:
+# 1) As is usually found with the LBA sv_true > sv_false 
+# 2) t0 is quite small (100ms)
+# 3) In this case start point noise (.29) is small relative to B (which has 
+#    intercept exp(-.16) = 0.85, so about 1/4 of b).
+
+### B effects
+
+# Recall the map used with 
+get_map(sPNAS_Bv_sv)$B
+
+# B_lRd tests threshold right - threshold left, although not quite credible
+# it indicates slightly higher right thresholds (i.e., a bias to respond left)
+p_test(x=sPNAS_Bv_sv,x_name="B_lRd",subfilter=2000)
+
+# B_Ea-n and B_Ea-s measure differences in response caution (i.e., thresholds
+# averaged over left and right accumulators), accuracy-neutral and accuracy-speed 
+# respectively. Caution for accuracy is clearly higher than speed, but not 
+# credibly greater than neutral.
+p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
+p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
+#
+# Here we construct a test showing the processing speed
+# advantage is greater for speed than neutral
+p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="average B: neutral-speed",
+  x_fun=function(x){mean(x[c("B_left_neutral","B_right_neutral")]) - 
+                    mean(x[c("B_left_speed","B_right_speed")])})
+
+# No evidence of a difference between accuracy and neutral thresholds
+p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
+
+# But thresholds clearly higher for speed (by about 0.2 on the natural scale)
+p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
+
+# The remaining terms test interactions with bias (i.e., lR), with evidence of
+# a small but just credibly stronger bias to respond left (i.e., a lower threshold
+# for the left accumulator) for speed than accuracy.
+p_test(x=sPNAS_Bv_sv,x_name="B_lRd:Ea-s",subfilter=1500,digits=2)
+
+### v effects
+
+# Again recall the map used with 
+get_map(sPNAS_Bv_sv)$v
+
+# v_Ea-n v_Ea-s indicate that processing rate (the average of matching and 
+# mismatching rates) is least in accuracy, slightly greater in neutral and 
+# the highest in speed.
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n",subfilter=2000)
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s",subfilter=2000)
+
+# Here we show that processing is faster in the speed condition.
+p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="average v: speed-neutral",
+  x_fun=function(x){mean(x[c("v_speed_TRUE","v_speed_FALSE")]) - 
+                    mean(x[c("v_neutral_TRUE","v_neutral_FALSE")])})
+
+# v_lMd tests the quality of selective attention, rate match - rate mismatch
+p_test(x=sPNAS_Bv_sv,x_name="v_lMd",subfilter=2000)
+
+# v_Ea-n tests if quality neutral - quality accuracy (i.e, 
+# (2.55 - -0.14) - (2.71  - 0.24) = 0.22)
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n:lMd",subfilter=2000)
+
+# The difference is ~5 times larger for accuracy - speed
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",subfilter=2000)
+
+# The neutral - speed difference is also highly credible, and
+# can be tested in the mapped form
+p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="quality: accuracy-neutral",
+  x_fun=function(x){diff(x[c("v_neutral_FALSE","v_neutral_TRUE")]) - 
+                    diff(x[c("v_speed_FALSE","v_speed_TRUE")])})
+# Or from the sampled parameters (i.e., 1.12 - .22)
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",y=sPNAS_Bv_sv,y_name="v_Ea-n:lMd",
+       subfilter=2000,digits=3)
 
 
-# But does it fit? Niek could you take a look at the "hyper" bit of this
-# function and give me some advice on how to simulate subject paraemters from
-# the hyper?
-pp <- post_predict(samples,filter="burn")
-# Here is the average over subjects, thick lines and black points are data
-# thin lines and grey points (small = 100 random posterior parameters,
-# large = their average). Points are q_points = .1, .3, .5, .7, .9 quantiles 
-plot_fit(dat,pp,factors=c("E","S"),layout=c(2,3))
-# Messier for participants, missing line when less than length(q_points) data  
-plot_fit(dat,pp,layout=c(2,3))
-# Looks like the fitting is working but the model is a bit too simple.
+#### Model selection with Bayes factors
 
-# Do recovery for data stimulated from posterior means
-new_dat <- post_predict(samples,n_post=1,use_par="mean")
-# An attribute keeps the pars used to create
-round(attr(new_dat,"pars"),2)
+print(load("is2.RData"))
+do.call(c,is2_sPNAS_Bv_sv)
+do.call(c,is2_sPNAS_avt0_full)
+do.call(c,is2_sPNAS_avt0_full_nocell)
 
-# can we recover these?
-samplers <- make_samplers(new_dat,design,type="standard",rt_resolution=.02)
-# save(samplers,file="testRecovery.RData")
+std_error_IS2 <- std_error_IS2(IS_samples)
+median(IS_samples)
 
-print(load("testRecovery.RData"))
+source("models/DDM/DDM/ddmTZD.R")
+design_avt0_full_nocell <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Flist=list(v~S*E,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
 
-# After some checking of samples as above all looks good without trimming
-pars <- attributes(attr(samples,"data_list")[[1]])$pars
-tabs <- plotDensity(as_mcmc.list(samples,selection="alpha",filter="burn"),
-                    layout=c(2,5),pars=pars)
-# Some shrinkage but not bad
-plotAlphaRecovery(tabs,layout=c(2,5))
+samplers <- make_samplers(dat,design_avt0_full_nocell,type="standard")
+save(samplers,file="sPNAS_avt0_full_nocell.RData")
 
+print(load("sPNAS_avt0_full_nocell.RData"))
+# Nicely converged after 500
+check_run(sPNAS_avt0_full_nocell,subfilter=500)
 
-
-# Single -----------------------------------------------------------
-
-samplers <- make_samplers(dat,design,type="single",rt_resolution=.02)
-# save(samplers,file="testSingle.RData")
-
-
-print(load("testSingle.RData"))
-# kd6t not quite there after 100 trys
-gd <- gd_pmwg(as_mcmc.list(samples,selection="alpha",filter=filter))
-# rt5t bl1t ku4t ta5t rmbt kmat scat as1t na1t kh6t zk1t vf1t rt3t hsgt bd6t kd9t hsft rt2t kd6t 
-# 1.00 1.01 1.01 1.02 1.02 1.02 1.02 1.02 1.03 1.03 1.03 1.03 1.05 1.05 1.05 1.06 1.08 1.08 1.21 
-print(round(gd,2))
-plotChains(as_mcmc.list(samples,selection="LL",filter=filter),layout=c(2,5))
-plotChains(as_mcmc.list(samples,selection="alpha",filter=filter),layout=c(2,5))
-
-pp <- post_predict(samples,filter="burn")
-plot_fit(dat,pp,factors=c("E","S"),layout=c(2,3))
-plot_fit(dat,pp,layout=c(2,3))
-
-# Do recovery for data stimulated from posterior means
-new_dat <- post_predict(samples,n_post=1,use_par="mean")
-round(attr(new_dat,"pars"),2)
-
-# can we recover these?
-samplers <- make_samplers(new_dat,design,type="single",rt_resolution=.02)
-# save(samplers,file="testRecoverySingle.RData")
-
-print(load("testRecoverySingle.RData"))
-
-# After some checking of samples as above all looks good without trimming
-pars <- attributes(attr(samples,"data_list")[[1]])$pars
-tabs <- plotDensity(as_mcmc.list(samples,selection="alpha",filter="burn"),
-                    layout=c(2,5),pars=pars)
-# Some shrinkage but not bad
-plotAlphaRecovery(tabs,layout=c(2,5))
-
-
-##########################################  UP TO HERE 
-
-# Factors different constraint --------------------------------------------
-# With the factor group level, you can also set different constraints on the loadings matrix
-# E.g. this one fixes the diagonals (which will be 1s in estimation), whereas in the default they're freely estimated.
-n_factors <- 3
-constraintMat <- matrix(1, nrow = length(p_vector), ncol = n_factors)
-constraintMat[upper.tri(constraintMat, diag = T)] <- 0 
-constraintMat
-
-sampler <- pmwgs(
-  dadm = dadm,
-  n_factors = n_factors,
-  constraintMat = constraintMat
-)
-
-samples <- mclapply(list(sampler,sampler, sampler),run_stages,
-                    iter=c(200,NA,NA),cores_per_chain=10,cores_for_chains=3,p_accept = .7)
-samples <- mclapply(samples,run_stages,
-                    iter=c(NA,200,NA),cores_per_chain=10,cores_for_chains=3,p_accept = .7)
-report_adapt(samples)
-samples <- mclapply(samples,run_stages,
-                    iter=c(NA,NA,500),cores_per_chain=10,cores_for_chains=3,p_accept = .7)
-save(samples, file = "testFactorsConstrained.RData")
-
-load("testFactorsConstrained.RData")
-
-# Factor regression -------------------------------------------------------
-source("pmwg/sampling_factorRegression.R")
-
-# Add a covariate like age at the group level! Here I could have also set different constraint but I use the default
-# I just used a random covariate
-n_factors <- 2
-
-sampler <- pmwgs(
-  dadm = dadm,
-  n_factors = n_factors,
-  covariates = matrix(runif(ns), ncol = 1)
-)
-
-samples <- mclapply(list(sampler,sampler, sampler),run_stages,
-                    iter=c(200,NA,NA),cores_per_chain=10,cores_for_chains=3, p_accept = .7)
-samples <- mclapply(samples,run_stages,
-                    iter=c(NA,200,NA),cores_per_chain=10,cores_for_chains=3,p_accept = .7)
-report_adapt(samples)
-samples <- mclapply(samples,run_stages,
-                    iter=c(NA,NA,500),cores_per_chain=10,cores_for_chains=3,p_accept = .7)
-save(samples, file = "testFactorRegression.RData")
-
-load("testFactorRegression.RData")
+# Little difference between two parameterizations and full length Bvsv model 
+compare_IC(list(avt0=sPNAS_avt0_full,avt0_nocell=sPNAS_avt0_full_nocell,Bvsv=sPNAS_Bv_sv),
+           subfilter=list(500,500,2000))
