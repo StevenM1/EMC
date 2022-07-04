@@ -118,10 +118,10 @@ merge_samples <- function(samples){
 
 #### pmwg object list functions ----
 
-chain_thin <- function(samplers,thin=5) 
-  # thins a set of chains  
+thin_chains <- function(samplers,thin=5)
+  # thins a set of chains
 {
-  data_list <- attr(samplers,"data_list")  
+  data_list <- attr(samplers,"data_list")
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
   samplers <- lapply(samplers,thin_pmwg,thin=thin)
@@ -131,13 +131,13 @@ chain_thin <- function(samplers,thin=5)
   samplers
 }
 
-chain_shorten <- function(samplers,n) 
+shorten_chains <- function(samplers,n,filter="sample") 
   # removes first n samples (scalar n) or range at some point (vector n) 
 {
   data <- attr(samplers,"data_list")
   design <- attr(samplers,"design_list")
   model <- attr(samplers,"model_list")
-  samplers <- lapply(samplers,remove_iterations,select=n)
+  samplers <- lapply(samplers,remove_iterations,select=n,filter=filter)
   attr(samplers,"data_list") <- data
   attr(samplers,"design_list") <- design
   attr(samplers,"model_list") <- model

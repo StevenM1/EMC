@@ -13,6 +13,8 @@ ADmat <- matrix(c(-1/2,1/2),ncol=1,dimnames=list(NULL,"d"))
 Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
 dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 
+#### Models ----
+
 design_B <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
