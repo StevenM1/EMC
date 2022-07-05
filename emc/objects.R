@@ -368,13 +368,11 @@ mapped_designs <- function(samples,remove_subjects=TRUE)
 }
 
 
-get_map <- function(samples,add_design=FALSE) {
+get_map <- function(samples,add_design=TRUE) {
   out <- attr(attr(attr(samples,"design_list")[[1]],"p_vector"),"map")
   if (add_design) {
-    model <- attr(samples,"model_list")[[1]]
-    des <-mapped_par(attr(attr(samples,"design_list")[[1]],"p_vector"),
-               attr(samples,"design_list")[[1]],model)
-    out <- cbind(des[,!(names(des) %in% model$p_types)],out)
+    mnl <- mapped_name_list(attr(samples,"design_list")[[1]],attr(samples,"model_list")[[1]],TRUE)
+    for (i in names(out)) out[[i]] <- cbind(mnl[[i]],out[[i]])
   }
   out
 }

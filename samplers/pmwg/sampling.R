@@ -1,6 +1,5 @@
 require(MASS) ## For matrix inverse.
 require(MCMCpack) #For inverse wishart
-require(lme4)
 require(parallel)
 require(mvtnorm) ## For the multivariate normal.
 require(condMVNorm)

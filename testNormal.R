@@ -17,7 +17,7 @@ p_vector[1:2] <- c(0,1)
 Sigma <- matrix(c(.08, .02,
                   .02, .1), nrow = 2)
 
-p_mat1 <- rmvnorm(length(design1$Ffactors$subjects),mean=p_vector,sigma=Sigma)
+p_mat1 <- mvtnorm::rmvnorm(length(design1$Ffactors$subjects),mean=p_vector,sigma=Sigma)
 dimnames(p_mat1)[[1]] <- design1$Ffactors$subjects
 data1 <- make_data(p_vector= p_mat1,design=design1,trials=200)
 
@@ -38,7 +38,7 @@ Sigma <- matrix(c(.12, .02, .03, .05,
                   .03, .04, .2, .01,
                   .05, .05, .01, .25), nrow = 4)
 
-p_mat2 <- rmvnorm(length(design2$Ffactors$subjects),mean=p_vector,sigma=Sigma)
+p_mat2 <- mvtnorm::rmvnorm(length(design2$Ffactors$subjects),mean=p_vector,sigma=Sigma)
 dimnames(p_mat2)[[1]] <- design2$Ffactors$subjects
 data2 <- make_data(p_vector= p_mat2,design=design2,trials=200)
 
