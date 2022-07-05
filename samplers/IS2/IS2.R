@@ -2,13 +2,9 @@
 ## set up environment and packages 
 library(mvtnorm)
 library(MCMCpack)
-library(rtdists)
-library(invgamma)
-library(mixtools)
 library(condMVNorm)
 library(parallel)
-library(corpcor) #RJI_change: not sure if this was included before
-#library(matrixcalc)
+library(corpcor) 
 
 
 IS2 <- function(samples, filter = "sample", subfilter = 0, IS_samples = 1000, stepsize_particles = 500, max_particles = 5000, n_cores = 1, df = 5){
