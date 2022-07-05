@@ -1,10 +1,3 @@
-require(MASS) ## For matrix inverse.
-require(MCMCpack) #For inverse wishart
-require(parallel)
-require(mvtnorm) ## For the multivariate normal.
-require(condMVNorm)
-require(magic)
-require(abind)
 
 source("samplers/pmwg/messaging.R")
 
