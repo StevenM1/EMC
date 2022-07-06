@@ -99,6 +99,13 @@ print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0.RData"))
 compare_IC(list(DDM_avt0=sPNAS_avt0_full,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,
                 LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,2000))
 
+
+source("models/DDM/DDM/ddmTZD.R")
+print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full_nocell.RData")) 
+
+compare_IC(list(DDM_avt0=sPNAS_avt0_full_nocell,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,
+                LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,2000))
+
 # For the remaining analysis add 4000 iterations to Bvt0 model
 
 ####  Fit of winning (E on mu, sigma and t0) model ----
