@@ -17,8 +17,8 @@ dimnames(Emat) <- list(NULL,c("a-n","a-s"))
 design_mu <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
-  Clist=list(lM=ADmat,lR=ADmat,E=Emat),
-  Flist=list(m~E*lM,s~1,t0~1),
+  Clist=list(lM=ADmat,lR=ADmat,E=Emat,S=ADmat),
+  Flist=list(m~S*E*lM,s~1,t0~1),
   model=lnrMS)
 lnr_mu <- make_samplers(dat,design_mu,type="standard",rt_resolution=.02)
 save(lnr_mu,file="lnrPNAS_mu.RData")
@@ -27,8 +27,8 @@ save(lnr_mu,file="lnrPNAS_mu.RData")
 design_mu_slM <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
-  Clist=list(lM=ADmat,lR=ADmat,E=Emat),
-  Flist=list(m~E*lM,s~lM,t0~1),
+  Clist=list(lM=ADmat,lR=ADmat,E=Emat,S=ADmat),
+  Flist=list(m~S*E*lM,s~lM,t0~1),
   model=lnrMS)
 lnr_mu_slM <- make_samplers(dat,design_mu_slM,type="standard",rt_resolution=.02)
 save(lnr_mu_slM,file="lnrPNAS_mu_slM.RData")
@@ -36,8 +36,8 @@ save(lnr_mu_slM,file="lnrPNAS_mu_slM.RData")
 design_mu_slM_t0 <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
-  Clist=list(lM=ADmat,lR=ADmat,E=Emat),
-  Flist=list(m~E*lM,s~lM,t0~E),
+  Clist=list(lM=ADmat,lR=ADmat,E=Emat,S=ADmat),
+  Flist=list(m~S*E*lM,s~lM,t0~E),
   model=lnrMS)
 lnr_mu_slM_t0 <- make_samplers(dat,design_mu_slM_t0,type="standard",rt_resolution=.02)
 save(lnr_mu_slM_t0,file="lnrPNAS_mu_slM_t0.RData")
@@ -45,8 +45,8 @@ save(lnr_mu_slM_t0,file="lnrPNAS_mu_slM_t0.RData")
 design_mu_sElM <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
-  Clist=list(lM=ADmat,lR=ADmat,E=Emat),
-  Flist=list(m~E*lM,s~E*lM,t0~1),
+  Clist=list(lM=ADmat,lR=ADmat,E=Emat,S=ADmat),
+  Flist=list(m~S*E*lM,s~E*lM,t0~1),
   model=lnrMS)
 lnr_mu_sElM <- make_samplers(dat,design_mu_sElM,type="standard",rt_resolution=.02)
 save(lnr_mu_sElM,file="lnrPNAS_mu_sElM.RData")
@@ -55,40 +55,40 @@ save(lnr_mu_sElM,file="lnrPNAS_mu_sElM.RData")
 design_mu_sElM_t0 <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
-  Clist=list(lM=ADmat,lR=ADmat,E=Emat),
-  Flist=list(m~E*lM,s~E*lM,t0~E),
+  Clist=list(lM=ADmat,lR=ADmat,E=Emat,S=ADmat),
+  Flist=list(m~S*E*lM,s~E*lM,t0~E),
   model=lnrMS)
 lnr_mu_sElM_t0 <- make_samplers(dat,design_mu_sElM_t0,type="standard",rt_resolution=.02)
 save(lnr_mu_sElM_t0,file="lnrPNAS_mu_sElM_t0.RData")
 
 
 
-print(load("lnrPNAS_mu.RData"))
-print(load("lnrPNAS_mu_slM.RData"))
-print(load("lnrPNAS_mu_slM_t0.RData"))
-print(load("lnrPNAS_mu_sElM.RData"))
-print(load("lnrPNAS_mu_sElM_t0.RData"))
+print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu.RData"))
+print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_slM.RData"))
+print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_slM_t0.RData"))
+print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_sElM.RData"))
+print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_sElM_t0.RData"))
 
-check_run(lnr_mu)
-check_run(lnr_mu_slM)
-check_run(lnr_mu_slM_t0)
-check_run(lnr_mu_sElM,layout=c(3,5),subfilter=500)
-check_run(lnr_mu_sElM_t0,layout=c(3,5),subfilter=1000)
+check_run(lnr_mu,layout=c(3,5),subfilter=500)
+check_run(lnr_mu_slM,layout=c(3,5),subfilter=500)
+check_run(lnr_mu_slM_t0,layout=c(3,5),subfilter=1000)
+check_run(lnr_mu_sElM,layout=c(3,5),subfilter=1500)
+check_run(lnr_mu_sElM_t0,layout=c(3,5),subfilter=2000:3000)
 
 ############ Model selection
 
 # muElMt0 wins by DIC but mulMt0 by BPIC
 compare_IC(list(mu=lnr_mu,mulM=lnr_mu_slM,mulMt0=lnr_mu_slM_t0,
-  muElM=lnr_mu_sElM,muElMt0=lnr_mu_sElM_t0), subfilter=list(0,0,0,500,1000))
-# On an individual basis muElMt0 wins or ties for first.
+  muElM=lnr_mu_sElM,muElMt0=lnr_mu_sElM_t0), subfilter=list(500,500,1000,1500,2000))
+# On an individual basis muElMt0 also wins
 ICs <- compare_ICs(list(mu=lnr_mu,mulM=lnr_mu_slM,mulMt0=lnr_mu_slM_t0,
   muElM=lnr_mu_sElM,muElMt0=lnr_mu_sElM_t0), subfilter=list(0,0,0,500,1000))
-table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$DIC)]})))
-table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]})))
+sort(table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$DIC)]}))))
+sort(table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]}))))
 
 # Comparing with the best DDM (16 parameter) model to the best (15 parameter)
-# LBA model and best (16 parameter) RDM with muElMt0 (15 parameters) the LNR
-# comes in third. 
+# LBA model and best (16 parameter) RDM and best (21 parameter) LNR, muElMt0 
+# comes in second. 
 source("models/DDM/DDM/ddmTZD.R")
 print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData")) 
 source("models/RACE/LBA/lbaB.R")
@@ -97,18 +97,17 @@ source("models/RACE/RDM/rdmB.R")
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0.RData"))
 
 compare_IC(list(DDM_avt0=sPNAS_avt0_full,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,
-                LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,1000))
+                LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,2000))
 
 # For the remaining analysis add 4000 iterations to Bvt0 model
 
 ####  Fit of winning (E on mu, sigma and t0) model ----
 
-# post predict did not use first 1500, so inference based on 5000*3 samples
+# post predict did not use first 2000, so inference based on 5000*3 samples
 plot_fit(dat,pplnr_musElMt0,layout=c(2,3),factors=c("E","S"),lpos="right",xlim=c(.25,1.5))
 plot_fits(dat,pplnr_musElMt0,layout=c(2,3),lpos="right")
 
-# Very good account of RT but underestimates accuracy for speed left and 
-# over-estimates for speed right.
+# Very accurate fit
 pc <- function(d) 100*mean(d$S==d$R)
 plot_fit(dat,pplnr_musElMt0,layout=c(2,3),factors=c("E","S"),
          stat=pc,stat_name="Accuracy (%)",xlim=c(70,95))
@@ -128,110 +127,82 @@ tab <- plot_fit(dat,pplnr_musElMt0,layout=c(2,3),factors=c("E","S"),xlim=c(0.375
 
 ### Population mean (mu) tests
 
-# Priors all well dominated except some rate parameters
-cirdm_Bvt0 <- plot_density(lnr_mu_sElM_t0,layout=c(3,6),selection="mu",subfilter=1500)
+# Priors all well dominated 
+cilnr_mu_sElM_t0 <- plot_density(lnr_mu_sElM_t0,layout=c(3,7),selection="mu",subfilter=2000)
 # On the natural scale it is evident this is because the mismatch (FALSE) rates
 # are least well updated, due to the fairly low error rates (errors give the
 # most information about FALSE rates).
-cilnr_mu_sElM_t0_mapped <- plot_density(lnr_mu_sElM_t0,layout=c(3,6),
+cilnr_mu_sElM_t0_mapped <- plot_density(lnr_mu_sElM_t0,layout=c(3,7),subfilter=2000,
                                         selection="mu",mapped=TRUE)
 # Looking at parameters both with and without mapping
 round(cilnr_mu_sElM_t0,2)
 round(cilnr_mu_sElM_t0_mapped,2)
 
-# For simpler estimates:
-# 1) t0 is longer than the LBA
-# 2) Start point noise slightly larger relative to B than for the LBA.
+### m(ean) effects
 
-### mu effects
+get_map(lnr_mu_sElM_t0)$m
 
-# Recall the map used with 
-get_map(lnr_mu_sElM_t0)$B
+# lMd tests match minus mismatch, which is strongly negative, as the match
+# racer is much faster than the mismatch racer
+p_test(x=lnr_mu_sElM_t0,x_name="m_lMd",subfilter=2000)
 
-# B_lRd tests threshold right - threshold left, as for the LBA, although not 
-# quite credible it indicates slightly higher right thresholds (i.e., a bias to 
-# respond left)
-p_test(x=lnr_mu_sElM_t0,x_name="B_lRd",subfilter=1500,digits=3)
+# m_Sd tests main effect of stimulus (the mean for (right - left), and indicates 
+# a smaller mean (faster processing) for right (-.92) than left (-0.88).
+p_test(x=lnr_mu_sElM_t0,x_name="m_Sd",subfilter=2000)
 
-# B_Ea-n and B_Ea-s measure differences in response caution (i.e., thresholds
-# averaged over left and right accumulators), accuracy-neutral and accuracy-speed 
-# respectively. Caution for accuracy is clearly higher than speed, but not 
-# credibly greater than neutral.
-p_test(x=lnr_mu_sElM_t0,x_name="B_Ea-n",subfilter=1500)
-p_test(x=lnr_mu_sElM_t0,x_name="B_Ea-s",subfilter=1500)
+# m_Sd:lMd tests right(match-mismatch) - left(match-mismatch) which is positive,
+# indicating better discrimination for right than left. Rearranging this is also
+#   (right_match+left_mismatch) - (left_match+right_mismatch) =
+# right accumulator - left accumulator, so it is also a measure of response bias
+# the positive value indicates a bias to respond left (i.e., a lesser time for 
+# the left racer to finish). These two interpretations cannot be disambiguated 
+# from LNR parameter estimates.
+p_test(x=lnr_mu_sElM_t0,x_name="m_Sd:lMd",subfilter=2000)
 
-# Here we construct a test on the natural scale showing caution is greater for 
-# neutral than speed
-p_test(x=lnr_mu_sElM_t0,mapped=TRUE,x_name="average B: neutral-speed",
-  x_fun=function(x){mean(x[c("B_left_neutral","B_right_neutral")]) - 
-                    mean(x[c("B_left_speed","B_right_speed")])})
+# B_Ea-n and B_Ea-s measure differences the time overall race time between
+# accuracy and neutral/speed. Both are positive indicating the race time is
+# slowest for accuracy
+p_test(x=lnr_mu_sElM_t0,x_name="m_Ea-n",subfilter=2000)
+p_test(x=lnr_mu_sElM_t0,x_name="m_Ea-s",subfilter=2000)
+# We can test neutral - speed as follows, showing speed is quicker than neutral
+p_test(x=lnr_mu_sElM_t0,x_name="m_Ea-s",y=lnr_mu_sElM_t0,y_name="m_Ea-n",subfilter=2000)
 
-# The remaining terms test interactions with bias (i.e., lR), with evidence of
-# a small but credibly stronger bias to respond left (i.e., a lower threshold
-# for the left accumulator) for speed than accuracy.
-p_test(x=lnr_mu_sElM_t0,x_name="B_lRd:Ea-s",subfilter=1500,digits=2)
+# We will not look at the remaining interactions here
 
-### sigma effects
+### s(igma) effects
 
 # Again recall the map used with 
-get_map(lnr_mu_sElM_t0)$v
+get_map(lnr_mu_sElM_t0)$s
 
-# v_Ea-n v_Ea-s indicate that processing rate (the average of matching and 
-# mismatching rates) is less in the accuracy condition than in neutral or speed.
-p_test(x=lnr_mu_sElM_t0,x_name="v_Ea-n",subfilter=1500)
-p_test(x=lnr_mu_sElM_t0,x_name="v_Ea-s",subfilter=1500)
+# This gives the overall mean on the natural scale
+p_test(x=lnr_mu_sElM_t0,x_name="sigma",subfilter=2000,x_fun=function(x){exp(x["s"])})
 
-# However, neutral and speed do not credibly differ
-p_test(x=lnr_mu_sElM_t0,mapped=TRUE,x_name="average v: speed-neutral",
-  x_fun=function(x){mean(x[c("v_TRUE_speed","v_FALSE_speed")]) - 
-                    mean(x[c("v_TRUE_neutral","v_FALSE_neutral")])})
+# s_Ea-n s_Ea-s show sigma is credibly greater for accuracy than neutral, but
+# not for speed
+p_test(x=lnr_mu_sElM_t0,x_name="s_Ea-n",subfilter=2000)
+p_test(x=lnr_mu_sElM_t0,x_name="s_Ea-s",subfilter=2000)
 
-# v_lMd tests the quality of selective attention, rate match - rate mismatch
-p_test(x=lnr_mu_sElM_t0,x_name="v_lMd",subfilter=1500)
+# Sigma is substantially less for match than mismatch
+p_test(x=lnr_mu_sElM_t0,x_name="s_lMd",subfilter=2000)
 
-# v_Ea-n indicates quality does not differ credibly between accuracy and neutral.
-p_test(x=lnr_mu_sElM_t0,x_name="v_lMd:Ea-n",subfilter=1500)
+# s_Ea-n:lMd s_Ea-s:lMd show no credible differences in the match vs. mismatch
+# difference between accuracy and neutral or speed, suggesting an additive
+# model would be better (E+lM)
+p_test(x=lnr_mu_sElM_t0,x_name="s_Ea-n:lMd",subfilter=2000)
+p_test(x=lnr_mu_sElM_t0,x_name="s_Ea-s:lMd",subfilter=2000)
 
-# In contrast there is a strong difference for accuracy - speed
-p_test(x=lnr_mu_sElM_t0,x_name="v_lMd:Ea-s",subfilter=1500)
-
-# The neutral - speed difference is also highly credible, here is is tested
-# in the mapped form
-p_test(x=lnr_mu_sElM_t0,mapped=TRUE,x_name="quality: accuracy-neutral",
-  x_fun=function(x){diff(x[c("v_FALSE_neutral","v_TRUE_neutral")]) - 
-                    diff(x[c("v_FALSE_speed","v_TRUE_speed")])})
 
 ### t0 effects
 
-#####################################################
+# Recall the map used with 
+get_map(lnr_mu_sElM_t0)$t0
 
-#### Model selection with Bayes factors
+# From the tables we see that t0 for accuracy (0.26s) is credibly greater
+# than for neutral and speed. The following test shows that neutral is 
+# credibly greater than speed.
+p_test(mapped=TRUE,subfilter=2000,x=lnr_mu_sElM_t0,x_name="t0_neutral",
+                                  y=lnr_mu_sElM_t0,y_name="t0_speed")
 
-print(load("is2.RData"))
-do.call(c,is2_sPNAS_Bv_sv)
-do.call(c,is2_sPNAS_avt0_full)
-do.call(c,is2_sPNAS_avt0_full_nocell)
 
-std_error_IS2 <- std_error_IS2(IS_samples)
-median(IS_samples)
-
-source("models/DDM/DDM/ddmTZD.R")
-design_avt0_full_nocell <- make_design(
-  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
-  Rlevels=levels(dat$R),
-  Flist=list(v~S*E,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
-  constants=c(s=log(1),DP=qnorm(0.5)),
-  model=ddmTZD)
-
-samplers <- make_samplers(dat,design_avt0_full_nocell,type="standard")
-save(samplers,file="sPNAS_avt0_full_nocell.RData")
-
-print(load("sPNAS_avt0_full_nocell.RData"))
-# Nicely converged after 500
-check_run(sPNAS_avt0_full_nocell,subfilter=500)
-
-# Little difference between two parameterizations and full length Bvsv model 
-compare_IC(list(avt0=sPNAS_avt0_full,avt0_nocell=sPNAS_avt0_full_nocell,Bvsv=sPNAS_Bv_sv),
-           subfilter=list(500,500,2000))
 
 
