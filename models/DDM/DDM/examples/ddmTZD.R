@@ -623,7 +623,6 @@ design_avt0_full <- make_design(
   constants=c(s=log(1),DP=qnorm(0.5)),
   model=ddmTZD)
 
-sampled_p_vector(design_avt0_full,doMap=FALSE)
 # samplers <- make_samplers(dat,design_avt0_full,type="standard")
 # save(samplers,file="sPNAS_avt0_full.RData")
 
@@ -636,13 +635,12 @@ print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData"))
 # the first 500 iterations of the sample stage. 
 check_run(sPNAS_avt0_full)
 # Hence we re-run on only the last 1000. This looks good but lower efficiency
-# for a_neutral as well as SZ indicates the need for more samples for parameter
 # inference.
-check_run(sPNAS_avt0_full,subfilter=500)
+check_run(sPNAS_avt0_full,subfilter=1000)
 
 ####  Fit ----
 
-# post predict did not use first 500
+# post predict did not use first 1000
 plot_fit(dat,ppPNAS_avt0_full,layout=c(2,3),factors=c("E","S"),lpos="right",xlim=c(.25,1.5))
 plot_fits(dat,ppPNAS_avt0_full,layout=c(2,3),lpos="right")
 
