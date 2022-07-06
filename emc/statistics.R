@@ -358,3 +358,24 @@ compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
   }
   invisible(out)
 }
+
+
+compare_MLL <- function(mll,nboot=100000,digits=2,print_summary=TRUE) 
+  # mll is a list of vectors of marginal log-likelihoods for a set of models
+  # picks a vector of mlls for each model in the list randomly with replacement
+  # nboot times, calculates model probabilities and averages, the default
+  # nboot seems good for stable results at 2 decimal places.
+{
+  pmp <- function(x) 
+    # posterior model probability for a vector of marginal log-likelihoods  
+  {
+    x <- exp(x-max(x))
+    x/sum(x)
+  }
+  
+  out <- sort(apply(apply(do.call(rbind,lapply(mll,function(x){
+    x[sample(length(x),nboot,replace=TRUE)]})),2,pmp),1,mean),decreasing=TRUE)
+  print(round(out,digits))
+  invisible(out)
+}
+
