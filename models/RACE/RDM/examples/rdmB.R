@@ -211,3 +211,6 @@ p_test(x=rdm_Bvt0,x_name="v_lMd:Ea-s",subfilter=1500)
 p_test(x=rdm_Bvt0,mapped=TRUE,x_name="quality: accuracy-neutral",
   x_fun=function(x){diff(x[c("v_FALSE_neutral","v_TRUE_neutral")]) - 
                     diff(x[c("v_FALSE_speed","v_TRUE_speed")])})
+
+
+
