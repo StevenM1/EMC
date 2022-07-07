@@ -100,7 +100,8 @@ compare_IC(list(DDM_avt0=sPNAS_avt0_full,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,
                 LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,2000))
 
 
-source("models/DDM/DDM/ddmTZD.R")
+# Here we add in the version of the winning DDM model that did not use cell
+# coding. We see that there is very little effect on the ICs
 print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full_nocell.RData")) 
 
 compare_IC(list(DDM_avt0=sPNAS_avt0_full_nocell,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,

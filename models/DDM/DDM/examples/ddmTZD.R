@@ -787,7 +787,7 @@ design_av_full <- make_design(
 # save(samplers,file="sPNAS_av_full.RData")
 
 print(load("models/DDM/DDM/examples/samples/sPNAS_at0_full.RData"))
-print(load("models/RACE/LBA/examples/samples/sPNAS_av_full.RData"))
+print(load("models/DDM/DDM/examples/samples/sPNAS_av_full.RData"))
 
 # SZ was slow to converge in mu, needed to 750 for at0 and 500 for av, so ran 
 # enough samples to get 1000 left 1000 left without these. 
@@ -797,8 +797,26 @@ check_run(sPNAS_av_full,subfilter=500,layout=c(3,5))
 
 # avt0 still wins overall
 compare_IC(list(avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,av=sPNAS_av_full,a=sPNAS_a_full),
-            subfilter=c(500,750,500,0))
+            subfilter=list(500,750,500,0))
 # But now there are 5 more equivocal cases, largely favoring the at0 model.
 compare_ICs(list(avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,av=sPNAS_av_full,a=sPNAS_a_full),
-            subfilter=c(500,750,500,0))
+            subfilter=list(500,750,500,0))
+
+# Also fit a version of the winning model not using cell coding for v
+design_avt0_full_nocell <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),
+  Clist=list(SE=diag(6)),
+  Flist=list(v~S*E,a~E,sv~1, t0~E, st0~1, s~1, Z~1, SZ~1, DP~1),
+  Ffunctions = list(SE=se),
+  constants=c(s=log(1),DP=qnorm(0.5)),
+  model=ddmTZD)
+
+# samplers <- make_samplers(dat,design_av_full_nocell,type="standard")
+# save(samplers,file="sPNAS_av_full_nocell.RData")
+
+# We see it makes very little difference to the DIC and BPIC
+print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full_nocell.RData")) 
+compare_IC(list(avt0nocell=sPNAS_avt0_full_nocell,avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,av=sPNAS_av_full,a=sPNAS_a_full),
+            subfilter=list(500,500,750,500,0))
 
