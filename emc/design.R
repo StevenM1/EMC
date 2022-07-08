@@ -60,8 +60,8 @@ add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE")
   datar[order(apply(datar[,c(factors,"lR")],1,paste,collapse="")),]
 }
 
-# form=design$Flist[[1]]
-make_dm <- function(form,da,Clist=NULL) 
+# form=design$Flist[[4]];Clist=NULL
+make_dm <- function(form,da,Clist=NULL,Fcovariates=NULL) 
   # Makes a design matrix based on formula form from augmented data frame da
 {
   
@@ -106,12 +106,13 @@ make_dm <- function(form,da,Clist=NULL)
 }
 
 
-# prior = NULL;rt_resolution=0.02;verbose=TRUE;
+# prior = NULL;rt_resolution=0.02; add_acc=TRUE; verbose=TRUE; compress=TRUE; rt_check=TRUE
 # 
+# data=add_accumulators(data,matchfun=design$matchfun,type=model$type)
 # add_acc=FALSE;verbose=FALSE;rt_check=FALSE;compress=FALSE
 
 design_model <- function(data,design,model=NULL,prior = NULL,
-  add_acc=TRUE,rt_resolution=0.001,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
+  add_acc=TRUE,rt_resolution=0.02,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
   # Combines data frame with a design and model
   # Flist is a list of formula objects, one for each p_type
   # da is augmented data (from add_accumulators), must have all of the factors  
@@ -274,10 +275,13 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   if (add_acc)
     da <- add_accumulators(data,design$matchfun,type=model$type) else da <- data
   da <- da[order(da$subjects),] # fixes different sort in add_accumulators depending on subject type 
+
+  # NOT SURE THIS IS NEEDED, BUT CANT HURT 
   # Add dummy content for covariates in sampled_p_vector calls
   da[!(names(da) %in% c("R","rt"))] <- 
     data.frame(lapply(da[!(names(da) %in% c("R","rt"))],function(x){
       if (all(is.na(x))) rep(0,length(x)) else x}))
+  
   if (is.null(model$p_types) | is.null(model$transform) | is.null(model$Mtransform))
     stop("p_types, transform and Mtransform must be supplied")
   if (!all(unlist(lapply(design$Flist,class))=="formula"))
@@ -301,7 +305,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     }
   }
   for (i in model$p_types) attr(design$Flist[[i]],"Clist") <- design$Clist[[i]]
-  out <- lapply(design$Flist,make_dm,da=da)
+  out <- lapply(design$Flist,make_dm,da=da,Fcovariates=Fcovariates)
   if (!is.null(rt_resolution) & !is.null(da$rt)) da$rt <- round(da$rt/rt_resolution)*rt_resolution
   if (compress) dadm <- compress_dadm(da,out) else {
     dadm <- da
@@ -379,15 +383,13 @@ map_p <- function(p,dadm)
 }
 
 
-# Fcovariates=NULL; Ffunctions=NULL
-# 
-# Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E))
-# Rlevels=levels(dat$R);matchfun=function(d)d$S==d$lR
-# Clist=list(v=list(E=E_AVan_s_mat,lM=ADmat),sv=list(lM=ADmat),
-#              B=list(E=Emat,lR=ADmat),t0=list(E=E_AVan_s_mat))
-#   Flist=list(v~E*lM,sv~lM,B~lR*E,A~1,t0~E)
-#   constants=c(sv=log(1))
-#   model=lbaB
+# Ffunctions=NULL; constants=NULL
+# Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E))
+#   Fcovariates = list("MT")
+#   Rlevels=levels(dat$R); matchfun=function(d)d$S==d$lR
+#   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat)
+#   Flist=list(v~lM,B~lR*E,A~1,t0~MT)
+#   model=rdmB
 
 make_design <- function(Flist,Ffactors,Rlevels,model,
   Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
@@ -430,6 +432,11 @@ sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
     data[[i]] <- factor(data[[i]],levels=design$Ffactors[[i]])
   if (!is.null(design$Ffunctions))
     data <- cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
+  if (!is.null(design$Fcovariates)) {
+    covs <- matrix(0,nrow=dim(data)[1],ncol=length(design$Fcovariates),
+                   dimnames=list(NULL,design$Fcovariates))
+    data <- cbind.data.frame(data,covs)
+  }
   dadm <- design_model(
       add_accumulators(data,matchfun=design$matchfun,type=model$type),
       design,model,add_acc=FALSE,verbose=FALSE,rt_check=FALSE,compress=FALSE)

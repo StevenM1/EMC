@@ -139,7 +139,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
 # type=c("standard","diagonal","blocked","factor","factorRegression","single")[1]
 # n_chains=3; rt_resolution=0.02
 # prior_list = NULL;par_groups=NULL;n_factors=NULL;constraintMat = NULL;covariates=NULL
-# data_list=wordfaceROC; design_list=designFWcell;model_list=NULL
+# data_list=dat; design_list=design_B_MT;model_list=NULL
 make_samplers <- function(data_list,design_list,model_list=NULL,
   type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
   n_chains=3,rt_resolution=0.02,
