@@ -626,7 +626,10 @@ plot_fits <- function(data,pp,factors=NULL,
              matchfun,signalFactor,zROC=qfun,lim,rocfit_cex)
 
 
-
+# pdf_name="check_run.pdf";interactive=TRUE;
+#                       filter="sample";subfilter=0
+#                       layout=c(3,4);width=NULL;height=NULL
+# subfilter=2000
 check_run <- function(samples,pdf_name="check_run.pdf",interactive=TRUE,
                       filter="sample",subfilter=0,
                       layout=c(3,4),width=NULL,height=NULL) {
@@ -670,7 +673,6 @@ check_run <- function(samples,pdf_name="check_run.pdf",interactive=TRUE,
   iat_pmwg(samples,selection="alpha",filter=filter,subfilter=subfilter)
   cat("\nEffectvie Size (minimum)\n")
   round(es_pmwg(samples,selection="alpha",summary=min,filter=filter,subfilter=subfilter))
-    plot_chains(samples,selection="alpha",layout=layout,filter=filter,subfilter=subfilter)
   cat("\nEffectvie Size (mean)\n")
   round(es_pmwg(samples,selection="alpha",summary=mean,filter=filter,subfilter=subfilter))
     plot_chains(samples,selection="alpha",layout=layout,filter=filter,subfilter=subfilter)
