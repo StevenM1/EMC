@@ -11,7 +11,7 @@ rdmB <- list(
   },
   # mapped parameter transform
   Mtransform = function(pars) 
-    # transform parameters except v back to real line 
+    # transform parameters back to real line 
     # pars is a matrix output by map_p_vector  
   {
     rdmB$Ntransform(pars)
