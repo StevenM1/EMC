@@ -1,12 +1,22 @@
 # data generation 
 
+# Used in make_samplers
+add_trials <- function(dat) 
+  # Add trials column, 1:n for each subject   
+{
+  n <- table(dat$subjects)
+  if (!any(names(dat)=="trials")) dat <- cbind.data.frame(dat,trials=NA)
+  for (i in names(n)) dat$trials[dat$subjects==i] <- 1:n[i]
+  dat
+}
+
 
 # model=NULL;trials=NULL;data=NULL;expand=1;
 # mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
-# trials=1; p_vector=out
+# trials=10; design=design_B_MT
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
-                      mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL)
+                      mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,Fcovariates=NULL)
   # Simulates data using rfun from model specified by a formula list (Flist) 
   # a factor contrast list (Clist, if null data frame creation defaults used) 
   # using model (list specifying p_types, transform, Mtransform and rfun).
@@ -88,6 +98,21 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     if (!is.null(design$Ffunctions)) data <- 
       cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
     LT <- UT <- LC <- UC <- Rmissing <- NULL
+    if (!is.null(Fcovariates)) {
+      if (is.null(design$Fcovariates)) stop("Design does not contain Fcovariates")
+      if (!(all(sort(names(Fcovariates))==sort(design$Fcovariates))))
+        stop("Fcovariates and design$Fcovariates have different names")
+      if (!is.data.frame(Fcovariates)) {
+        if (!all(unlist(lapply(Fcovariates,is.function))))
+          stop("Fcovariates must be either a data frame or list of functions")
+        nams <- names(Fcovariates)
+        Fcovariates <- do.call(cbind.data.frame,lapply(Fcovariates,function(x){x(data)}))
+        names(Fcovariates) <- nams 
+      }
+      n <- dim(Fcovariates)[1]
+      if (!(n==dim(data)[1])) stop("Fcovariates must specify ",dim(data)[1]," values per covariate")
+      data <- cbind.data.frame(data,Fcovariates)
+    }
   } else {
     LT <- attr(data,"LT"); UT <- attr(data,"UT")
     LC <- attr(data,"LC"); UC <- attr(data,"UC")

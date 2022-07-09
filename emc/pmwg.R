@@ -139,7 +139,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
 # type=c("standard","diagonal","blocked","factor","factorRegression","single")[1]
 # n_chains=3; rt_resolution=0.02
 # prior_list = NULL;par_groups=NULL;n_factors=NULL;constraintMat = NULL;covariates=NULL
-# data_list=dat; design_list=design_B_MT;model_list=NULL
+# data_list=data[,-4]; design_list=design_B_MT;model_list=NULL
 make_samplers <- function(data_list,design_list,model_list=NULL,
   type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
   n_chains=3,rt_resolution=0.02,
@@ -155,8 +155,7 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
   data_list <- lapply(data_list,function(d){
     if (!is.factor(d$subjects)) d$subjects <- factor(d$subjects)
     d <- d[order(d$subjects),]
-    d$trials <- unlist(sapply(table(d$subjects),function(x){1:x}))
-    d
+    add_trials(d)
   })
   if (!is.null(names(design_list)[1]) && names(design_list)[1]=="Flist") 
     design_list <- list(design_list)

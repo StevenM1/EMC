@@ -487,25 +487,36 @@ fix_stuck <- function(samples, bad_subs, best, worst){
 
 run_emc <- function(file_name,nsample=1000, ...) 
   # Combined auto fitting functions, getting and saving samples to disk.
-  # NB: samples must be first object in file_name
+  #    NB: samples must be first object in file_name file on disk
+  # OR if file_name is not a character vector file_name is treated as a samplers 
+  #    object and results of fitting returned by the function.
 {
-  oname <- load(file_name)
-
-  if (is.null(attr(get(oname[1]),"burnt")) || is.na(attr(get(oname[1]),"burnt"))) {
-    assign(oname[1],auto_burn(get(oname[1]), ...))
-    save(list=oname,file=file_name)
-  }
-  if (is.null(attr(get(oname[1]),"adapted")) && !is.na(attr(get(oname[1]),"burnt"))) {
-    assign(oname[1],auto_adapt(get(oname[1]), ...))
-    save(list=oname,file=file_name)
-  }
-  if (!is.null(attr(get(oname[1]),"adapted")) && attr(get(oname[1]),"adapted")) {
-    assign(oname[1],auto_sample(get(oname[1]),iter=nsample, ...))
-    save(list=oname,file=file_name)
+  if (is.character(file_name)) {
+    sname <- load(file_name)
+    if (is.null(attr(get(sname[1]),"burnt")) || is.na(attr(get(sname[1]),"burnt"))) {
+      assign(sname[1],auto_burn(get(sname[1]), ...))
+      save(list=sname,file=file_name)
+    }
+    if (is.null(attr(get(sname[1]),"adapted")) && !is.na(attr(get(sname[1]),"burnt"))) {
+      assign(sname[1],auto_adapt(get(sname[1]), ...))
+      save(list=sname,file=file_name)
+    }
+    if (!is.null(attr(get(sname[1]),"adapted")) && attr(get(sname[1]),"adapted")) {
+      assign(sname[1],auto_sample(get(sname[1]),iter=nsample, ...))
+      save(list=sname,file=file_name)
+    }
+  } else { # file_name is actually a samplers object
+    if (is.null(attr(file_name,"burnt")) || is.na(attr(file_name,"burnt")))
+      file_name <- auto_burn(file_name, ...)
+    if (is.null(attr(file_name,"adapted")) && !is.na(attr(file_name,"burnt")))
+      file_name <- auto_adapt(file_name, ...)
+    if (!is.null(attr(file_name,"adapted")) && attr(file_name,"adapted"))
+      file_name <- auto_sample(file_name,iter=nsample, ...)
+    return(file_name)
   }
 }
 
-# all_par <- c(particles=NA, particle_factor = 50, mix = NULL, 
+# all_par <- c(particles=NA, particle_factor = 50, mix = NULL,
 # epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,cores_per_chain=1,
 # cores_for_chains=NULL,verbose=TRUE,verbose_run_stage = FALSE)
 # 
@@ -518,7 +529,7 @@ run_emc <- function(file_name,nsample=1000, ...)
 # auto_burn_par <- c(ndiscard=100,nstart=300,start_mu = NULL, start_var = NULL,
 # max_gd_trys=100,max_gd=1.2,thorough=TRUE,mapped=FALSE, min_iter=NULL,max_iter=NULL)
 # 
-# auto_adapt_par <- c(max_trys=25, min_unique = 200) 
+# auto_adapt_par <- c(max_trys=25, min_unique = 200)
 # 
-# auto_sample_par <- c(iter=NA) 
+# auto_sample_par <- c(iter=NA)
   
