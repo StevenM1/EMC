@@ -419,7 +419,7 @@ plot_roc <- function(data,zROC=FALSE,qfun=NULL,main="",lim=NULL)
 
 # subject=NULL;factors=NULL; do_plot=TRUE; fun=NULL
 # xlim=NULL;ylim=NULL;layout=NULL;probs=c(1:99)/100
-# data_lwd=2;fit_lwd=1; mfcol=TRUE; matchfun=NULL
+# data_lwd=2;fit_lwd=1; mfcol=TRUE; 
 # q_points=c(.1,.3,.5,.7,.9); qp_cex=1;pqp_cex=.5
 # ci=c(.025,.5,.975)
 # signalFactor="S";zROC=FALSE;qfun=NULL;lim=NULL;rocfit_cex=.5
@@ -434,7 +434,6 @@ plot_fit <- function(data,pp,subject=NULL,factors=NULL,
                      probs=c(1:99)/100,
                      data_lwd=2,fit_lwd=1,qp_cex=1,
                      q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft",
-                     matchfun=NULL,
                      signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
   # Plots data and fit or if stat supplied returns a table of statistics.
   # If rt available plots cdf, if not plots ROC (but if only 2 levels of
@@ -454,7 +453,7 @@ plot_fit <- function(data,pp,subject=NULL,factors=NULL,
     fnams <- factors
   }
   if (!is.null(layout)) if (mfcol) par(mfcol=layout) else par(mfrow=layout)
-  if (all(is.na(data$rt)) & is.null(matchfun)) {  # type=SDT
+  if (all(is.na(data$rt))) {  # type=SDT
     if (length(levels(data$R))==2 & is.null(stat)) 
       stop("No plots for binary responses, use an accuracy function in stat arguement.")
     if (!is.null(stat)) { # statistic 
@@ -519,9 +518,6 @@ plot_fit <- function(data,pp,subject=NULL,factors=NULL,
     pp_cells <- pp[,fnams,drop=FALSE]
     for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
     pp_cells <- apply(pp_cells,1,paste,collapse=" ")
-    if (!is.null(matchfun)) {
-      
-    }
     if (!is.null(stat)) { # statistic 
       postn <- unique(pp$postn)
       ucells <- sort(unique(cells))
@@ -618,12 +614,69 @@ plot_fits <- function(data,pp,factors=NULL,
                       probs=c(1:99)/100,
                       data_lwd=2,fit_lwd=1,qp_cex=1,
                       q_points=c(.1,.3,.5,.7,.9),pqp_cex=.5,lpos="topleft",
-                      matchfun=NULL,signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
+                      signalFactor="S",zROC=FALSE,qfun=NULL,lim=NULL,rocfit_cex=.5)
   # as for plot_fits but does it per subject.
   for (i in levels(data$subjects)) 
     plot_fit(data,pp,subject=i,factors,stat,stat_name,ci,do_plot,xlim,ylim,layout,mfcol,
              probs,data_lwd,fit_lwd,qp_cex,q_points,pqp_cex,lpos,
-             matchfun,signalFactor,zROC=qfun,lim,rocfit_cex)
+             signalFactor,zROC=qfun,lim,rocfit_cex)
+
+
+# subject=NULL;factors=NULL;
+# pp=pprdm_B_MT; data=attr(rdm_B_MT,"data_list")[[1]]; Fcovariates="MT", layout=c(2,3)
+plot_trials <- function(data,pp=NULL,subject=NULL,factors=NULL,Fcovariates=NULL,
+                        layout=NULL,mfcol=TRUE,OvsP=TRUE)
+  # Plots data and fit or if stat supplied returns a table of statistics.
+  # If rt available plots cdf, if not plots ROC (but if only 2 levels of
+  # response factor returns an accuracy table).
+{
+  if (!any(names(data)=="trials")) stop("data must have trials column")
+  if (!is.null(pp)) {
+    if (!any(names(pp)=="trials")) stop("posterior predictives must have trials column")
+  } else OvsP <- FALSE
+  if (!is.null(subject)) {
+    dat <- data[data$subjects==subject,]
+    pp <- pp[pp$subjects==subject,]
+    fnams <- names(dat)[!(names(dat) %in% c("subjects","trials","R","rt",Fcovariates))]
+  } else {
+    dat <- data
+    fnams <- names(dat)[!(names(dat) %in% c("trials","R","rt",Fcovariates))]
+  }
+  if (!is.null(factors)) {
+    if (!all(factors %in% fnams)) stop("factors must name factors in data")
+    if (!any(factors=="subjects")) stop("factors must include subjects")
+    fnams <- factors
+  }
+  if (!is.null(layout)) if (mfcol) par(mfcol=layout) else par(mfrow=layout)
+  cells <- dat[,fnams,drop=FALSE]
+  for (i in fnams) cells[,i] <- paste(i,cells[,i],sep="=")
+  cells <- apply(cells,1,paste,collapse=" ")
+  if (!is.null(pp)) {
+    pp_cells <- pp[,fnams,drop=FALSE]
+    for (i in fnams) pp_cells[,i] <- paste(i,pp_cells[,i],sep="=")
+    pp_cells <- apply(pp_cells,1,paste,collapse=" ")
+  }
+  postn <- unique(pp$postn)
+  ucells <- sort(unique(cells))
+  for (i in ucells[1:6]) {
+    obs <- dat[cells==i,]
+    obs <- obs[order(obs$trials),]
+    if (!OvsP) 
+      plot(obs$trials,obs$rt,type="l",xlab="Trials",ylab="RT (s)",main=i)
+    if (!is.null(pp)) {
+      ppi <- pp[pp_cells==i,]
+      ppi <- ppi[order(ppi$trials),]
+      # average over post_n
+      if (OvsP) {
+        pred <- tapply(ppi$rt,ppi$trials,mean)
+        lim <- c(min(c(obs$rt,pred)),max(c(obs$rt,pred)))
+        plot(obs$rt,pred,xlim=lim,ylim=lim,xlab="Observed RT (s)",ylab="Predcited RT (s)")
+      } else lines(obs$trials,tapply(ppi$rt,ppi$trials,mean),col="red")
+    }
+  }  
+}
+
+
 
 
 # pdf_name="check_run.pdf";interactive=TRUE;
