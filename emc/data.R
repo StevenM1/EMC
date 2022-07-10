@@ -1,6 +1,6 @@
 # data generation 
 
-# Used in make_samplers
+# Used in make_data and make_samplers
 add_trials <- function(dat) 
   # Add trials column, 1:n for each subject   
 {
@@ -14,6 +14,8 @@ add_trials <- function(dat)
 # model=NULL;trials=NULL;data=NULL;expand=1;
 # mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
 # trials=10; design=design_B_MT
+# 
+# p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]]
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,Fcovariates=NULL)
@@ -117,8 +119,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     LT <- attr(data,"LT"); UT <- attr(data,"UT")
     LC <- attr(data,"LC"); UC <- attr(data,"UC")
     Rmissing <- any(is.na(data$R))
-    data <- data[order(data$subjects),]
-    data$trials <- unlist(sapply(table(data$subjects),function(x){1:x}))
+    data <- add_trials(data[order(data$subjects),])
   }
   if (!is.factor(data$subjects)) data$subjects <- factor(data$subjects)
   if ( is.null(model$p_types) ) stop("model$p_types must be specified")
@@ -145,6 +146,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
 
 # hyper=FALSE;n_post=100;expand=1; filter="sample";subfilter=1;thin=1;
 # use_par=c("random","mean","median")[1]; n_cores=1
+# samples=rdm_B_MT; n_post=1;subfilter=1000
 post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
                          filter="sample",subfilter=0,thin=1,n_cores=1,
                          use_par=c("random","mean","median")[1]) 
@@ -161,10 +163,10 @@ post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
   design <- attr(samples,"design_list")
   model <- attr(samples,"model_list")
   if(length(data) > 1){
-    jointModel <- T
+    jointModel <- TRUE
     all_samples <- samples
   } else{
-    jointModel <- F
+    jointModel <- FALSE
   }
   post_out <- vector("list", length = length(data))
   for(j in 1:length(data)){
