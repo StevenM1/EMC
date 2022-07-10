@@ -5,7 +5,7 @@
 source("models/DDM/DDM/ddm.R")
 
 
-ddmTZD <- list(
+ddmTZDt0natural <- list(
   type="DDM",
   p_types=c("v","a","sv","t0","st0","s","Z","SZ","DP"),
   # The "TZD" parameterization defined relative to the "rtdists" package is:
@@ -30,13 +30,13 @@ ddmTZD <- list(
     
     if (!is.matrix(x)) {
       nams <- get_p_types(names(x))
-      islog <- nams %in%  c("a","sv","t0","st0","s")
+      islog <- nams %in%  c("a","sv","st0","s")
       isprobit <- nams %in%  c("Z","SZ","DP")
       x[islog] <- exp(x[islog]) 
       x[isprobit] <- pnorm(x[isprobit])
     } else { 
       nams <- get_p_types(dimnames(x)[[2]])
-      islog <- nams %in%  c("a","sv","t0","st0","s")
+      islog <- nams %in%  c("a","sv","st0","s")
       isprobit <- nams %in%  c("Z","SZ","DP")
       x[,islog] <- exp(x[,islog])
       x[,isprobit] <- pnorm(x[,isprobit])  
@@ -47,12 +47,13 @@ ddmTZD <- list(
   Mtransform = function(pars) 
     # pars is a matrix output by map_p_vector  
   {
-    pars <- ddmTZD$Ntransform(pars)
+    pars <- ddmTZDt0natural$Ntransform(pars)
     pars <- cbind(pars,z=pars[,"a"]*pars[,"Z"],
       sz = 2*pars[,"SZ"]*pars[,"a"]*apply(cbind(pars[,"Z"],1-pars[,"Z"]),1,min))
     pars <- cbind(pars, d = pars[,"t0"]*(2*pars[,"DP"]-1))
     attr(pars,"ok") <- 
-      !( abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | pars[,"SZ"]>.75 | pars[,"st0"]>.2) 
+      !( pars[,"t0"] < 0 | abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | 
+         pars[,"SZ"]>.75 | pars[,"st0"]>.2) 
     if (pars[1,"sv"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"sv"] > .01
     if (pars[1,"SZ"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"SZ"] > .01  
     pars

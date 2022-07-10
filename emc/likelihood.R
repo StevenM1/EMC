@@ -182,7 +182,6 @@ log_likelihood_ddm <- function(p_vector,dadm,min_ll=log(1e-10))
 {
   pars <- get_pars(p_vector,dadm)
   like <- numeric(dim(dadm)[1]) 
-  # bad <- abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | pars[,"sv"]<.1 | pars[,"SZ"]>.75 | pars[,"SZ"]<.01 | pars[,"st0"]>.2
   if (any(attr(pars,"ok"))) 
     like[attr(pars,"ok")] <- attr(dadm,"model")$dfun(dadm$rt[attr(pars,"ok")],dadm$R[attr(pars,"ok")],pars[attr(pars,"ok"),,drop=FALSE])
   like[attr(pars,"ok")][is.na(like[attr(pars,"ok")])] <- 0
