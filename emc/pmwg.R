@@ -215,8 +215,8 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
   # replicate chains
   dadm_lists <- rep(list(out),n_chains)
   # For post predict
-  attr(dadm_lists,"data_lists") <- data_list
-  attr(dadm_lists,"design_lists") <- design_list
-  attr(dadm_lists,"model_lists") <- model_list
+  attr(dadm_lists,"data_list") <- data_list
+  attr(dadm_lists,"design_list") <- design_list
+  attr(dadm_lists,"model_list") <- model_list
   dadm_lists
 }
