@@ -280,16 +280,16 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   model_list <- attr(samplers,"model_list")
   burnt <- attr(samplers,"burnt")
   trys <- 0
-  samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size,0),
+  samplers_new <- mclapply(samplers,run_stages,iter=c(0,min_unique/(length(samplers)*p_accept) - step_size_adapt,0),
                            n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
-                           particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                           particles=particles_adapt,particle_factor=particle_factor_adapt,epsilon=epsilon,
                            verbose=FALSE,verbose_run_stage=verbose_run_stage,
                            mc.cores=cores_for_chains)
   repeat {
     trys <- trys + 1
-    samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,step_size,0),
+    samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,step_size_adapt,0),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
-                             particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                             particles=particles_adapt,particle_factor=particle_factor_adapt,epsilon=epsilon,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage,
                              mc.cores=cores_for_chains)
     test_samples <- lapply(samplers_new, extract_samples, stage = "adapt", thin = thin, samplers_new[[1]]$samples$iteration, thin_eff_only = F)
@@ -334,10 +334,10 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
   burnt <- attr(samplers,"burnt")
   adapted <- attr(samplers,"adapted")
   samplers_new <- samplers
-  n_steps <- ceiling(iter/step_size)
+  n_steps <- ceiling(iter/step_size_sample)
   for(step in 1:n_steps){
     if(step == n_steps){
-      step_size <- ifelse(iter %% step_size == 0, step_size, iter %% step_size)
+      step_size <- ifelse(iter %% step_size_sample == 0, step_size_sample, iter %% step_size_sample)
     } 
     test_samples <- lapply(samplers_new, extract_samples, 
                            stage = c("adapt", "sample"), thin = thin, 50*trys, thin_eff_only = FALSE)
@@ -351,9 +351,9 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
                                                         samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
     eff_mu <- conditionals[,1,] #First column is the means
     eff_var <- conditionals[,2:(samplers_new[[1]]$n_pars+1),] #Other columns are the variances
-    samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,0,step_size),
+    samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,0,step_size_sample),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
-                             particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                             particles=particles_sample,particle_factor=particle_factor_sample,epsilon=epsilon,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage, eff_mu = eff_mu,
                              eff_var = eff_var,
                              mc.cores=cores_for_chains)
