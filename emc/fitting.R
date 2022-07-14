@@ -261,10 +261,10 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
 
 
 run_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
-                       particles=NA,particle_factor=40, p_accept=.7,
+                       particles_adapt=NA,particle_factor_adapt=40, p_accept=.7,
                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
-                       n_cores_conditional = 1, min_es=NULL,min_unique = 200, 
-                       step_size = 25, thin = NULL,
+                       n_cores_conditional = 1, min_unique = 200, 
+                       step_size_adapt = 25, thin = NULL,
                        verbose=TRUE,verbose_run_stage = FALSE){
   # Uses all the same arguments as run_stages and run_burn, but with:
   # max_trys, the amount of times to run adapt in step_size
@@ -311,9 +311,9 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
 
 
 run_sample <- function(samplers,iter=NA,verbose=TRUE,
-                        epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
+                        epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.7,
                         cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
-                        n_cores_conditional = 1, step_size = 50, thin = NULL,
+                        n_cores_conditional = 1, step_size_sample = 50, thin = NULL,
                         verbose_run_stage = FALSE)
   # Uses all the same arguments as run_stages and run_burn, but with:
   # iter: The amount of samples desired at the end from the sample stage
