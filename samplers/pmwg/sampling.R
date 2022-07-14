@@ -114,8 +114,6 @@ run_stage <- function(pmwgs,
                       verbose = TRUE,
                       force_prev_epsilon = TRUE,
                       n_cores = 1,
-                      n_unique = ifelse(stage == "adapt", 20, NA),
-                      min_unique = ifelse(stage == "adapt", 200, NA),
                       epsilon = NULL,
                       pstar = NULL,
                       mix = NULL,
@@ -128,8 +126,6 @@ run_stage <- function(pmwgs,
   # Set defaults for NULL values
   mix <- set_mix(stage, mix, verbose)
   # Set necessary local variables
-  .n_unique <- n_unique
-  n_unique <- min_unique
   # Set stable (fixed) new_sample argument for this run
   n_pars <- length(pmwgs$par_names)
   

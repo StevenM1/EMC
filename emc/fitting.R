@@ -4,15 +4,18 @@ require(parallel)
 require(abind)
 run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
-                       max_adapt_trys=2,particles=NA,particle_factor=100, p_accept= NULL, n_cores=1,
+                       particles=NA,particle_factor=50, p_accept= NULL, n_cores=1,
                        epsilon = NULL, start_mu = NULL, start_var = NULL, mix=NULL,  
-                       pdist_update_n=50,min_unique=200,epsilon_upper_bound=15,
-                       eff_var = NULL, eff_mu = NULL) 
-  # Initializes (if needed) then runs burn, adapt and sample if iter is not 
-  # NA where iter[1] = burn, iter[2] = adapt, iter[3] = sample
-  # Adapt stage is run repeatedly up to max_adapt_trys times. 
-  # Number of particles is set at particle_factor*sqrt(number of parameters) if
-  # particles is NA
+                       epsilon_upper_bound=15, eff_var = NULL, eff_mu = NULL) 
+  # Initializes (if needed) then runs burn, adapt and sample depending on iter
+  # Verbose and verbose_run_stage are whether to keep you updated on EMC and PMwG output
+  # Number of particles is set at particle_factor*sqrt(number of parameters) if particles is NA
+  # P_accept is the target acceptance ratio for pmwg 
+  # Epsilon is a start value for the p_star tuning, best left at default
+  # start_mu and start_var are startpoints for the sampler. If let NULL we'll sample startpoints
+  # Epsilon_upper_bound is a safety net
+  # Eff_var and Eff_mu are the efficient distibutions as calculated in run_adapt and run_sample
+
 {
   
   if (is.na(particles)) 
@@ -26,39 +29,36 @@ run_stages <- function(sampler,iter=c(300,0,0),
     if (verbose) message("Running burn stage")
     sampler <- run_stage(sampler, stage = "burn",iter = iter[1], particles = particles, 
                          n_cores = n_cores, pstar = p_accept, epsilon = epsilon, verbose = verbose_run_stage,
-                         min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound, mix=mix)
+                         epsilon_upper_bound=epsilon_upper_bound, mix=mix)
     if (all(iter[2:3]==0)) return(sampler)
   }
   if (iter[2] != 0) {
     if (verbose) message("Running adapt stage")
     sampler <- run_stage(sampler, stage = "adapt",iter = iter[2], particles = particles, 
                          n_cores = n_cores, pstar = p_accept, epsilon = epsilon, verbose = verbose_run_stage,
-                         min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound, mix=mix)
+                         epsilon_upper_bound=epsilon_upper_bound, mix=mix)
     if (iter[3]==0) return(sampler)
   }
   if (verbose) message("Running sample stage")
   sampler <- run_stage(sampler, stage = "sample", iter = iter[3], epsilon = epsilon,
                        pdist_update_n=pdist_update_n,particles = particles, n_cores = n_cores, 
                        pstar = p_accept, verbose = verbose_run_stage, mix=mix, eff_mu = eff_mu,
-                       eff_var = eff_var,
-                       min_unique=min_unique,epsilon_upper_bound=epsilon_upper_bound)  
+                       eff_var = eff_var,  epsilon_upper_bound=epsilon_upper_bound)  
   sampler
 }
 
 
 
-# iter=c(500,0,0);
-#   verbose=TRUE;verbose_run_stage=FALSE;mix=NULL;
-#   max_adapt_trys=10;particles=NA;particle_factor=100; p_accept= 0.7;
-#   cores_per_chain=1;cores_for_chains=NULL;min_unique=200;epsilon_upper_bound=2;
-#   epsilon = NULL; start_mu = NULL; start_var = NULL;pdist_update_n=50
-# verbose=TRUE; iter=c(3,0,0)
-run_chains <- function(samplers,iter=c(300,0,0),
+run_burn <- function(samplers,iter=300,
                        verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
-                       max_adapt_trys=10,particles=NA,particle_factor=100, p_accept= 0.7, 
-                       cores_per_chain=1,cores_for_chains=NULL,min_unique=200,epsilon_upper_bound=15,
-                       epsilon = NULL, start_mu = NULL, start_var = NULL,pdist_update_n=50) 
-  # applies run stages over chains preserving list attributes
+                       particles=NA,particle_factor=50, p_accept= 0.7, 
+                       cores_per_chain=1,cores_for_chains=NULL,epsilon_upper_bound=15,
+                       epsilon = NULL, start_mu = NULL, start_var = NULL) 
+  # This is the multi-chain version of run_chains but only for Burn
+  # cores_per_chain is how many cores to give each chain
+  # if cores_for chain > 1 we'll parallelize across chains
+  # Initializes (if needed)
+  # For the other arguments see run_stages
 {
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -67,17 +67,16 @@ run_chains <- function(samplers,iter=c(300,0,0),
   model_list <- attr(samplers,"model_list")
   run_try <- 0
   repeat {
-    samplers_new <- mclapply(samplers,run_stages,iter=iter,
+    samplers_new <- mclapply(samplers,run_stages,iter=c(iter, 0,0),
                              verbose=verbose,verbose_run_stage=verbose_run_stage,
-                             max_adapt_trys=max_adapt_trys,particles=particles,particle_factor=particle_factor, 
-                             p_accept=p_accept, min_unique=min_unique, mix=mix,
-                             epsilon = epsilon, start_mu = start_mu, start_var = start_var,
-                             pdist_update_n=pdist_update_n,epsilon_upper_bound=epsilon_upper_bound,
+                             particles=particles,particle_factor=particle_factor, 
+                             p_accept=p_accept, mix=mix, epsilon = epsilon, start_mu = start_mu, start_var = start_var,
+                             epsilon_upper_bound=epsilon_upper_bound,
                              n_cores=cores_per_chain, mc.cores = cores_for_chains)
     if (class(samplers_new)=="try-error" || 
         any(lapply(samplers_new,class)=="try-error")) {
       save(samplers,iter,particles,particle_factor,p_accept,pdist_update_n,
-           epsilon_upper_bound,min_unique,file="fail_run_stage.RData")
+           epsilon_upper_bound,file="fail_run_stage.RData")
       run_try <- run_try + 1
       if (verbose) message("run_stage try error", run_try)
       if (run_try > 10)
@@ -209,24 +208,25 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
-# ndiscard=80;nstart=120;
-# particles=NA; particle_factor = 50; start_mu = NULL; start_var = NULL;
-# mix = NULL; verbose=TRUE;verbose_run_stage=FALSE;
-# max_gd_trys=100;max_gd=1.1;
-# thorough=TRUE;mapped=FALSE; step_size = NA;
-# min_es=NULL;min_iter=NULL;max_iter=NULL;
-# epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
-# cores_per_chain=10;cores_for_chains=NULL
+
 auto_burn <- function(samplers,ndiscard=100,nstart=300,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
+                      epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,
+                      cores_per_chain=1,cores_for_chains=NULL,
                       max_gd_trys=100,max_gd=1.2,
                       thorough=TRUE,mapped=FALSE, step_size = NA,
-                      min_es=NULL,min_iter=NULL,max_iter=NULL,
-                      epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,
-                      cores_per_chain=1,cores_for_chains=NULL)
-  # Takes a pmwgs chains list, initializes it (see run_stages), if !burn adapts
-  # and runs burn or sample until gd criterion satisfied (see run_gd for details)
+                      min_es=NULL,min_iter=NULL,max_iter=NULL
+)
+  # Will run burn until convergence through run_stages and run_gd
+  # ndiscard and nstart together form the first batch of samples ran, of which ndiscard then discarded
+  # For the first sets of arguments see run_burn and run_stages
+  # Max_gd trys is how many times it will run gelman diags in fixed stepsizes
+  # If stepsize not provided will use a heuristic in run_gd
+  # If thorough gd should be lower than criterion for all parameters
+  # If mapped parameters are transformed back to the 'interpretable' scale before gd is run. 
+  # Min_iter, min_es (effective sample size), max_iter and max_gd determine when run_gd is done
+  
 {
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -260,37 +260,18 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
 }
 
 
-# min_particles = 50; max_particles = 500;min_factor = 25; max_factor = 100; percent_up = 10; percent_down = 5
-adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles = NA, 
-                               min_particles = 50, max_particles = 500, 
-                               min_factor = 25, max_factor = 100,
-                               percent_up = 10, percent_down = 5){
-  # This function adaptively tunes the particles per participant,
-  # so that we can lower the number of particles is we're closer to gd_criterion,
-  # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
-  if (any(is.na(gd_diff))) {
-    if (is.na(particles)) 
-      return(list(particles=100,particle_factor = particle_factor)) else
-      return(list(particles=particles,particle_factor = particle_factor))
-  }
-  if(is.na(particles)){
-    gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_factor
-    gd_diff[gd_diff < 0] <- -(percent_down/100)*max_factor
-    particle_factor <- pmin(pmax(min_factor, particle_factor + gd_diff), max_factor)
-  } else{
-    gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_particles
-    gd_diff[gd_diff < 0] <- -(percent_down/100)*min_particles
-    particles <- pmin(pmax(min_particles, particles + gd_diff), max_particles)
-  }
-  return(list(particles = round(particles), particle_factor = particle_factor))
-}
-
-auto_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
+run_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
                        particles=NA,particle_factor=40, p_accept=.7,
                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                        n_cores_conditional = 1, min_es=NULL,min_unique = 200, 
                        step_size = 25, thin = NULL,
                        verbose=TRUE,verbose_run_stage = FALSE){
+  # Uses all the same arguments as run_stages and run_burn, but with:
+  # max_trys, the amount of times to run adapt in step_size
+  # After every step_size iterations it will check whether min_unique particles are there and adapt based on that
+  # If the conditional distribution can be created it will finish adaptation and you can start sampling.
+  # Thin whether to ONLY thin the samples passed to the creation of the conditional. Probably not necessary
+  # Thin doesn't thin the actual ouptut
   if(verbose) message("Running adapt stage")
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -329,12 +310,16 @@ auto_adapt <- function(samplers,max_trys=25,epsilon = NULL,
 }
 
 
-auto_sample <- function(samplers,iter=NA,verbose=TRUE,
+run_sample <- function(samplers,iter=NA,verbose=TRUE,
                         epsilon = NULL, particles=NA,particle_factor=25, p_accept=.7,
                         cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                         n_cores_conditional = 1, step_size = 50, thin = NULL,
                         verbose_run_stage = FALSE)
-  # Automatically run the sample stage  
+  # Uses all the same arguments as run_stages and run_burn, but with:
+  # iter: The amount of samples desired at the end from the sample stage
+  # After step_size iterations it will update the conditional efficient distribution
+  # Thin whether to ONLY thin the samples passed to the creation of the conditional. Probably not necessary
+  # Thin doesn't thin the actual ouptut
 {
   if(!attr(samplers, "adapted")){
     warning("samplers should be adapted before you can run sample stage")
@@ -394,6 +379,8 @@ run_IS2 <- function(samples, filter = "sample", subfilter = 0, IS_samples = 1000
 test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional = 1, 
                          verbose = FALSE)
 {
+  # Function used by run_adapt to check whether we can create the conditional.
+  
   # Only need to check uniqueness for one parameter
   first_par <- test_samples$alpha[1, , ]
   # Split the matrix into a list of vectors by subject
@@ -426,6 +413,31 @@ test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional 
   } else{
     return(FALSE) # Not enough unique particles found
   }
+}
+
+# min_particles = 50; max_particles = 500;min_factor = 25; max_factor = 100; percent_up = 10; percent_down = 5
+adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles = NA, 
+                               min_particles = 50, max_particles = 500, 
+                               min_factor = 25, max_factor = 100,
+                               percent_up = 10, percent_down = 5){
+  # This function adaptively tunes the particles per participant using broad,
+  # so that we can lower the number of particles if we're closer to gd_criterion,
+  # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
+  if (any(is.na(gd_diff))) {
+    if (is.na(particles)) 
+      return(list(particles=100,particle_factor = particle_factor)) else
+        return(list(particles=particles,particle_factor = particle_factor))
+  }
+  if(is.na(particles)){
+    gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_factor
+    gd_diff[gd_diff < 0] <- -(percent_down/100)*max_factor
+    particle_factor <- pmin(pmax(min_factor, particle_factor + gd_diff), max_factor)
+  } else{
+    gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_particles
+    gd_diff[gd_diff < 0] <- -(percent_down/100)*min_particles
+    particles <- pmin(pmax(min_particles, particles + gd_diff), max_particles)
+  }
+  return(list(particles = round(particles), particle_factor = particle_factor))
 }
 
 check_stuck <- function(samples,filter=c("burn","sample")[1], # dont use adapt
@@ -498,38 +510,20 @@ run_emc <- function(file_name,nsample=1000, ...)
       save(list=sname,file=file_name)
     }
     if (is.null(attr(get(sname[1]),"adapted")) && !is.na(attr(get(sname[1]),"burnt"))) {
-      assign(sname[1],auto_adapt(get(sname[1]), ...))
+      assign(sname[1],run_adapt(get(sname[1]), ...))
       save(list=sname,file=file_name)
     }
     if (!is.null(attr(get(sname[1]),"adapted")) && attr(get(sname[1]),"adapted")) {
-      assign(sname[1],auto_sample(get(sname[1]),iter=nsample, ...))
+      assign(sname[1],run_sample(get(sname[1]),iter=nsample, ...))
       save(list=sname,file=file_name)
     }
   } else { # file_name is actually a samplers object
     if (is.null(attr(file_name,"burnt")) || is.na(attr(file_name,"burnt")))
       file_name <- auto_burn(file_name, ...)
     if (is.null(attr(file_name,"adapted")) && !is.na(attr(file_name,"burnt")))
-      file_name <- auto_adapt(file_name, ...)
+      file_name <- run_adapt(file_name, ...)
     if (!is.null(attr(file_name,"adapted")) && attr(file_name,"adapted"))
-      file_name <- auto_sample(file_name,iter=nsample, ...)
+      file_name <- run_sample(file_name,iter=nsample, ...)
     return(file_name)
   }
 }
-
-# all_par <- c(particles=NA, particle_factor = 50, mix = NULL,
-# epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,cores_per_chain=1,
-# cores_for_chains=NULL,verbose=TRUE,verbose_run_stage = FALSE)
-# 
-# # step_size = NA (in burn, but = 25 in adapt and 50 sample)
-# 
-# burn_adapt <- c(min_es=NULL)
-# 
-# adapt_sample_par <- c(n_cores_conditional = 1,thin = NULL)
-# 
-# auto_burn_par <- c(ndiscard=100,nstart=300,start_mu = NULL, start_var = NULL,
-# max_gd_trys=100,max_gd=1.2,thorough=TRUE,mapped=FALSE, min_iter=NULL,max_iter=NULL)
-# 
-# auto_adapt_par <- c(max_trys=25, min_unique = 200)
-# 
-# auto_sample_par <- c(iter=NA)
-  

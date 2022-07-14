@@ -19,7 +19,7 @@ Sigma <- matrix(c(.08, .02,
 
 p_mat1 <- mvtnorm::rmvnorm(length(design1$Ffactors$subjects),mean=p_vector,sigma=Sigma)
 dimnames(p_mat1)[[1]] <- design1$Ffactors$subjects
-data1 <- make_data(p_vector= p_mat1,design=design1,trials=200)
+data1 <- make_data(p_vector= p_mat1,design=design1,trials=50)
 
 dadm1 <- design_model(data1,design1)
 
@@ -40,13 +40,15 @@ Sigma <- matrix(c(.12, .02, .03, .05,
 
 p_mat2 <- mvtnorm::rmvnorm(length(design2$Ffactors$subjects),mean=p_vector,sigma=Sigma)
 dimnames(p_mat2)[[1]] <- design2$Ffactors$subjects
-data2 <- make_data(p_vector= p_mat2,design=design2,trials=200)
+data2 <- make_data(p_vector= p_mat2,design=design2,trials=50)
 
 
 dadm2 <- design_model(data2,design2)
 sampler <- make_samplers(list(dadm1, dadm2), list(design1, design2), type = "standard")
 
-samples <- run_chains(sampler, iter = c(30, 0, 0), cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
+samples <- run_emc(sampler, nsample = 500, cores_per_chain = 6, cores_for_chains = 1, verbose_run_stage = T)
+
+samples2 <- shorten_chains(samples, n = c(5, 100), filter = "burn")
 plot_chains(samples, filter = "burn", selection = "alpha", plot_acf = F, subfilter = 10)
 gd_pmwg(samples, filter = "burn")
 
