@@ -438,7 +438,7 @@ head(parameters_data_frame(sPNAS_a,selection="alpha",mapped=TRUE))
 # emc/likelihood.R) imposes the following restrictions on these parameters
 # (we also restrict v and a to typical regions), returning low likelihoods when
 # they are violated. 
-#     abs(v)<5 | a<2 | sv<2 | sv>.1 | SZ<.75 | SZ>.01 | st0<.2
+#     abs(v)<5 | a<2 | sv<2 | sv>.01 | SZ<.75 | SZ>.01 | st0<.2
 # They are usually appropriate for the seconds scale with s=1 fixed. For 
 # some data and/or different scalings they may have to be adjusted. Posterior
 # estiamtes should be checked to see if estimates are stacking up against these
