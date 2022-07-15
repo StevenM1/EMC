@@ -106,10 +106,7 @@ make_dm <- function(form,da,Clist=NULL,Fcovariates=NULL)
 }
 
 
-# prior = NULL;rt_resolution=0.02; add_acc=TRUE; verbose=TRUE; compress=TRUE; rt_check=TRUE
-# 
-# data=add_accumulators(data,matchfun=design$matchfun,type=model$type)
-# add_acc=FALSE;verbose=FALSE;rt_check=FALSE;compress=FALSE
+# model=NULL;prior = NULL; add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
 
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.02,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
@@ -210,6 +207,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     model <- design$model
   }
   if (model$type=="SDT") rt_check <- FALSE
+  if (any(names(model)=="da_augment")) compress=FALSE # RL models
   
   if (any(model$p_types %in% names(data)))
     stop("Data cannot have columns with the same names as model parameters")
