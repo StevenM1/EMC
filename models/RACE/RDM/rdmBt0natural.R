@@ -31,6 +31,8 @@ rdmBt0natural <- list(
   },
   # p_vector transform scaling parameter by s=1 assumed in rdm.R
   transform = function(x) x,
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) pars,
   # Random function for racing accumulators
   rfun=function(lR,pars) rRDM(lR,pars),
   # Density function (PDF) for single accumulator

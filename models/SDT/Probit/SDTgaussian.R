@@ -39,6 +39,8 @@ probit <- list(
       x
     }
   },
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) pars,
   # Random function for discrete choices
   rfun=function(lR,pars) rPROBIT(lR,pars),
   # probability of choice between lower and upper thresholds (lt & ut)

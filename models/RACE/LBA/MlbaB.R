@@ -31,6 +31,8 @@ MlbaB <- list(
   },
   # p_vector transform, sets sv as a scaling parameter
   transform = function(p) p,
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) pars,
   # Random function for racing accumulator
   rfun=function(lR,pars) rLBA(lR,pars,posdrift=TRUE),
   # Density function (PDF) for single accumulator

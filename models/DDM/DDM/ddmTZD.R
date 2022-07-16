@@ -57,6 +57,8 @@ ddmTZD <- list(
     if (pars[1,"SZ"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"SZ"] > .01  
     pars
   },
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) pars,
   # p_vector transform, sets s as a scaling parameter
   transform = function(p) p,
   # Random function

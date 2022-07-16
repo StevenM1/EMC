@@ -60,6 +60,8 @@ ddmTZDt0natural <- list(
   },
   # p_vector transform, sets s as a scaling parameter
   transform = function(p) p,
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) pars,
   # Random function
   rfun=function(lR,pars) rDDM(lR,pars,precision=3),
   # Density function (PDF)
