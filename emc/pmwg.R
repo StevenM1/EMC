@@ -46,6 +46,7 @@ dm_list <- function(dadm)
   ok_da_looser <- attr(dadm,"ok_da_looser")
   expand_uc <- attr(dadm,"expand_uc") 
   expand_lc <- attr(dadm,"expand_lc") 
+  adapt <- attr(dadm,"adapt")
   
   # winner on expanded dadm  
   expand_winner <- attr(dadm,"expand_winner")
@@ -59,6 +60,8 @@ dm_list <- function(dadm)
     isin1 <- s_expand==i             # da
     isin2 <- attr(dadm,"s_data")==i  # data
     dl[[i]] <- dadm[isin,]
+    dl[[i]]$subjects <- factor(as.character(dl[[i]]$subjects))
+    
     attr(dl[[i]],"model") <- model
     attr(dl[[i]],"p_names") <- p_names
     attr(dl[[i]],"sampled_p_names") <- sampled_p_names
@@ -76,11 +79,14 @@ dm_list <- function(dadm)
     attr(dl[[i]],"unique_nortR") <- unique_nortR[isin] 
 
     isinlR1 <- slR1==i
-    attr(dl[[i]],"expand_nort") <-  expand_nort[isinlR1]- min( expand_nort[isinlR1]) + 1
-    attr(dl[[i]],"expand_nortR") <- expand_nortR[isinlR1]-min(expand_nortR[isinlR1]) + 1
+    if (!is.null(expand_nort)) 
+      attr(dl[[i]],"expand_nort") <-  expand_nort[isinlR1]- min( expand_nort[isinlR1]) + 1
+    if (!is.null(expand_nortR)) 
+      attr(dl[[i]],"expand_nortR") <- expand_nortR[isinlR1]-min(expand_nortR[isinlR1]) + 1
     
     attr(dl[[i]],"ok_trials") <- ok_trials[isin2]
-    attr(dl[[i]],"expand_winner") <- expand_winner[isin2]-min(expand_winner[isin2]) + 1
+    if (!is.null(expand_winner))
+      attr(dl[[i]],"expand_winner") <- expand_winner[isin2]-min(expand_winner[isin2]) + 1
     
     if (!is.null(attr(dadm,"expand_uc")))
       attr(dl[[i]],"expand_uc") <- as.numeric(factor(expand_uc[isin2]))
@@ -95,6 +101,11 @@ dm_list <- function(dadm)
       attr(dl[[i]],"LC") <- attr(dadm,"LC")[names(attr(dadm,"LC"))==i]
     if (!is.null(attr(dadm,"UC")))
       attr(dl[[i]],"UC") <- attr(dadm,"UC")[names(attr(dadm,"UC"))==i]
+    
+    # adapt models
+    if (!is.null(adapt))
+      attr(dl[[i]],"adapt") <- setNames(list(adapt[[i]],adapt$design),c(i,"design"))
+    
   }
   dl
 } 
@@ -105,11 +116,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
   pars <- attr(dadms[[1]], "sampled_p_names")
   prior <- attr(dadms[[1]], "prior")
   ll_func <- attr(dadms[[1]], "model")$log_likelihood
-  # subjects <- unique(unlist(sapply(dadms, FUN = function(x){return(unique(x$subjects))})))
   subjects <- unique(factor(sapply(dadms, FUN = function(x) levels(x$subjects))))
-  # dadm_list <- vector("lis", length = length(subjects))
-  # dadm_list[as.numeric(subjects)] <- dm_list(dadms[[1]])
-  # dadm_list[as.numeric(subjects)] <- dm_list(dadms[[1]])
   dadm_list <- dm_list(dadms[[1]])
   if(N_models > 1){
     k <- 1
@@ -139,7 +146,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
 # type=c("standard","diagonal","blocked","factor","factorRegression","single")[1]
 # n_chains=3; rt_resolution=0.02
 # prior_list = NULL;par_groups=NULL;n_factors=NULL;constraintMat = NULL;covariates=NULL
-# data_list=data[,-4]; design_list=design_B_MT;model_list=NULL
+# data_list=data; design_list=design;model_list=NULL; rt_resolution=.001
 make_samplers <- function(data_list,design_list,model_list=NULL,
   type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
   n_chains=3,rt_resolution=0.02,

@@ -11,14 +11,14 @@ add_trials <- function(dat)
 }
 
 
-# model=NULL;trials=NULL;data=NULL;expand=1;
-# mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL
-# trials=10; design=design_B_MT
+# model=NULL;trials=NULL;data=NULL;expand=1; n_cores=1
+# mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL; Fcovariates=NULL
 # 
-# p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]]
+# trials=10
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
-                      mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,Fcovariates=NULL)
+                      mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
+                      Fcovariates=NULL,n_cores=1)
   # Simulates data using rfun from model specified by a formula list (Flist) 
   # a factor contrast list (Clist, if null data frame creation defaults used) 
   # using model (list specifying p_types, transform, Mtransform and rfun).
@@ -33,9 +33,10 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   # expand replicates the design expand times
   # matchfun scores correct response accumulator lM, e.g., for scoring latent 
   #   response = stimulus  matchfun = function(d)d$S==d$lR
-# If mapped_p is true instead returns cbind(da,pars), augmented data and 
-# mapped pars.
-
+  # If mapped_p is true instead returns cbind(da,pars), augmented data and 
+  # mapped pars.
+  # Fcovariates = list of functions to specify covariates
+  # n_cores: parallel generation over subjects for RL models 
 {
   
   missingFilter <- function(data,LT,UT,LC,UC,Rmissing) 
@@ -100,20 +101,24 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     if (!is.null(design$Ffunctions)) data <- 
       cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
     LT <- UT <- LC <- UC <- Rmissing <- NULL
-    if (!is.null(Fcovariates)) {
-      if (is.null(design$Fcovariates)) stop("Design does not contain Fcovariates")
-      if (!(all(sort(names(Fcovariates))==sort(design$Fcovariates))))
-        stop("Fcovariates and design$Fcovariates have different names")
-      if (!is.data.frame(Fcovariates)) {
-        if (!all(unlist(lapply(Fcovariates,is.function))))
-          stop("Fcovariates must be either a data frame or list of functions")
-        nams <- names(Fcovariates)
-        Fcovariates <- do.call(cbind.data.frame,lapply(Fcovariates,function(x){x(data)}))
-        names(Fcovariates) <- nams 
+    # Add comparatives
+    if (!is.null(design$Fcovariates)) {
+      if (!is.null(Fcovariates)) {
+        if (!(all(names(Fcovariates)  %in% design$Fcovariates)))
+          stop("All Fcovariates must be named in design$Fcovariates")
+        if (!is.data.frame(Fcovariates)) {
+          if (!all(unlist(lapply(Fcovariates,is.function))))
+            stop("Fcovariates must be either a data frame or list of functions")
+          nams <- names(Fcovariates)
+          Fcovariates <- do.call(cbind.data.frame,lapply(Fcovariates,function(x){x(data)}))
+          names(Fcovariates) <- nams 
+        }
+        n <- dim(Fcovariates)[1]
+        if (!(n==dim(data)[1])) stop("Fcovariates must specify ",dim(data)[1]," values per covariate")
+        data <- cbind.data.frame(data,Fcovariates)
       }
-      n <- dim(Fcovariates)[1]
-      if (!(n==dim(data)[1])) stop("Fcovariates must specify ",dim(data)[1]," values per covariate")
-      data <- cbind.data.frame(data,Fcovariates)
+      empty_covariates <- design$Fcovariates[!(design$Fcovariates %in% names(Fcovariates))]
+      if (length(empty_covariates)>0) data[[empty_covariates]] <- NA
     }
   } else {
     LT <- attr(data,"LT"); UT <- attr(data,"UT")
@@ -124,7 +129,8 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   if (!is.factor(data$subjects)) data$subjects <- factor(data$subjects)
   if ( is.null(model$p_types) ) stop("model$p_types must be specified")
   if ( is.null(model$transform) ) model$transform <- identity
-  if ( is.null(model$Mtransform) ) mdoel$Mtransform <- identity
+  if ( is.null(model$Mtransform) ) modell$Mtransform <- identity
+  if ( is.null(model$Ttransform) ) modell$Ttransform <- identity
   data <- design_model(
     add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
@@ -132,15 +138,26 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   pars <- model$Mtransform(map_p(
     model$transform(add_constants(p_vector,design$constants)),data
   ))
-  if (mapped_p) 
-    return(cbind(data[,!(names(data) %in% c("R","rt"))],pars))
+  if (!is.null(design$adapt)) {
+    if (expand>1) {
+      expand <- 1
+      warning("Expand does not work with this type of model")
+    }
+    data <- adapt_data(data,design,model,pars,mapped_p=mapped_p)
+    if (mapped_p) return(data)
+    adapt <- attr(data,"adapt")
+    data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% c("lR","lM"))]
+    attr(data,"adapt") <- adapt
+    return(data)
+  } 
+  if (mapped_p) return(cbind(data[,!(names(data) %in% c("R","rt"))],pars))
   if (expand==1) 
     Rrt <- model$rfun(data$lR,pars) else
       Rrt <- model$rfun(rep(data$lR,expand),apply(pars,2,rep,times=expand))
-  data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% c("lR","lM"))]
   if (expand>1) data <- cbind(rep=rep(1:expand,each=dim(data)[1]),
                               data.frame(lapply(data,rep,times=expand))) 
   data[,c("R","rt")] <- Rrt
+  data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% c("lR","lM"))]
   missingFilter(data[,names(data)!="winner"],LT,UT,LC,UC,Rmissing)
 }
 

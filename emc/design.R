@@ -108,6 +108,8 @@ make_dm <- function(form,da,Clist=NULL,Fcovariates=NULL)
 
 # model=NULL;prior = NULL; add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
 
+# add_acc=FALSE;compress=FALSE;verbose=FALSE;rt_check=FALSE
+
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.02,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
   # Combines data frame with a design and model
@@ -207,7 +209,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     model <- design$model
   }
   if (model$type=="SDT") rt_check <- FALSE
-  if (any(names(model)=="da_augment")) compress=FALSE # RL models
+  if (!is.null(design$adapt)) compress=FALSE # RL models
   
   if (any(model$p_types %in% names(data)))
     stop("Data cannot have columns with the same names as model parameters")
@@ -309,6 +311,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     dadm <- da
     attr(dadm,"designs") <- out
     attr(dadm,"s_expand") <- da$subjects
+    attr(dadm,"expand") <- 1:dim(dadm)[1]
   }
   if (verbose & compress) message("Likelihood speedup factor: ",round(dim(da)[1]/dim(dadm)[1],1))
   p_names <-  unlist(lapply(out,function(x){dimnames(x)[[2]]}),use.names=FALSE)
@@ -348,6 +351,12 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   }
   attr(dadm,"ok_trials") <- is.finite(data$rt)
   attr(dadm,"s_data") <- data$subjects
+  if (!is.null(design$adapt)) {
+    attr(dadm,"adapt") <- setNames(
+      lapply(levels(data$subjects),augment,da=dadm,design=design),
+    levels(data$subjects))
+    attr(dadm,"adapt")$design <- design$adapt
+  }
   dadm
 }
 
@@ -391,14 +400,14 @@ map_p <- function(p,dadm)
 
 make_design <- function(Flist,Ffactors,Rlevels,model,
   Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
-  report_p_vector=TRUE) 
+  adapt=NULL,report_p_vector=TRUE) 
   # Binds together elements that make up a design a list  
 {
 
   if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels),Rlevels)
   design <- list(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
        Clist=Clist,matchfun=matchfun,constants=constants,
-       Fcovariates=Fcovariates,Ffunctions=Ffunctions,model=model)
+       Fcovariates=Fcovariates,Ffunctions=Ffunctions,adapt=adapt,model=model)
   p_vector <- sampled_p_vector(design,design$model)
   if (model$type=="SDT") {
     tnams <- dimnames(attr(p_vector,"map")$threshold)[[2]]

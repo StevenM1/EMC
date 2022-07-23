@@ -1,7 +1,5 @@
 #### Fitting automation
-require(parallel)
 
-require(abind)
 run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
                        particles=NA,particle_factor=50, p_accept= NULL, n_cores=1,
@@ -41,7 +39,7 @@ run_stages <- function(sampler,iter=c(300,0,0),
   }
   if (verbose) message("Running sample stage")
   sampler <- run_stage(sampler, stage = "sample", iter = iter[3], epsilon = epsilon,
-                       pdist_update_n=pdist_update_n,particles = particles, n_cores = n_cores, 
+                       particles = particles, n_cores = n_cores, # pdist_update_n=pdist_update_n,
                        pstar = p_accept, verbose = verbose_run_stage, mix=mix, eff_mu = eff_mu,
                        eff_var = eff_var,  epsilon_upper_bound=epsilon_upper_bound)  
   sampler
@@ -75,7 +73,7 @@ run_burn <- function(samplers,iter=300,
                              n_cores=cores_per_chain, mc.cores = cores_for_chains)
     if (class(samplers_new)=="try-error" || 
         any(lapply(samplers_new,class)=="try-error")) {
-      save(samplers,iter,particles,particle_factor,p_accept,pdist_update_n,
+      save(samplers,iter,particles,particle_factor,p_accept, # pdist_update_n,
            epsilon_upper_bound,file="fail_run_stage.RData")
       run_try <- run_try + 1
       if (verbose) message("run_stage try error", run_try)
@@ -309,7 +307,11 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   return(samplers)
 }
 
-
+# verbose=TRUE;epsilon = NULL; particles_sample=NA;particle_factor_sample=25; p_accept=.7;
+#                         cores_per_chain=1;cores_for_chains=NULL;mix=NULL;
+#                         n_cores_conditional = 1; step_size_sample = 50; thin = NULL;
+#                         verbose_run_stage = FALSE
+# iter=1000
 run_sample <- function(samplers,iter=NA,verbose=TRUE,
                         epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.7,
                         cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
@@ -357,7 +359,18 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage, eff_mu = eff_mu,
                              eff_var = eff_var,
                              mc.cores=cores_for_chains)
+    if(verbose) {
+      cat(paste(step*step_size_sample," "))
+      if (step %% 15 == 0) cat("\n")
+    }
+    
+                     # tmp <- run_stage(samplers_new[[2]],stage="sample",iter=50,epsilon = epsilon,
+                     #   particles = particles, n_cores = cores_per_chain, 
+                     #    pstar = p_accept, verbose = TRUE, mix=mix, eff_mu = eff_mu,
+                     #    eff_var = eff_var,  epsilon_upper_bound=15)
+    
   }
+  if(verbose) cat("\n")
   samplers <- samplers_new
   attr(samplers,"data_list") <- data_list
   attr(samplers,"design_list") <- design_list
@@ -495,6 +508,10 @@ fix_stuck <- function(samples, bad_subs, best, worst){
   }
   return(samples)
 }
+
+
+
+# cores_for_chains=1; verbose_run_stage=TRUE; cores_per_chain=28
 
 
 run_emc <- function(file_name,nsample=1000, ...) 
