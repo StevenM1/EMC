@@ -530,7 +530,7 @@ run_emc <- function(file_name,nsample=1000, ...)
       assign(sname[1],run_adapt(get(sname[1]), ...))
       save(list=sname,file=file_name)
     }
-    if (!is.null(attr(get(sname[1]),"adapted")) && attr(get(sname[1]),"adapted")) {
+    if (!is.null(attr(get(sname[1]),"adapted")) && attr(get(sname[1]),"adapted") && nsample > 0) {
       assign(sname[1],run_sample(get(sname[1]),iter=nsample, ...))
       save(list=sname,file=file_name)
     }
@@ -539,7 +539,7 @@ run_emc <- function(file_name,nsample=1000, ...)
       file_name <- auto_burn(file_name, ...)
     if (is.null(attr(file_name,"adapted")) && !is.na(attr(file_name,"burnt")))
       file_name <- run_adapt(file_name, ...)
-    if (!is.null(attr(file_name,"adapted")) && attr(file_name,"adapted"))
+    if (!is.null(attr(file_name,"adapted")) && attr(file_name,"adapted") && nsample > 0)
       file_name <- run_sample(file_name,iter=nsample, ...)
     return(file_name)
   }
