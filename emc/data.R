@@ -11,10 +11,11 @@ add_trials <- function(dat)
 }
 
 
-# model=NULL;trials=NULL;data=NULL;expand=1; n_cores=1
-# mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL; Fcovariates=NULL
+# model=NULL;trials=NULL;data=NULL;expand=1;
+#
+# n_cores=1; mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL; Fcovariates=NULL
 # 
-# trials=10
+# p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]];expand=expand
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
@@ -143,7 +144,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
       expand <- 1
       warning("Expand does not work with this type of model")
     }
-    data <- adapt_data(data,design,model,pars,mapped_p=mapped_p)
+    data <- adapt_data(data,design,model,pars,mapped_p=mapped_p,add_response = TRUE)
     if (mapped_p) return(data)
     adapt <- attr(data,"adapt")
     data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% c("lR","lM"))]
@@ -163,7 +164,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
 
 # hyper=FALSE;n_post=100;expand=1; filter="sample";subfilter=1;thin=1;
 # use_par=c("random","mean","median")[1]; n_cores=1
-# samples=rdm_B_MT; n_post=1;subfilter=1000
+# samples=miltic1_rdm; n_post=1;subfilter=500
 post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
                          filter="sample",subfilter=0,thin=1,n_cores=1,
                          use_par=c("random","mean","median")[1]) 
