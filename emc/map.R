@@ -55,7 +55,7 @@ mapped_name_list <- function(design,model,save_design=FALSE)
 }
 
 
-map_mcmc <- function(mcmc,design,model, include_constants = T) 
+map_mcmc <- function(mcmc,design,model, include_constants = TRUE) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
   # model parameterization. NB: Does not apply Mtransform, only Ntransform 
 {

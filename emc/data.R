@@ -11,11 +11,9 @@ add_trials <- function(dat)
 }
 
 
-# model=NULL;trials=NULL;data=NULL;expand=1;
-#
-# n_cores=1; mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL; Fcovariates=NULL
-# 
-# p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]];expand=expand
+# data=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
+# Fcovariates=NULL;n_cores=1
+# trials=1
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,

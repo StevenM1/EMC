@@ -81,7 +81,8 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # show_chains=FALSE;do_plot=TRUE;subject=NA;add_means=FALSE;
 # pars=NULL;probs=c(.025,.5,.975);bw = "nrd0"; adjust = 1
 # 
-# layout=c(2,4); do_plot=FALSE, pmwg_mcmc=ddm_a_MT; pars <- attributes((attributes(ddm_a_MT)$data_list[[1]]))$pars
+# pmwg_mcmc=miltic1_rdm; mapped=TRUE; selection="mu";subfilter=500
+
 
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
@@ -119,12 +120,10 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (plot_prior) {
       psamples <- get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
-      if (mapped) {
-        psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
-                             model=attr(pmwg_mcmc,"model_list")[[1]])
-        if (!is.null(attr(psamples,"isConstant")))
-          psamples <- psamples[,!attr(psamples,"isConstant"),drop=FALSE]
-      }
+      if (mapped) psamples <- map_mcmc(psamples,design=design,
+                                       model=attr(pmwg_mcmc,"model_list")[[1]])
+      if (!is.null(attr(psamples,"isConstant")))
+        psamples <- psamples[,!attr(psamples,"isConstant"),drop=FALSE]
     }
     if (is.null(psamples)) plot_prior <- FALSE
     if (class(pmwg_mcmc)=="pmwgs") pmwg_mcmc <- as_Mcmc(pmwg_mcmc,

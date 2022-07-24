@@ -29,7 +29,7 @@ augment = function(s,da,design)
 }
 
 # ARCHITECTURE OF FOLLOWING FUNCTION WILL NEED UPDATING FOR MULTIPLE ADAPT TYPES  
-# s="15";npars=pars;da=data; rfun=model$rfun;return_learning=FALSE;mapped_p=FALSE
+# s="10";npars=pars;da=data; rfun=model$rfun;return_learning=FALSE;mapped_p=FALSE
 update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE) 
   # for subject s
   # Either return da filling in responses and RT if da has no responses (in
@@ -57,10 +57,13 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
           dimnames=list(namAcc,NULL,dimnames(npars)[[2]],namStim)),
   c(1,2,4,3)) # reorder to make look up quick in loop
   # fill prob reward array: trials x stimulus x stimulus component
-  pReward <- array(as.vector(sapply(dimnames(adapt$stimulus$targets)[[1]],function(x){
-    da[index,paste("p",x,sep="_")]})),dim=c(nAcc,maxQupdates,nStim,nAcc),
-    dimnames=list(namAcc,NULL,namStim,namAcc))[1,,,]
-    
+  # pReward <- array(as.vector(sapply(dimnames(adapt$stimulus$targets)[[1]],function(x){
+  #   da[index,paste("p",x,sep="_")]})),dim=c(nAcc,maxQupdates,nStim,nAcc),
+  #   dimnames=list(namAcc,NULL,namStim,namAcc))[1,,,]
+  pReward <- array(array(as.vector(sapply(dimnames(adapt$stimulus$targets)[[1]],function(x){
+    da[index,paste("p",x,sep="_")]})),dim=c(nAcc,maxQupdates,nStim,nAcc))[1,,,],
+    dim=c(maxQupdates,nStim,nAcc),dimnames=list(NULL,namStim,namAcc))
+  
   # Extract Q values and update
   if (add_response) {
     da_reward <- da_rt <- rep(NA,dim(da)[1])         # Rewards and rts
