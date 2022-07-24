@@ -29,7 +29,7 @@ augment = function(s,da,design)
 }
 
 # ARCHITECTURE OF FOLLOWING FUNCTION WILL NEED UPDATING FOR MULTIPLE ADAPT TYPES  
-# s="15";npars=pars;da=dadm; rfun=NULL;return_learning=FALSE;mapped_p=FALSE
+# s="15";npars=pars;da=data; rfun=model$rfun;return_learning=FALSE;mapped_p=FALSE
 update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE) 
   # for subject s
   # Either return da filling in responses and RT if da has no responses (in
@@ -71,7 +71,7 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
     Rmat <- array(da[index,"R"], dim=c(nAcc,maxQupdates,nStim))[1,,] 
     reward_mat <- array(da[index,"reward"], dim=c(nAcc,maxQupdates,nStim))[1,,] 
   }
-  for (i in 1:maxQupdates) {
+  for (i in 1:maxQupdates)  { 
     ok <- !is.na(parArr[1,i,,1]) # stimuli that need updating
     if (i==1) learn[,ok,i] <- parArr[,1,,adapt$stimulus$init_par] # Initialize   
     # pick out fixed pars
@@ -85,7 +85,7 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
     if (add_response) { # Simulate trial
       Rrt <- rfun(factor(levels=dimnames(adapt$stimulus$targets)[[1]]),pars)
       Rfac <- Rrt[,"R"]
-      reward <- rbinom(length(Rfac),1,pReward[i,,][cbind(1:length(Rfac),as.numeric(Rfac))])
+      reward <- rbinom(length(Rfac),1,pReward[i,ok,][cbind(1:length(Rfac),as.numeric(Rfac))])
       # harvest new trial info
       da_rt[Ri[,i,][,ok,drop=FALSE]] <- rep(Rrt[,"rt"],each=nAcc)
       da_reward[Ri[,i,][,ok,drop=FALSE]] <- rep(reward,each=nAcc)
