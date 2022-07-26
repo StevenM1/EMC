@@ -14,10 +14,11 @@ add_constants <- function(p,constants)
 }
 
 get_pars <- function(p_vector,dadm)
-  # Transform p_vector, map to design, and transform mapped parameters
-  attr(dadm,"model")$Mtransform(map_p(
+  # Add constants, transform p_vector, map to design, transform mapped parameters 
+  # tp the natural scale, and create trial-dependant parameters
+  attr(dadm,"model")$Ttransform(attr(dadm,"model")$Mtransform(map_p(
     attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
-    dadm))
+    dadm)),dadm)
 
 
 add_constants_mcmc <- function(p,constants) 
@@ -54,7 +55,7 @@ mapped_name_list <- function(design,model,save_design=FALSE)
 }
 
 
-map_mcmc <- function(mcmc,design,model, include_constants = T) 
+map_mcmc <- function(mcmc,design,model, include_constants = TRUE) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
   # model parameterization. NB: Does not apply Mtransform, only Ntransform 
 {

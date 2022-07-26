@@ -1,25 +1,35 @@
 # RDM_B parameterization with s=1 scaling (B = b-A done in rdm.R)
+# Added v0 parameter for initial rates in RL version.
 
 source("models/RACE/RDM/rdm.R")
 
-rdmB <- list(
+rdmRL <- list(
   type="RACE",
-  p_types=c("v","B","A","t0"),
+  p_types=c("v0","v","B","A","t0","alpha","w","q0"),
+
   # Transform to natural scale
   Ntransform=function(x) {
     exp(x)
   },
+  
   # mapped parameter transform
-  Mtransform = function(pars) 
+  Mtransform = function(pars,dadm) # ,data,model=NULL 
     # transform parameters back to real line 
-    # pars is a matrix output by map_p_vector  
+    # pars is a matrix output by map_p_vector
+    # da is an augmented data
   {
-    rdmB$Ntransform(pars)
+    rdmRL$Ntransform(pars) 
+  },
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) {
+    parsList <- setNames(vector(mode="list",length=length(levels(dadm$subjects))),
+                         levels(dadm$subjects))
+    for (i in levels(dadm$subjects))
+      parsList[[i]] <- update_pars(i,pars,dadm)
+    do.call(rbind,parsList)
   },
   # p_vector transform scaling parameter by s=1 assumed in rdm.R
   transform = function(x) x,
-  # Trial dependent parameter transform
-  Ttransform = function(pars,dadm) pars,
   # Random function for racing accumulators
   rfun=function(lR,pars) rRDM(lR,pars),
   # Density function (PDF) for single accumulator

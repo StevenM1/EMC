@@ -29,6 +29,8 @@ normal <- list(
   },
   # p_vector transform
   transform = function(x) x,
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) pars,
   # Random function for racing accumulators
   rfun=function(lR,pars) rNORMAL(lR,pars),
   # Density function (PDF) for single accumulator

@@ -81,7 +81,8 @@ plot_acfs <- function(samples,layout=NULL,subject=1,
 # show_chains=FALSE;do_plot=TRUE;subject=NA;add_means=FALSE;
 # pars=NULL;probs=c(.025,.5,.975);bw = "nrd0"; adjust = 1
 # 
-# layout=c(2,4); do_plot=FALSE, pmwg_mcmc=ddm_a_MT; pars <- attributes((attributes(ddm_a_MT)$data_list[[1]]))$pars
+# pmwg_mcmc=miltic1_rdm; mapped=TRUE; selection="mu";subfilter=500
+
 
 plot_density <- function(pmwg_mcmc,layout=c(2,3),
     selection="alpha",filter="sample",thin=1,subfilter=0,mapped=FALSE,
@@ -119,12 +120,10 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (plot_prior) {
       psamples <- get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
-      if (mapped) {
-        psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
-                             model=attr(pmwg_mcmc,"model_list")[[1]])
-        if (!is.null(attr(psamples,"isConstant")))
-          psamples <- psamples[,!attr(psamples,"isConstant"),drop=FALSE]
-      }
+      if (mapped) psamples <- map_mcmc(psamples,design=design,
+                                       model=attr(pmwg_mcmc,"model_list")[[1]])
+      if (!is.null(attr(psamples,"isConstant")))
+        psamples <- psamples[,!attr(psamples,"isConstant"),drop=FALSE]
     }
     if (is.null(psamples)) plot_prior <- FALSE
     if (class(pmwg_mcmc)=="pmwgs") pmwg_mcmc <- as_Mcmc(pmwg_mcmc,
@@ -742,3 +741,107 @@ check_run <- function(samples,pdf_name="check_run.pdf",interactive=TRUE,
   dev.off()
 }
 
+
+
+# model=NULL; adapt_type="stimulus";adapt_output=c("learn","R","rt")[1]
+# reps=1; subject=NA;layout=NULL; ylim=NULL
+plot_adapt <- function(data=NULL,design=NULL,model=NULL,adapt_type="stimulus",
+  adapt_output=c("learn","R","rt","par")[1],
+  reps=1,p_vector=NULL, # For building replicates
+  subject=NA,layout=NULL,ylim=NULL,dat=NULL)
+  # Plots learning/response/rt or adapted parameter for one subject
+  # reps enable averaging over many replicates, if 1 then just plots data
+{
+  if (is.null(dat)) {
+    if (is.null(model)) model <- design$model
+    if (is.null(model)) stop("Must supply model if not in design.")
+    adapt <- attr(data,"adapt")
+    if (is.null(adapt)) stop("Data has no adapt attribute")
+    if (is.na(subject[1])) subject <- names(adapt)[[1]]
+    if (!(subject %in% names(adapt))) stop("Subject not present")
+    adapt <- adapt[[subject]]
+    data <- data[data$subjects==subject,]
+    data$subjects <- factor(as.character(data$subjects))
+    if (!(adapt_type %in% names(adapt))) stop("adapt_type not present")
+    adapt <- adapt[[adapt_type]]
+    if (reps>1) {
+      if (is.null(p_vector)) stop("Must supply p_vector to get replicates")
+      dadm <- design_model(
+        add_accumulators(data,design$matchfun,type=model$type),
+        design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
+        rt_check=FALSE,rt_resolution = .001)
+      pars <- model$Mtransform(map_p(
+        model$transform(add_constants(p_vector,design$constants)),
+        dadm))
+    }
+    if (adapt_output=="learn") {
+      if (!any(is.na(adapt$learn))) dat <- adapt$learn 
+      if (reps>1) {
+        for (i in 2:reps) 
+          dat <- dat + adapt_data(dadm,design,model,pars,
+                                  add_response=TRUE,return_learning=TRUE)[[1]]  
+        dat <- dat/reps
+      }
+    } else if (adapt_output=="par") {
+      if (is.null(design) | is.null(p_vector)) 
+        stop("Must supply design and p_vector to plot adapted parameter")
+      dat <- adapt_data(dadm,design,model,pars)[,adapt$par]
+      if (reps>1) {
+        for (i in 2:reps)
+          dat <- dat + adapt_data(dadm,design,model,pars,add_response=TRUE,mapped_p=TRUE)[,adapt$par]  
+        dat <- dat/reps
+      }
+      dat <- cbind.data.frame(lR=dadm$lR,dat)
+    } else if (adapt_output=="R") {
+      dat <- cbind.data.frame(lR=dadm[,"lR"],R=dadm[,"R"]==dadm[,"lR"])
+      if (reps>1) {
+        for (i in 2:reps) {
+          dadmi <- adapt_data(dadm,design,model,pars,add_response=TRUE)
+          dat$R <- dat$R + (dadmi[,"R"]==dadmi[,"lR"]) 
+        } 
+        dat$R <- dat$R/reps
+      }
+    } else { # rt
+      dat <- cbind.data.frame(lR=dadm[,"lR"],rt=dadm[,"rt"])
+      dat[dadm[,"R"]!=dadm[,"lR"],"rt"] <- NA
+      if (reps>1) {
+        n <- !is.na(dat$rt)
+        for (i in 2:reps) {
+          dadmi <- adapt_data(dadm,design,model,pars,add_response=TRUE)
+          rti <- dadmi[,"rt"]
+          rti[dadmi[,"R"]!=dadmi[,"lR"]] <- NA
+          dat[,"rt"] <- apply(cbind(dat[,"rt"],rti),1,sum,na.rm=TRUE)
+          n[!is.na(rti)] <- n[!is.na(rti)] + 1
+        }  
+        dat[n!=0,"rt"] <- dat[n!=0,"rt"]/n[n!=0]
+      }
+    }
+  } else {
+    adapt <- attr(dat,"adapt")
+    adapt_output <- attr(dat,"adapt_output")
+    dadm <- attr(dat,"dadm")
+  }
+  if (is.null(layout)) layout <- dim(adapt$target)
+  par(mfrow=layout)
+  for (r in row.names(adapt$target)) for (s in 1:ncol(adapt$target)) {
+    stim <- adapt$target[r,s]
+    ok <- dadm[,r]==stim
+    if (is.data.frame(dat)) {  # par or R or rt
+      dati <- dat[ok,]
+      dati <- dati[dati[,1]==r,]
+      if (!is.null(ylim)) ylimi <- ylim else 
+        ylimi <- c(min(dati[,2],na.rm=TRUE),max(dati[,2],na.rm=TRUE)) 
+      if (adapt_output=="par") ylab <- adapt$par else 
+        if (adapt_output=="R") ylab <- "p(Response)" else ylab <- "RT (s)"
+      plot(dati[,2],ylim=ylimi,type="l",ylab=ylab,xlab="Trials",main=stim)
+    } else { # learning
+      dati <- dat[r,s,]
+      if (!is.null(ylim)) ylimi <- ylim else ylimi <- c(min(dati),max(dati)) 
+      plot(dati,type="l",main=stim,xlab="Trials",ylab="learn",ylim=ylim)
+    }
+  }
+  attr(dat,"adapt") <- adapt
+  attr(dat,"adapt_output") <- adapt_output
+  attr(dat,"dadm") <- dadm
+  invisible(dat)
+}
