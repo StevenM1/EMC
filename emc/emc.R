@@ -21,7 +21,4 @@ source("emc/design.R")     # make design matrix and view parameters & mapping
 source("emc/priors.R")     # sampling from priors
 source("emc/pmwg.R")       # interface with pmwg
 source("emc/joint.R")       # handles joint models
-<<<<<<< HEAD
-=======
 source("emc/adaptive.R")    # adaptive parameters (e.g, RL)
->>>>>>> d4e9c3dba1fb0dbe409c566a49c5f7512a637a84

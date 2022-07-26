@@ -209,16 +209,12 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     model <- design$model
   }
   if (model$type=="SDT") rt_check <- FALSE
-<<<<<<< HEAD
   if(model$type == "MRI"){
     rt_check <- FALSE
     add_acc <- FALSE
     compress <- FALSE
   }
-=======
   if (!is.null(design$adapt)) compress=FALSE # RL models
->>>>>>> d4e9c3dba1fb0dbe409c566a49c5f7512a637a84
-  
   if (any(model$p_types %in% names(data)))
     stop("Data cannot have columns with the same names as model parameters")
   if (!is.factor(data$subjects)) {
