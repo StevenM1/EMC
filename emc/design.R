@@ -210,6 +210,11 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     model <- design$model
   }
   if (model$type=="SDT") rt_check <- FALSE
+  if(model$type == "MRI"){
+    rt_check <- FALSE
+    add_acc <- FALSE
+    compress <- FALSE
+  }
   
   if (any(model$p_types %in% names(data)))
     stop("Data cannot have columns with the same names as model parameters")
@@ -288,7 +293,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     stop("Flist must contain formulas")
   nams <- unlist(lapply(design$Flist,function(x)as.character(terms(x)[[2]])))
   names(design$Flist) <- nams
-  if (!all(sort(model$p_types)==sort(nams))) 
+  if (!all(sort(model$p_types)==sort(nams)) & model$type != "MRI") 
     stop("Flist must specify formulas for ",paste(model$p_types,collapse = " "))
   if (is.null(design$Clist)) design$Clist=list(contr.treatment) 
   if (class(design$Clist) != "list") stop("Clist must be a list")
@@ -304,7 +309,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
       } 
     }
   }
-  for (i in model$p_types) attr(design$Flist[[i]],"Clist") <- design$Clist[[i]]
+  if(model$type != "MRI") for (i in model$p_types) attr(design$Flist[[i]],"Clist") <- design$Clist[[i]]
   out <- lapply(design$Flist,make_dm,da=da,Fcovariates=Fcovariates)
   if (!is.null(rt_resolution) & !is.null(da$rt)) da$rt <- round(da$rt/rt_resolution)*rt_resolution
   if (compress) dadm <- compress_dadm(da,out) else {
@@ -445,5 +450,34 @@ sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
   if (doMap) attr(out,"map") <- 
     lapply(attributes(dadm)$designs,function(x){x[,,drop=FALSE]})
   out
+}
+
+make_design_fmri <- function(design_matrix, data, model, whiten = FALSE){
+  if(is.null(design_matrix$subjects)) stop("Design matrix must have a subjects column")
+  if(is.null(data$subjects)) stop("data must have a subjects column")
+  par_names <- colnames(design_matrix)[colnames(design_matrix) != "subjects"]
+  data_name <- colnames(data)[colnames(data) != "subjects"]
+  
+  dm_list <- split(design_matrix, f = design_matrix$subjects)
+  model$design_matrix <- lapply(dm_list, FUN = function(x){ 
+    y <- x[,colnames(x) != "subjects"]
+    data.matrix(y)
+  })
+  
+  if(!whiten){
+    par_names <- paste(data_name, c(par_names, "sd"), sep = "_")
+  } else{
+    par_names <- paste(data_name, c(par_names, "sd", "rho"), sep = "_")
+    model$toeplitz <- lapply(model$design_matrix, FUN = function(x) return(toeplitz(0:(nrow(x) - 1))))
+  }
+  n_pars <- length(par_names)
+  Flist <- vector("list", n_pars)
+  for(i in 1:n_pars){
+    Flist[[i]] <- as.formula(paste0(par_names[i], "~1"))
+  }
+
+  design <- list(model = model, Flist = Flist)
+  attr(design, "p_vector") <- par_names
+  return(design)
 }
 

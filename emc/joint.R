@@ -9,10 +9,10 @@ single_out_joint <- function(joint_samples_list, i){
 
 return_single_sampler <- function(joint_samples, i){
   par_names <- joint_samples$par_names
-  prefix <- unique(gsub("[-].*", "", par_names))[i]
-  idx <- grep(paste0(prefix, "-"), par_names)
+  prefix <- unique(gsub("[|].*", "", par_names))[i]
+  idx <- grep(paste0(prefix, "|"), par_names, fixed = T)
   current_pars <- par_names[idx]
-  replacement <-  gsub(".*[-]", "", current_pars)
+  replacement <-  gsub(".*[|]", "", current_pars)
   single_samples <- joint_samples
   single_samples$samples <- base::rapply(joint_samples$samples, f = function(x) fix_single_object(x, prefix, current_pars, replacement), how = "replace")
   single_samples$par_names <- replacement

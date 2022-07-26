@@ -62,47 +62,63 @@ start_proposals <- function(s, parameters, n_particles, pmwgs){
 
 new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL, 
                           eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
-                          likelihood_func = NULL, epsilon = NULL, subjects) 
+                          likelihood_func = NULL, epsilon = NULL, subjects,
+                          components) 
 {
   num_particles <- num_particles[s]
-  eff_mu <- eff_mu[, s]
-  eff_var <- eff_var[, , s]
+  start_par <- 1
   group_pars <- variant_funs$get_group_level(parameters, s)
-  mu <- group_pars$mu
-  var <- group_pars$var
-  subj_mu <- parameters$alpha[, s]
-  particle_numbers <- numbers_from_proportion(mix_proportion, num_particles)
-  cumuNumbers <- cumsum(particle_numbers)
-  pop_particles <- particle_draws(particle_numbers[1], mu, 
-                                  var)
-  ind_particles <- particle_draws(particle_numbers[2], subj_mu, 
-                                  var * epsilon[s]^2)
-  if(mix_proportion[3] == 0){
-    eff_particles <- NULL
-  } else{
-    eff_particles <- particle_draws(particle_numbers[3], eff_mu, eff_var)
+  n_components <- length(components)
+  proposal_out <- numeric(length(group_pars$mu))
+  ll <- 0
+  for(i in 1:n_components){
+    idx <- start_par:components[i]
+    eff_mu <- eff_mu[idx, s]
+    eff_var <- eff_var[idx, idx , s]
+    mu <- group_pars$mu[idx]
+    var <- group_pars$var[idx, idx]
+    subj_mu <- parameters$alpha[idx, s]
+    particle_numbers <- numbers_from_proportion(mix_proportion, num_particles)
+    cumuNumbers <- cumsum(particle_numbers)
+    pop_particles <- particle_draws(particle_numbers[1], mu, 
+                                    var)
+    ind_particles <- particle_draws(particle_numbers[2], subj_mu, 
+                                    var * epsilon[s,i]^2)
+    if(mix_proportion[3] == 0){
+      eff_particles <- NULL
+    } else{
+      eff_particles <- particle_draws(particle_numbers[3], eff_mu, eff_var)
+    }
+    proposals <- rbind(pop_particles, ind_particles, eff_particles)
+    colnames(proposals) <- names(subj_mu)
+    proposals[1, ] <- subj_mu
+    if(n_components > 1){
+      lw <- apply(proposals, 1, likelihood_func, dadm = data[[which(subjects == s)]], component = i)
+    } else{
+      lw <- apply(proposals, 1, likelihood_func, dadm = data[[which(subjects == s)]])
+    }
+    lp <- mvtnorm::dmvnorm(x = proposals, mean = mu, sigma = var, 
+                           log = TRUE)
+    prop_density <- mvtnorm::dmvnorm(x = proposals, mean = subj_mu, 
+                                     sigma = var * (epsilon[s,i]^2))
+    if (mix_proportion[3] == 0) {
+      eff_density <- 0
+    }
+    else {
+      eff_density <- mvtnorm::dmvnorm(x = proposals, mean = eff_mu, sigma = eff_var)
+    }
+    lm <- log(mix_proportion[1] * exp(lp) + (mix_proportion[2] * 
+                                               prop_density) + (mix_proportion[3] * eff_density))
+    l <- lw + lp - lm
+    weights <- exp(l - max(l))
+    idx_ll <- sample(x = num_particles, size = 1, prob = weights)
+    origin <- min(which(idx_ll <= cumuNumbers))
+    ll <- ll + lw[idx_ll]
+    proposal_out[idx] <- proposals[idx_ll,]
+    start_par <- components[i] + 1
   }
-  proposals <- rbind(pop_particles, ind_particles, eff_particles)
-  colnames(proposals) <- names(mu)
-  proposals[1, ] <- subj_mu
-  lw <- apply(proposals, 1, likelihood_func, dadm = data[[which(subjects == s)]])
-  lp <- mvtnorm::dmvnorm(x = proposals, mean = mu, sigma = var, 
-                log = TRUE)
-  prop_density <- mvtnorm::dmvnorm(x = proposals, mean = subj_mu, 
-                          sigma = var * (epsilon[s]^2))
-  if (mix_proportion[3] == 0) {
-    eff_density <- 0
-  }
-  else {
-    eff_density <- mvtnorm::dmvnorm(x = proposals, mean = eff_mu, sigma = eff_var)
-  }
-  lm <- log(mix_proportion[1] * exp(lp) + (mix_proportion[2] * 
-                                             prop_density) + (mix_proportion[3] * eff_density))
-  l <- lw + lp - lm
-  weights <- exp(l - max(l))
-  idx <- sample(x = num_particles, size = 1, prob = weights)
-  origin <- min(which(idx <= cumuNumbers))
-  return(list(proposal = proposals[idx, ], ll = lw[idx], origin = origin))
+  
+  return(list(proposal = proposal_out, ll = ll, origin = origin))
 }
 
 
@@ -128,7 +144,7 @@ run_stage <- function(pmwgs,
   # Set necessary local variables
   # Set stable (fixed) new_sample argument for this run
   n_pars <- length(pmwgs$par_names)
-  
+  components <- attr(pmwgs$data, "components")
   # Display stage to screen
   if(verbose){
     msgs <- list(
@@ -150,7 +166,8 @@ run_stage <- function(pmwgs,
   if(length(particles == 1)){
     particles <- rep(particles, pmwgs$n_subjects)
   }
-  
+  epsilon <- replicate(length(components), epsilon)
+  if(stage!= "burn") components <- pmwgs$n_pars
   # Build new sample storage
   pmwgs <- extend_sampler(pmwgs, iter, stage)
   # create progress bar
@@ -167,31 +184,31 @@ run_stage <- function(pmwgs,
       accRate <- mean(accept_rate(pmwgs))
       update_progress_bar(pb, i, extra = accRate)
     }
-    # Create/update efficient proposal distribution if we are in sampling phase.
-    # if(stage == "sample" & (i %% pdist_update_n == 0 || i == 1)){
-    #   test_samples <- extract_samples(pmwgs, stage = c("adapt", "sample"), thin, i, thin_eff_only)
-    #   conditionals=mclapply(X = 1:pmwgs$n_subjects,FUN = variant_funs$get_conditionals,samples = test_samples, n_pars, mc.cores = n_cores_conditional)
-    #   conditionals <- array(unlist(conditionals), dim = c(pmwgs$n_pars, pmwgs$n_pars + 1, pmwgs$n_subjects))
-    #   eff_mu <- conditionals[,1,] #First column is the means
-    #   eff_var <- conditionals[,2:(n_pars+1),] #Other columns are the variances
-    # }
+
     j <- start_iter + i
     # Gibbs step
     pars <- variant_funs$gibbs_step(pmwgs, pmwgs$samples$alpha[,,j-1])
     # Particle step
     proposals=mclapply(X=1:pmwgs$n_subjects,FUN = new_particle, data, particles, pars, eff_mu, 
-                         eff_var, mix, pmwgs$ll_func, epsilon, subjects, mc.cores =n_cores)
+                       eff_var, mix, pmwgs$ll_func, epsilon, subjects, components, mc.cores =n_cores)
     proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
     
     #Fill samples
     pmwgs$samples <- variant_funs$fill_samples(samples = pmwgs$samples, group_level = pars,
-                                  proposals = proposals, epsilon = epsilon, j = j, n_pars = pmwgs$n_pars)
+                                  proposals = proposals, epsilon = rowMeans(epsilon), j = j, n_pars = pmwgs$n_pars)
     
     # Update epsilon
     if(!is.null(pstar)){
       if(j > n0){
-        acc <-  pmwgs$samples$alpha[1,,j] != pmwgs$samples$alpha[1,,(j-1)]
-        epsilon<-pmin(update.epsilon(epsilon^2, acc, pstar, j, pmwgs$n_pars, alphaStar), epsilon_upper_bound)
+        prev_comp <- 0
+        comp_n <- 0
+        for(component in components){
+          comp_n <- comp_n + 1
+          acc <-  pmwgs$samples$alpha[component,,j] != pmwgs$samples$alpha[component,,(j-1)]
+          epsilon[,comp_n] <-pmin(update.epsilon(epsilon[,comp_n]^2, acc, pstar, j, component-prev_comp, alphaStar), epsilon_upper_bound)
+          
+          prev_comp <- component
+        }
       }
     }
     # Test whether we can finish adaptation

@@ -20,4 +20,4 @@ source("emc/fitting.R")    # fitting automation
 source("emc/design.R")     # make design matrix and view parameters & mapping
 source("emc/priors.R")     # sampling from priors
 source("emc/pmwg.R")       # interface with pmwg
-source("emc/joint_functions.R")       # handles joint models
+source("emc/joint.R")       # handles joint models
