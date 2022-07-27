@@ -1,15 +1,16 @@
 ### PMWG ---
 
-jointLL <- function(pars, dadms){
-  parPreFixs <- unique(gsub("[-].*", "", names(pars)))
+jointLL <- function(pars, dadms, component = NULL){
+  parPreFixs <- unique(gsub("[|].*", "", names(pars)))
   i <- 0
   total_ll <- 0
+  if(!is.null(component)) dadms <- dadms[component]
   for(dadm in dadms){
     if(is.data.frame(dadm)){
       i <- i + 1
       parPrefix <- parPreFixs[i]
-      currentPars <- pars[grep(paste0(parPrefix, "-"), names(pars))]
-      names(currentPars) <- gsub(".*[-]", "", names(currentPars))
+      currentPars <- pars[grep(paste0(parPrefix, "|"), names(pars), fixed = T)]
+      names(currentPars) <- gsub(".*[|]", "", names(currentPars))
       total_ll <- total_ll +  attr(dadm, "model")$log_likelihood(currentPars, dadm)
     }
   }
@@ -118,9 +119,10 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
   ll_func <- attr(dadms[[1]], "model")$log_likelihood
   subjects <- unique(factor(sapply(dadms, FUN = function(x) levels(x$subjects))))
   dadm_list <- dm_list(dadms[[1]])
+  components <- length(pars)
   if(N_models > 1){
     k <- 1
-    pars <- paste(names[1], pars, sep = "-")
+    pars <- paste(names[1], pars, sep = "|")
     dadm_list[as.character(which(!subjects %in% unique(dadms[[1]]$subjects)))] <- NA
     for(dadm in dadms[-1]){
       k <- k + 1
@@ -128,7 +130,8 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
       tmp_list[as.numeric(unique(dadm$subjects))] <- dm_list(dadm)
       dadm_list <- mapply(list, dadm_list, tmp_list, SIMPLIFY = F)
       curr_pars <- attr(dadm, "sampled_p_names")
-      pars <- c(pars, paste(names[k], curr_pars, sep = "-"))
+      components <- c(components, max(components) + length(curr_pars))
+      pars <- c(pars, paste(names[k], curr_pars, sep = "|"))
       prior$theta_mu_mean <- c(prior$theta_mu_mean, attr(dadm, "prior")$theta_mu_mean) 
       if(is.matrix(prior$theta_mu_var)){
         prior$theta_mu_var <- adiag(prior$theta_mu_var, attr(dadm, "prior")$theta_mu_var) 
@@ -138,6 +141,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
     }
     ll_func <- jointLL
   }
+  attr(dadm_list, "components") <- components
   return(list(ll_func = ll_func, pars = pars, prior = prior, 
               dadm_list = dadm_list, subjects = subjects))
 }
