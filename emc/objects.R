@@ -317,17 +317,26 @@ as_mcmc.list <- function(samplers,
 
 
 parameters_data_frame <- function(samples,filter="sample",thin=1,subfilter=0,
-                                  mapped=FALSE,include_constants=FALSE,
-                                  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[2]) 
+  mapped=FALSE,include_constants=FALSE,stat=NULL,
+  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[2]) 
   # extracts and stacks chains into a matrix  
 {
   out <- as_mcmc.list(samples,selection=selection,filter=filter,
                       subfilter=subfilter,mapped=mapped,include_constants=include_constants)
-  if (selection!="alpha") as.data.frame(do.call(rbind,out)) else {
+  if (selection!="alpha") out <- as.data.frame(do.call(rbind,out)) else {
     out <- lapply(out,function(x){do.call(rbind,x)})
     subjects <- rep(names(out),lapply(out,function(x){dim(x)[1]}))
-    cbind.data.frame(subjects=factor(subjects,levels=names(out)),do.call(rbind,out))
+    out <- cbind.data.frame(subjects=factor(subjects,levels=names(out)),do.call(rbind,out))
+  } 
+  if (!is.null(stat)) {
+    if (selection=="alpha") {
+      ss <- levels(out$subjects)
+      outList <- setNames(vector(mode="list",length=length(ss)),ss)
+      for (s in ss) outList[[s]] <- apply(out[out$subjects==s,-1],2,stat) 
+      out <- do.call(rbind,outList)
+    } else out <- apply(out,2,stat) 
   }
+  out
 }
 
 

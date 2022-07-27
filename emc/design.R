@@ -110,6 +110,9 @@ make_dm <- function(form,da,Clist=NULL,Fcovariates=NULL)
 
 # add_acc=FALSE;compress=FALSE;verbose=FALSE;rt_check=FALSE
 
+# prior = NULL; add_acc=FALSE;compress=FALSE;verbose=FALSE;rt_check=FALSE;rt_resolution = NULL
+# data=add_accumulators(data,design$matchfun,type=model$type)
+
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.02,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
   # Combines data frame with a design and model
@@ -353,7 +356,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   attr(dadm,"s_data") <- data$subjects
   if (!is.null(design$adapt)) {
     attr(dadm,"adapt") <- setNames(
-      lapply(levels(data$subjects),augment,da=dadm,design=design),
+      lapply(levels(data$subjects),augment,da=data,design=design),
     levels(data$subjects))
     attr(dadm,"adapt")$design <- design$adapt
   }

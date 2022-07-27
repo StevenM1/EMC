@@ -30,7 +30,8 @@ augment = function(s,da,design)
 
 # ARCHITECTURE OF FOLLOWING FUNCTION WILL NEED UPDATING FOR MULTIPLE ADAPT TYPES  
 # s="10";npars=pars;da=data; rfun=model$rfun;return_learning=FALSE;mapped_p=FALSE
-update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE) 
+update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE,
+                       return_all=FALSE) 
   # for subject s
   # Either return da filling in responses and RT if da has no responses (in
   # in which case rfun must be supplied), or return npars filling in adapted 
@@ -103,36 +104,40 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
       learn[,ok,i+1][imat] <- adapt$stimulus$adapt_fun(Qlast=learn[,,i][,ok,drop=FALSE][imat],
         adapt_par=parArr[,i,,adapt$stimulus$adapt_par][,ok,drop=FALSE][imat],reward)
     } 
-    if (mapped_p | !add_response) # Output will be new so update parrArr 
-      parArr[,i,,adapt$stimulus$output_name][!is.na(parArr[,i,,adapt$stimulus$output_name])] <- pars[,adapt$stimulus$output_name]
+    if (mapped_p | !add_response | return_all) # Output will be new so update parrArr 
+      parArr[,i,,adapt$stimulus$output_name][!is.na(parArr[,i,,adapt$stimulus$output_name])] <- 
+        pars[,adapt$stimulus$output_name]
   }
   if (add_response) {
     da$R <- da_R
     da$reward <- da_reward
     da$rt <- da_rt
+    attr(da,"adapt")[[s]]$stimulus$learn <- learn
   }
-  if (mapped_p | !add_response) {
+  if (mapped_p | !add_response | return_all) {
     stim_output <- parArr[,,,adapt$stimulus$output_name][!is.na(index)] 
     # Protect against numerical problems, may screw up dfun for some models
     stim_output[is.na(stim_output)|is.nan(stim_output)] <- -Inf 
     npars[index[!is.na(index)],adapt$stimulus$output_name] <- stim_output
   }
+  if (return_all) return(list(learn=learn,pars=npars,data=da)) 
   if (return_learning) return(learn)
   if (mapped_p) return(list(data=da,pars=npars))
-  if (add_response) {
-    attr(da,"adapt")[[s]]$stimulus$learn <- learn 
-    return(da)
-  }
+  if (add_response) return(da)
   npars
 }
 
-# add_response=FALSE;return_learning=FALSE
+# data=dadm
 adapt_data <- function(data,design,model,pars,
-  add_response=FALSE,return_learning=FALSE,mapped_p=FALSE)
+  add_response=FALSE,return_learning=FALSE,mapped_p=FALSE,return_all=FALSE)
   # runs learning, and either returns learning, or data with responses and rt 
   # added (either if data has NA in R or if add_Response), or adapted parameters 
   # or data + parameters (mapped_p)   
 {
+  if (return_all & mapped_p) {
+    warning("return_all and mapped_p incompatible, going with the latter")
+    return_all <- FALSE
+  }
   if (add_response) data$R <- NA # Force new data generation ignoring old data
   if ( all(is.na(data$R)) ) add_response <- TRUE # make new if none supplied
   # add augmentation
@@ -143,17 +148,21 @@ adapt_data <- function(data,design,model,pars,
     attr(data,"adapt")$design <- design$adapt  
   }
   daList <- setNames(
-    lapply(levels(data$subjects),update_pars,npars=pars,da=data,
+    lapply(levels(data$subjects),update_pars,npars=pars,da=data,return_all=return_all,
            rfun=model$rfun,return_learning=return_learning,mapped_p=mapped_p),
     levels(data$subjects))
   if (return_learning) return(daList)
-  if (mapped_p) {
+  adapt <- attr(data,"adapt")
+  if (mapped_p | return_all) {
     data <- do.call(rbind,lapply(daList,function(x)x$data))
     pars <- do.call(rbind,lapply(daList,function(x)x$pars))
-    return(cbind(data[,!(names(data) %in% c("R","rt"))],pars))
+    if (mapped_p) return(cbind(data[,!(names(data) %in% c("R","rt"))],pars))
+    for (i in names(daList)) adapt[[i]] <- attr(daList[[i]]$data,"adapt")[[i]]
+    data <- cbind(data,pars)
+    attr(data,"adapt") <- adapt
+    return(list(learn=lapply(daList,function(x)x$learn),data=data))
   }
-  adapt <- attr(data,"adapt")
-  for (i in names(adapt)) adapt[[i]] <- attr(daList[[i]],"adapt")[[i]]
+  for (i in names(daList)) adapt[[i]] <- attr(daList[[i]],"adapt")[[i]]
   data <- do.call(rbind,daList)
   attr(data,"adapt") <- adapt
   data

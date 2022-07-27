@@ -13,12 +13,15 @@ add_constants <- function(p,constants)
   } else c(p,constants)
 }
 
-get_pars <- function(p_vector,dadm)
+get_pars <- function(p_vector,dadm) {
   # Add constants, transform p_vector, map to design, transform mapped parameters 
-  # tp the natural scale, and create trial-dependant parameters
-  attr(dadm,"model")$Ttransform(attr(dadm,"model")$Mtransform(map_p(
+  # to the natural scale, and create trial-dependent parameters
+  out <- attr(dadm,"model")$Mtransform(map_p(
     attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
-    dadm)),dadm)
+    dadm))
+  if (any(names(attr(dadm,"model")=="Ttransform")))
+    attr(dadm,"model")$Ttransform(out,dadm) else(out)
+}
 
 
 add_constants_mcmc <- function(p,constants) 

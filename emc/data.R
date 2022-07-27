@@ -10,10 +10,10 @@ add_trials <- function(dat)
   dat
 }
 
-
-# data=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
+# data=NULL; model=NULL
+# trials=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
 # Fcovariates=NULL;n_cores=1
-# trials=1
+# p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]]
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
@@ -128,8 +128,8 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   if (!is.factor(data$subjects)) data$subjects <- factor(data$subjects)
   if ( is.null(model$p_types) ) stop("model$p_types must be specified")
   if ( is.null(model$transform) ) model$transform <- identity
-  if ( is.null(model$Mtransform) ) modell$Mtransform <- identity
-  if ( is.null(model$Ttransform) ) modell$Ttransform <- identity
+  if ( is.null(model$Mtransform) ) model$Mtransform <- identity
+  if ( is.null(model$Ttransform) ) model$Ttransform <- identity
   data <- design_model(
     add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
@@ -223,7 +223,9 @@ post_predict <- function(samples,hyper=FALSE,n_post=100,expand=1,
         make_data(pars[[i]],design=design[[j]],model=model[[j]],data=data[[j]],expand=expand)
       },mc.cores=n_cores)
     }
+    if (!is.null(attr(simDat[[1]],"adapt"))) adapt <- attr(simDat[[1]],"adapt")
     out <- cbind(postn=rep(1:n_post,each=dim(simDat[[1]])[1]),do.call(rbind,simDat))
+    if (!is.null(attr(simDat[[1]],"adapt"))) attr(out,"adapt") <- adapt
     if (n_post==1) pars <- pars[[1]]
     attr(out,"pars") <- pars 
     post_out[[j]] <- out
