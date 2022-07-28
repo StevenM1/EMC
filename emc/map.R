@@ -19,8 +19,11 @@ get_pars <- function(p_vector,dadm) {
   out <- attr(dadm,"model")$Mtransform(map_p(
     attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
     dadm))
-  if (any(names(attr(dadm,"model")=="Ttransform")))
+  if (any(names(attr(dadm,"model"))=="Ttransform"))
     attr(dadm,"model")$Ttransform(out,dadm) else(out)
+  # attr(dadm,"model")$Ttransform(attr(dadm,"model")$Mtransform(map_p(
+  #   attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
+  #   dadm)),dadm)
 }
 
 
