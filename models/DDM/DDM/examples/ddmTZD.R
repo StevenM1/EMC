@@ -145,11 +145,11 @@ samplers <- make_samplers(dat,design_a,type="standard",
 # The "adapt" stage develops and approximation to the posterior that will make
 # sampling more efficient (less autocorrelated) in the final "sample" stage.
 #
-# sPNAS_a <- auto_adapt(sPNAS_a,cores_per_chain=2)
+# sPNAS_a <- run_adapt(sPNAS_a,cores_per_chain=2)
 #
 # Here in the final sample stage we ask for 1000 iterations per chain.
 #
-# sPNAS_a <- auto_sample(sPNAS_a,iter=1000,cores_per_chain=2)
+# sPNAS_a <- run_sample(sPNAS_a,iter=1000,cores_per_chain=2)
 # 
 # Once sampling is completed the script also gets posterior predictive samples
 # to enable model fit checks. By default this is based on randomly selecting 
