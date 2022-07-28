@@ -360,8 +360,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   attr(dadm,"s_data") <- data$subjects
   if (!is.null(design$adapt)) {
     attr(dadm,"adapt") <- setNames(
-      lapply(levels(data$subjects),augment,da=data,design=design),
-    levels(data$subjects))
+      lapply(levels(dadm$subjects),augment,da=dadm,design=design),
+    levels(dadm$subjects))
     attr(dadm,"adapt")$design <- design$adapt
   }
   dadm

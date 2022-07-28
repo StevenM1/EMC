@@ -10,10 +10,22 @@ add_trials <- function(dat)
   dat
 }
 
+
+add_Ffunctions <- function(data,design) 
+  # Adds columns created by Ffunctions (if not already there)  
+{
+  Fdf <- data.frame(lapply(design$Ffunctions,function(f){f(data)}))
+  ok <- !(names(Fdf) %in% names(data))
+  if (!any(ok)) data else
+    data <-  cbind.data.frame(data,Fdf[,ok,drop=FALSE])
+}
+
+
 # data=NULL; model=NULL
 # trials=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
 # Fcovariates=NULL;n_cores=1
 # p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]]
+
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,

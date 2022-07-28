@@ -770,7 +770,8 @@ plot_adapt <- function(data=NULL,design=NULL,model=NULL,
     datas$subjects <- factor(as.character(datas$subjects))
     adapts <- adapts[[adapt_type]]
     if (is.list(p_vector)) p_vectors <- p_vector[[s]] else
-                           p_vectors <- p_vector[s,]
+      if (is.matrix(p_vector)) p_vectors <- p_vector[s,] else
+        p_vectors <- p_vector
     dadm <- design_model(
       add_accumulators(datas,design$matchfun,type=model$type),
       design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
