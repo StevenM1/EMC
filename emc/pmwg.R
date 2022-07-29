@@ -78,7 +78,7 @@ dm_list <- function(dadm)
     
     attr(dl[[i]],"unique_nort") <- unique_nort[isin] 
     attr(dl[[i]],"unique_nortR") <- unique_nortR[isin] 
-
+    
     isinlR1 <- slR1==i
     if (!is.null(expand_nort)) 
       attr(dl[[i]],"expand_nort") <-  expand_nort[isinlR1]- min( expand_nort[isinlR1]) + 1
@@ -121,14 +121,16 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
   dadm_list <- dm_list(dadms[[1]])
   components <- length(pars)
   if(N_models > 1){
+    total_dadm_list <- vector("list", length = N_models)
     k <- 1
     pars <- paste(names[1], pars, sep = "|")
     dadm_list[as.character(which(!subjects %in% unique(dadms[[1]]$subjects)))] <- NA
+    total_dadm_list[[1]] <- dadm_list
     for(dadm in dadms[-1]){
       k <- k + 1
       tmp_list <- vector("list", length = length(subjects))
       tmp_list[as.numeric(unique(dadm$subjects))] <- dm_list(dadm)
-      dadm_list <- mapply(list, dadm_list, tmp_list, SIMPLIFY = F)
+      total_dadm_list[[k]] <- tmp_list
       curr_pars <- attr(dadm, "sampled_p_names")
       components <- c(components, max(components) + length(curr_pars))
       pars <- c(pars, paste(names[k], curr_pars, sep = "|"))
@@ -140,6 +142,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
       }
     }
     ll_func <- jointLL
+    dadm_list <- do.call(mapply, c(list, total_dadm_list, SIMPLIFY = F))
   }
   attr(dadm_list, "components") <- components
   return(list(ll_func = ll_func, pars = pars, prior = prior, 
@@ -152,11 +155,11 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
 # prior_list = NULL;par_groups=NULL;n_factors=NULL;constraintMat = NULL;covariates=NULL
 # data_list=miletic1_rdm_simdat; design_list=design;model_list=NULL; rt_resolution=.001
 make_samplers <- function(data_list,design_list,model_list=NULL,
-  type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
-  n_chains=3,rt_resolution=0.02,
-  prior_list = NULL,
-  par_groups=NULL,
-  n_factors=NULL,constraintMat = NULL,covariates=NULL)
+                          type=c("standard","diagonal","blocked","factor","factorRegression","single")[1],
+                          n_chains=3,rt_resolution=0.02,
+                          prior_list = NULL,
+                          par_groups=NULL,
+                          n_factors=NULL,constraintMat = NULL,covariates=NULL)
   
 {
   if (!(type %in% c("standard","diagonal","blocked","factor","factorRegression","single")))
@@ -171,33 +174,30 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
   if (!is.null(names(design_list)[1]) && names(design_list)[1]=="Flist") 
     design_list <- list(design_list)
   if (length(design_list)!=length(data_list))
-      design_list <- rep(design_list,length(data_list))
+    design_list <- rep(design_list,length(data_list))
   if (is.null(model_list)) model_list <- lapply(design_list,function(x){x$model})
   if (any(unlist(lapply(model_list,is.null)))) 
     stop("Must supply model_list if model is not in all design_list components")
   if (!is.null(names(model_list)[1]) && names(model_list)[1]=="type") 
     model_list <- list(model_list)
   if (length(model_list)!=length(data_list))
-      model_list <- rep(model_list,length(data_list))
+    model_list <- rep(model_list,length(data_list))
   if (!is.null(names(prior_list)) && any(names(prior_list)=="theta_mu_mean"))
     prior_list <- list(prior_list)
   if (length(prior_list)!=length(data_list))
-      prior_list <- rep(prior_list,length(data_list))
+    prior_list <- rep(prior_list,length(data_list))
   dadm_list <- vector(mode="list",length=length(data_list))
   rt_resolution <- rep(rt_resolution,length.out=length(data_list))
   for (i in 1:length(dadm_list)) {
     message("Processing data set ",i)
-    pars <- attr(data_list[[i]],"pars")
-    if (!is.null(pars)) attr(data_list[[i]],"pars") <- pars
     if (!is.null(design_list[[i]]$Ffunctions)) {
-      Fdf <- data.frame(lapply(
-        design_list[[i]]$Ffunctions,function(f){f(data_list[[i]])}))
-      ok <- !(names(Fdf) %in% names(data_list[[i]]))
-      if (any(ok)) data_list[[i]] <- 
-        cbind.data.frame(data_list[[i]],Fdf[,ok,drop=FALSE])
+      pars <- attr(data_list[[i]],"pars")
+      data_list[[i]] <- cbind.data.frame(data_list[[i]],data.frame(lapply(
+        design_list[[i]]$Ffunctions,function(f){f(data_list[[i]])})))
+      if (!is.null(pars)) attr(data_list[[i]],"pars") <- pars
     }
     dadm_list[[i]] <- design_model(data=data_list[[i]],design=design_list[[i]],
-      model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
+                                   model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
   }
   if (type == "standard") {
     source("samplers/pmwg/variants/standard.R")
