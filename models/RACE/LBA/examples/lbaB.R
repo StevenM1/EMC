@@ -2,21 +2,23 @@ rm(list=ls())
 source("emc/emc.R")
 source("models/RACE/LBA/lbaB.R")
 
-print( load("Data/PNAS.RData"))
+print(load("Data/PNAS.RData"))
 dat <- data[,c("s","E","S","R","RT")]
 names(dat)[c(1,5)] <- c("subjects","rt")
 levels(dat$R) <- levels(dat$S)
+head(dat)
 # NB: This data has been truncated at 0.25s and 1.5s
 
 # Average rate = intercept, and rate d = difference (match-mismatch) contrast
 ADmat <- matrix(c(-1/2,1/2),ncol=1,dimnames=list(NULL,"d"))  
+ADmat
 
 Emat <- matrix(c(0,-1,0,0,0,-1),nrow=3)
 dimnames(Emat) <- list(NULL,c("a-n","a-s"))
-
+Emat
 
 # Here we fit a series of models
-
+# We'll first build several plausible models and then do model selection
 # Only B affected by E
 design_B <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
@@ -27,6 +29,7 @@ design_B <- make_design(
   model=lbaB)
 # samplers <- make_samplers(dat,design_B,type="standard",rt_resolution=.02)
 # save(samplers,file="sPNAS_B.RData")
+# length(sampled_p_vector(design_B))
 
 # B, v and t0 affected by E
 design_Bvt0 <- make_design(
@@ -86,7 +89,11 @@ design_Bvt0_sv <- make_design(
 # between the average of accuracy and neutral and speed, a 14 parameter model. 
 E_AVan_s_mat <- matrix(c(1/4,1/4,-1/2),nrow=3)
 dimnames(E_AVan_s_mat) <- list(NULL,c("an-s"))
+E_AVan_s_mat
 
+# Note: if make_design says 'Clist not found', make it first outside the function
+Clist=list(v=list(E=E_AVan_s_mat,lM=ADmat),sv=list(lM=ADmat),
+           B=list(E=Emat,lR=ADmat),t0=list(E=E_AVan_s_mat))
 design_Bvt0_sv_NOa_n <- make_design(
   Ffactors=list(subjects=unique(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
@@ -116,7 +123,7 @@ design_Bvt0_sv_NOa_n <- make_design(
 #   save(sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
 # }
 #
-# Here it only moves on to sampling of adaptation was successful
+# Here it only moves on to sampling if adaptation was successful
 #
 # if (!is.null(attr(sPNAS_Bv_sv,"adapted")) && attr(sPNAS_Bv_sv,"adapted")) {
 #   sPNAS_Bv_sv <- auto_sample(sPNAS_Bv_sv,iter=2000,cores_per_chain=4)
@@ -124,7 +131,7 @@ design_Bvt0_sv_NOa_n <- make_design(
 # }
 #
 # This was run later after choosing this as the best model and knowing that
-# the first 2000 iterations of the sample run had to be discareded, giving
+# the first 2000 iterations of the sample run had to be discarded, giving
 # 5000*3 = 15000 good samples to work with.
 #
 # sPNAS_Bv_sv <- auto_sample(sPNAS_Bv_sv,iter=4000,cores_per_chain=10)
@@ -156,7 +163,7 @@ check_run(sPNAS_Bt0_sv,subfilter=2000,layout=c(3,5))
 check_run(sPNAS_Bv_sv,subfilter=2000,layout=c(3,5))
 # After extensive burn (although not achieving Rhat < 1.2), adaptation was quick 
 # but chains were very poor. Decided not to pursue further.
-check_run(sPNAS_Bvt0_sv,subfilter=1000)
+check_run(sPNAS_Bvt0_sv,subfilter=1000,interactive = FALSE)
 # Burned in quickly and converged well after 1000, B_lRd:Ea-n and especially 
 # t0_Ean-s quite inefficient
 check_run(sPNAS_Bvt0_sv_NOa_n,subfilter=1000,layout=c(3,5)) 
@@ -165,10 +172,20 @@ check_run(sPNAS_Bvt0_sv_NOa_n,subfilter=1000,layout=c(3,5))
 
 # Comparing all 5 models, clearly need sv (NB: use only 1000 from Bvsv after
 # convergence, more added for parameter inference as this is the winning model)
-compare_IC(list(B=sPNAS_B,Bvt0=sPNAS_Bvt0,Bt0sv=sPNAS_Bt0_sv,Bvsv=sPNAS_Bv_sv,
-  Bvt0sv=sPNAS_Bvt0_sv_NOa_n),subfilter=list(0,4500,2000,2001:3000,1000))
-ICs <- compare_ICs(list(B=sPNAS_B, Bvt0=sPNAS_Bvt0, Bt0sv=sPNAS_Bt0_sv, 
-  Bvsv=sPNAS_Bv_sv, Bvt0sv=sPNAS_Bvt0_sv_NOa_n),subfilter=list(0,4500,2000,2001:3000,1000))
+compare_IC(list(
+  B=sPNAS_B,
+  Bvt0=sPNAS_Bvt0,
+  Bt0sv=sPNAS_Bt0_sv,
+  Bvsv=sPNAS_Bv_sv,
+  Bvt0sv=sPNAS_Bvt0_sv_NOa_n),
+  subfilter=list(0,4500,2000,2001:3000,1000))
+ICs <- compare_ICs(list(
+  B=sPNAS_B, 
+  Bvt0=sPNAS_Bvt0, 
+  Bt0sv=sPNAS_Bt0_sv, 
+  Bvsv=sPNAS_Bv_sv, 
+  Bvt0sv=sPNAS_Bvt0_sv_NOa_n),
+  subfilter=list(0,4500,2000,2001:3000,1000))
 #
 # The latter function returns a list of matrices for each participant, so can use
 # that to count winners as follows. 
@@ -182,7 +199,9 @@ table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]})))
 # both models fit well but the small overestimation of error RT in the speed
 # condition evident in the DDM is no longer evident.
 source("models/DDM/DDM/ddmTZD.R")
+print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData"))
 compare_IC(list(avt0=sPNAS_avt0_full,Bvsv=sPNAS_Bv_sv),subfilter=list(500,2000))
+
 
 # For the remaining analysis add 4000 iterations to Bvsv model
 
@@ -197,27 +216,28 @@ pc <- function(d) 100*mean(d$S==d$R)
 plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),
          stat=pc,stat_name="Accuracy (%)",xlim=c(70,95))
 tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),
-         stat=function(d){mean(d$rt)},stat_name="Mean RT (s)",xlim=c(0.375,.625))
+                stat=function(d){mean(d$rt)},stat_name="Mean RT (s)",xlim=c(0.375,.625))
 tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.275,.4),
-         stat=function(d){quantile(d$rt,.1)},stat_name="10th Percentile (s)")
+                stat=function(d){quantile(d$rt,.1)},stat_name="10th Percentile (s)")
 tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.525,.975),
-         stat=function(d){quantile(d$rt,.9)},stat_name="90th Percentile (s)")
+                stat=function(d){quantile(d$rt,.9)},stat_name="90th Percentile (s)")
 tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),
-         stat=function(d){sd(d$rt)},stat_name="SD (s)",xlim=c(0.1,.355))
+                stat=function(d){sd(d$rt)},stat_name="SD (s)",xlim=c(0.1,.355))
 tab <- plot_fit(dat,ppPNAS_Bv_sv,layout=c(2,3),factors=c("E","S"),xlim=c(0.375,.725),
-         stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
+                stat=function(d){mean(d$rt[d$R!=d$S])},stat_name="Mean Error RT (s)")
+
 
 #### Posterior parameter inference ----
 
 ### Population mean (mu) tests
 
 # Priors all well dominated except some rate parameters
-ciPNAS_Bv_sv <- plot_density(sPNAS_Bv_sv,layout=c(3,6),selection="mu",subfilter=2000)
+ciPNAS_Bv_sv <- plot_density(sPNAS_Bv_sv,layout=c(2,4),selection="mu",subfilter=2000)
 # On the natural scale it is evident this is because the mismatch (FALSE) rates
 # are least well updated, due to the fairly low error rates (errors give the
 # most information about FALSE rates).
-ciPNAS_Bv_sv_mapped <- plot_density(sPNAS_Bv_sv,layout=c(3,6),
-                                        selection="mu",mapped=TRUE)
+ciPNAS_Bv_sv_mapped <- plot_density(sPNAS_Bv_sv,layout=c(2,4),
+                                    selection="mu",mapped=TRUE)
 # Looking at parameters both with and without mapping
 round(ciPNAS_Bv_sv,2)
 round(ciPNAS_Bv_sv_mapped,2)
@@ -243,12 +263,12 @@ p_test(x=sPNAS_Bv_sv,x_name="B_lRd",subfilter=2000)
 # credibly greater than neutral.
 p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
 p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
-#
+
 # Here we construct a test showing the processing speed
 # advantage is greater for speed than neutral
 p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="average B: neutral-speed",
-  x_fun=function(x){mean(x[c("B_left_neutral","B_right_neutral")]) - 
-                    mean(x[c("B_left_speed","B_right_speed")])})
+       x_fun=function(x){mean(x[c("B_left_neutral","B_right_neutral")]) - 
+           mean(x[c("B_left_speed","B_right_speed")])})
 
 # No evidence of a difference between accuracy and neutral thresholds
 p_test(x=sPNAS_Bv_sv,x_name="B_Ea-n",subfilter=2000)
@@ -260,6 +280,8 @@ p_test(x=sPNAS_Bv_sv,x_name="B_Ea-s",subfilter=2000)
 # a small but just credibly stronger bias to respond left (i.e., a lower threshold
 # for the left accumulator) for speed than accuracy.
 p_test(x=sPNAS_Bv_sv,x_name="B_lRd:Ea-s",subfilter=1500,digits=2)
+# p_test(x=sPNAS_Bv_sv,x_name="B_lRd:Ea-n",subfilter=1500,digits=2)
+
 
 ### v effects
 
@@ -269,31 +291,106 @@ get_map(sPNAS_Bv_sv)$v
 # v_Ea-n v_Ea-s indicate that processing rate (the average of matching and 
 # mismatching rates) is least in accuracy, slightly greater in neutral and 
 # the highest in speed.
-p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n",subfilter=2000)
-p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s",subfilter=2000)
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n",subfilter=2000,alternative = "greater")
+p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s",subfilter=2000,alternative = "greater")
 
 # Here we show that processing is faster in the speed condition.
 p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="average v: speed-neutral",
-  x_fun=function(x){mean(x[c("v_speed_TRUE","v_speed_FALSE")]) - 
-                    mean(x[c("v_neutral_TRUE","v_neutral_FALSE")])})
+       x_fun=function(x){mean(x[c("v_speed_TRUE","v_speed_FALSE")]) - 
+           mean(x[c("v_neutral_TRUE","v_neutral_FALSE")])})
 
 # v_lMd tests the quality of selective attention, rate match - rate mismatch
 p_test(x=sPNAS_Bv_sv,x_name="v_lMd",subfilter=2000)
 
-# v_Ea-n tests if quality neutral - quality accuracy (i.e, 
+# v_Ea-n tests if quality accuracy - quality neutral (i.e, 
 # (2.55 - -0.14) - (2.71  - 0.24) = 0.22)
 p_test(x=sPNAS_Bv_sv,x_name="v_Ea-n:lMd",subfilter=2000)
 
 # The difference is ~5 times larger for accuracy - speed
 p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",subfilter=2000)
 
-# The neutral - speed difference is also highly credible, and
-# can be tested in the mapped form
-p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="quality: accuracy-neutral",
-  x_fun=function(x){diff(x[c("v_neutral_FALSE","v_neutral_TRUE")]) - 
-                    diff(x[c("v_speed_FALSE","v_speed_TRUE")])})
+# The neutral-speed difference is also highly credible, and can be tested 
+# in the mapped form
+p_test(x=sPNAS_Bv_sv,mapped=TRUE,x_name="quality: neutral-speed",
+       x_fun=function(x){diff(x[c("v_neutral_FALSE","v_neutral_TRUE")]) - 
+           diff(x[c("v_speed_FALSE","v_speed_TRUE")])})
 # Or from the sampled parameters (i.e., 1.12 - .22)
 p_test(x=sPNAS_Bv_sv,x_name="v_Ea-s:lMd",y=sPNAS_Bv_sv,y_name="v_Ea-n:lMd",
        subfilter=2000,digits=3)
 
+
+# -------------------------------------------------------------------------
+
+# Now we will visualize some of these effects
+library(tidyverse)
+
+# Get parameter data frame
+ps <- parameters_data_frame(sPNAS_Bv_sv, mapped = TRUE)
+head(ps)
+
+# Calculate means
+pmeans <- data.frame(lapply(ps, mean))
+pmeans
+
+# Here we will calculate the quality (match-mismatch difference) and quantity
+# (match-mismatch average) of accumulation rates
+vmeans <- data.frame(
+  a_quality = mean(ps$v_accuracy_TRUE - ps$v_accuracy_FALSE),
+  n_quality = mean(ps$v_neutral_TRUE - ps$v_neutral_FALSE),
+  s_quality = mean(ps$v_speed_TRUE - ps$v_speed_FALSE),
+  a_quantity = mean(c(ps$v_accuracy_TRUE, ps$v_accuracy_FALSE)),
+  n_quantity = mean(c(ps$v_neutral_TRUE, ps$v_neutral_FALSE)),
+  s_quantity = mean(c(ps$v_speed_TRUE, ps$v_speed_FALSE))
+)
+vmeans
+
+# Long format
+QQ <- vmeans %>% transmute(Accuracy_Quality = a_quality,
+                           Neutral_Quality = n_quality,
+                           Speed_Quality = s_quality,
+                           Accuracy_Quantity = a_quantity,
+                           Neutral_Quantity = n_quantity,
+                           Speed_Quantity = s_quantity) %>%
+  pivot_longer(cols = everything(),
+               names_to = c("Emphasis", "Measure"),
+               names_pattern = "(.*)_(.*)",
+               values_to = "v")
+QQ
+
+# Plot quality and quantity
+# As our parameter tests above showed, processing quality is poorer in
+# the speed emphasis condition, but quantity is higher. This reflects
+# additional effort or resources deployed in order to respond more quickly,
+# without necessarily improving the quality of processing
+QQ_plot <- ggplot(data = QQ, aes(Emphasis, v, col = Measure)) +
+  geom_line(aes(group = Measure), lty = "dashed", lwd = 1) +
+  geom_point(size = 4, shape = 19) +
+  ylim(0.8, 3) +
+  theme_minimal() + theme(text = element_text(size = 15))
+QQ_plot
+
+
+# Let's look at thresholds
+B <- pmeans %>% transmute(Accuracy_Left = B_left_accuracy,
+                          Accuracy_Right = B_right_accuracy,
+                          Neutral_Left = B_left_neutral,
+                          Neutral_Right = B_right_neutral,
+                          Speed_Left = B_left_speed,
+                          Speed_Right = B_right_speed) %>%
+  pivot_longer(cols = everything(),
+               names_to = c("Emphasis", "Accumulator"),
+               names_pattern = "(.*)_(.*)",
+               values_to = "B")
+B
+
+# Plotting separately for left and right accumulators shows the 
+# overall bias towards responding 'left'
+B_plot <- ggplot(data = B, aes(Emphasis, B, col = Accumulator)) +
+  geom_line(aes(group = Accumulator), lty = "dashed", lwd = 1) +
+  geom_point(size = 4, shape = 19) +
+  ylim(0.5, 1) + 
+  theme_minimal() + theme(text = element_text(size = 15))
+B_plot
+
+# -------------------------------------------------------------------------
 
