@@ -302,7 +302,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   if (class(design$Clist[[1]])[1] !="list") # same contrasts for all p_types
     design$Clist <- setNames(lapply(1:length(model$p_types),
                               function(x)design$Clist),model$p_types) else {
-    missing_p_types <- model$p_types[!(model$p_types %in% names(Clist))]
+    missing_p_types <- model$p_types[!(model$p_types %in% names(design$Clist))]
     if (length(missing_p_types)>0) {
       nok <- length(design$Clist)
       for (i in 1:length(missing_p_types)) {
