@@ -62,7 +62,12 @@ ddmTZD <- list(
   # p_vector transform, sets s as a scaling parameter
   transform = function(p) p,
   # Random function
-  rfun=function(lR,pars) rDDM(lR,pars,precision=3),
+  rfun=function(lR,pars) {
+    ok <- !( abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | pars[,"SZ"]>.75 | pars[,"st0"]>.2 | pars[,"Z"] > .99 ) 
+    if (pars[1,"sv"] !=0) ok <- ok & pars[,"sv"] > .01
+    if (pars[1,"SZ"] !=0) ok <- ok & pars[,"SZ"] > .01  
+    rDDM(lR,pars,precision=3,ok)
+  },
   # Density function (PDF)
   dfun=function(rt,R,pars) dDDM(rt,R,pars,precision=3),
   # Probability function (CDF)

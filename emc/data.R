@@ -24,7 +24,9 @@ add_Ffunctions <- function(data,design)
 # data=NULL; model=NULL
 # trials=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
 # Fcovariates=NULL;n_cores=1
-# p_vector=pars[[i]];design=design[[j]];model=model[[j]];data=data[[j]]
+# p_vector=pars[1,];design <- attr(samples,"design_list")[[1]]; trials=1
+# model <- attr(sPNAS_avt0_full,"model_list")[[1]]
+
 
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,

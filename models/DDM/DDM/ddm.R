@@ -1,6 +1,6 @@
 require(rtdists)
 
-rDDM <- function(lR,pars,precision=3) 
+rDDM <- function(lR,pars,precision=3,ok=NULL) 
   # lR is an empty latent response factor lR with one level for each boundary
   # pars is a matrix of parameter values named as in p_types
   # lower is mapped to first level of lR and upper to second
@@ -10,10 +10,14 @@ rDDM <- function(lR,pars,precision=3)
   # lR <- factor(c("left","right"))
   
 {
-  out <- rdiffusion(length(lR), a = pars[,"a"], v = pars[,"v"], t0 = pars[,"t0"], 
-    z = pars[,"z"], d = pars[,"d"], sz = pars[,"sz"], sv = pars[,"sv"],
-    st0 = pars[,"st0"], s = pars[,"s"])
-  cbind.data.frame(R=factor(out[,"response"],levels=c("lower","upper"),labels=levels(lR)),rt=out[,"rt"])
+  if (is.null(ok)) ok <- rep(TRUE,length(lR))
+  bad <- rep(NA,length(lR))
+  out <- data.frame(response=bad,rt=bad)
+  out[ok,2:1] <- rdiffusion(length(lR[ok]), a = pars[ok,"a"], v = pars[ok,"v"], t0 = pars[ok,"t0"], 
+    z = pars[ok,"z"], d = pars[ok,"d"], sz = pars[ok,"sz"], sv = pars[ok,"sv"],
+    st0 = pars[ok,"st0"], s = pars[ok,"s"])
+  # cbind.data.frame(R=factor(out[,"response"],levels=c("lower","upper"),labels=levels(lR)),rt=out[,"rt"])
+  cbind.data.frame(R=factor(out[,"response"],levels=1:2,labels=levels(lR)),rt=out[,"rt"])
 }
 
 dDDM <- function(rt,R,pars,precision=3) 

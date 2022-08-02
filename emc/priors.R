@@ -8,7 +8,7 @@ prior_samples_alpha <- function(theta_mu,theta_var,n=1e3)
 }
 
 
-prior_samples <- function(samps,type=c("mu","variance","covariance","correlation")[1],n=1e4)
+prior_samples <- function(samps,type=c("mu","variance","covariance","correlation","sigma")[1],n=1e4)
   # Samples from prior for standard at hyper levels for three types, 
   # or for single at subject level (in which case type="mu")
 {
@@ -27,12 +27,12 @@ prior_samples <- function(samps,type=c("mu","variance","covariance","correlation
                            rate = 1/(hyper$A_half^2))
       var[,,i] <- riwish(hyper$v_half + samps$n_pars - 1, 2 * hyper$v_half * diag(1 / a_half))
     }
-    if (type=="variance") return(t(apply(var,3,diag))) else {
-      if (type=="correlation")
-        var <- array(apply(var,3,cov2cor),dim=dim(var),dimnames=dimnames(var))
-      lt <- lower.tri(var[,,1])
-      return(t(apply(var,3,function(x){x[lt]})))
-    }
+    if (type=="sigma") return(var)
+    if (type=="variance") return(t(apply(var,3,diag)))
+    if (type=="correlation")
+      var <- array(apply(var,3,cov2cor),dim=dim(var),dimnames=dimnames(var))
+    lt <- lower.tri(var[,,1])
+    return(t(apply(var,3,function(x){x[lt]})))
   }
 }
 
