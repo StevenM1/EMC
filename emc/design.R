@@ -133,7 +133,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
 # Note p_names only contains non-constant parameters names
 {
   
-  compress_dadm <- function(da,designs) 
+  compress_dadm <- function(da,designs,Fcov,Ffun) 
     # out keeps only unique rows in terms of all parameters design matrices
     # R, lR and rt (at given resolution) from full data set
   {
@@ -142,6 +142,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
       apply(do.call(cbind,lapply(designs,function(x){
         apply(x[attr(x,"expand"),,drop=FALSE],1,paste,collapse="_")})
       ),1,paste,collapse="+"),da$subjects,da$R,da$lR,da$rt,sep="+")
+    if (!is.null(Fcov)) cells <- paste(cells,apply(da[,Fcov],1,paste,collapse="+"),sep="+")
+    if (!is.null(Ffun)) cells <- paste(cells,apply(da[,Ffun],1,paste,collapse="+"),sep="+")
     contract <- !duplicated(cells)
     out <- da[contract,,drop=FALSE]
     attr(out,"contract") <- contract
@@ -283,6 +285,12 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     da <- add_accumulators(data,design$matchfun,type=model$type) else da <- data
   da <- da[order(da$subjects),] # fixes different sort in add_accumulators depending on subject type 
 
+  if (!is.null(design$Ffunctions)) for (i in names(design$Ffunctions)) {
+    newF <- setNames(data.frame(design$Ffunctions[[i]](da)),i)
+    da <- cbind.data.frame(da,newF)
+  }
+
+  
   # NOT SURE THIS IS NEEDED, BUT CANT HURT 
   # Add dummy content for covariates in sampled_p_vector calls
   da[!(names(da) %in% c("R","rt"))] <- 
@@ -314,7 +322,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   if(model$type != "MRI") for (i in model$p_types) attr(design$Flist[[i]],"Clist") <- design$Clist[[i]]
   out <- lapply(design$Flist,make_dm,da=da,Fcovariates=Fcovariates)
   if (!is.null(rt_resolution) & !is.null(da$rt)) da$rt <- round(da$rt/rt_resolution)*rt_resolution
-  if (compress) dadm <- compress_dadm(da,out) else {
+  if (compress) dadm <- compress_dadm(da,designs=out,
+    Fcov=names(design$Fcovariates),Ffun=names(design$Ffunctions)) else {
     dadm <- da
     attr(dadm,"designs") <- out
     attr(dadm,"s_expand") <- da$subjects
@@ -444,8 +453,10 @@ sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
                                     dimnames=Ffactors))[,-(length(Ffactors)+1)]
   for (i in names(design$Ffactors)) 
     data[[i]] <- factor(data[[i]],levels=design$Ffactors[[i]])
-  if (!is.null(design$Ffunctions))
-    data <- cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
+  
+  # if (!is.null(design$Ffunctions))
+  #   data <- cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
+  
   if (!is.null(design$Fcovariates)) {
     covs <- matrix(0,nrow=dim(data)[1],ncol=length(design$Fcovariates),
                    dimnames=list(NULL,design$Fcovariates))

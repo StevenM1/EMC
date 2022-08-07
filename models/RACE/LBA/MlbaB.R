@@ -21,7 +21,7 @@ MlbaB <- list(
     x
   },
   # mapped parameter transform
-  Mtransform = function(pars) 
+  Mtransform = function(pars,dadm=NULL) 
     # transform parameters except v back to real line and add b
     # pars is a matrix output by map_p_vector  
   {

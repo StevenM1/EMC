@@ -20,7 +20,7 @@ rdmBt0natural <- list(
     x
   },
   # mapped parameter transform
-  Mtransform = function(pars) 
+  Mtransform = function(pars,dadm=NULL) 
     # transform parameters except t0 back to real line 
     # pars is a matrix output by map_p_vector  
   {

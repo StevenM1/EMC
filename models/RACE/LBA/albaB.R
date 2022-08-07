@@ -2,9 +2,9 @@
 
 source("models/RACE/LBA/lba.R")
 
-lbaB <- list(
+albaB <- list(
   type="RACE",
-  p_types=c("v","sv","B","A","t0"),
+  p_types=c("v_0","v_S","v_D","sv","B","A","t0"),
   # Transform to natural scale
   Ntransform=function(x) {
 
@@ -21,16 +21,17 @@ lbaB <- list(
     x
   },
   # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
+  Mtransform = function(pars,dadm) 
     # transform parameters except v back to real line and add b
     # pars is a matrix output by map_p_vector  
   {
-    pars <- lbaB$Ntransform(pars)
-    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
+    pars <- albaB$Ntransform(pars)
+    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"],
+      v = pars[,"v_0"] + pars[,"v_D"]*dadm$SD + pars[,"v_S"]*dadm$SS)
     pars
   },
   # p_vector transform, sets sv as a scaling parameter
-  transform = function(p) p,
+  transform = function(p) {p},
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) pars,
   # Random function for racing accumulator

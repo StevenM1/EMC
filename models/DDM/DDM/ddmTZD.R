@@ -44,7 +44,7 @@ ddmTZD <- list(
     x
   },
   # mapped parameter transform
-  Mtransform = function(pars) 
+  Mtransform = function(pars,dadm=NULL) 
     # pars is a matrix output by map_p_vector  
   {
     pars <- ddmTZD$Ntransform(pars)

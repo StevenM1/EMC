@@ -13,7 +13,7 @@ rdmRL <- list(
   },
   
   # mapped parameter transform
-  Mtransform = function(pars,dadm) # ,data,model=NULL 
+  Mtransform = function(pars,dadm=NULL) # ,data,model=NULL 
     # transform parameters back to real line 
     # pars is a matrix output by map_p_vector
     # da is an augmented data

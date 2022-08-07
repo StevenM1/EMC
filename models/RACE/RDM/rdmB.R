@@ -10,7 +10,7 @@ rdmB <- list(
     exp(x)
   },
   # mapped parameter transform
-  Mtransform = function(pars) 
+  Mtransform = function(pars,dadm=NULL) 
     # transform parameters back to real line 
     # pars is a matrix output by map_p_vector  
   {

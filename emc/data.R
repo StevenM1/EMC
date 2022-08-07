@@ -23,15 +23,13 @@ add_Ffunctions <- function(data,design)
 
 # data=NULL; model=NULL
 # trials=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
-# Fcovariates=NULL;n_cores=1
-# p_vector=pars[1,];design <- attr(samples,"design_list")[[1]]; trials=1
-# model <- attr(sPNAS_avt0_full,"model_list")[[1]]
-
-
+# n_cores=1
+# design=design_bLR1; trials=3
+# Fcovariates=data.frame(b_L=rep(c(3,1),each=9),b_R=rep(c(1,3),each=9))
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
-                      Fcovariates=NULL,n_cores=1)
+                      Fcovariates=NULL,n_cores=1,return_Ffunctions=FALSE)
   # Simulates data using rfun from model specified by a formula list (Flist) 
   # a factor contrast list (Clist, if null data frame creation defaults used) 
   # using model (list specifying p_types, transform, Mtransform and rfun).
@@ -111,10 +109,10 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     names(data)[dim(data)[2]] <- "R"
     data$R <- factor(data$R,levels=design$Rlevels)
     data$trials <- as.numeric(as.character(data$trials))
-    if (!is.null(design$Ffunctions)) data <- 
-      cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
+    # if (!is.null(design$Ffunctions)) data <- 
+    #   cbind.data.frame(data,data.frame(lapply(design$Ffunctions,function(f){f(data)})))
     LT <- UT <- LC <- UC <- Rmissing <- NULL
-    # Add comparatives
+    # Add covariates
     if (!is.null(design$Fcovariates)) {
       if (!is.null(Fcovariates)) {
         if (!(all(names(Fcovariates)  %in% design$Fcovariates)))
@@ -150,7 +148,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     rt_check=FALSE)
   pars <- model$Mtransform(map_p(
     model$transform(add_constants(p_vector,design$constants)),data
-  ))
+  ),data)
   if (!is.null(design$adapt)) {
     if (expand>1) {
       expand <- 1
@@ -169,8 +167,11 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
       Rrt <- model$rfun(rep(data$lR,expand),apply(pars,2,rep,times=expand))
   if (expand>1) data <- cbind(rep=rep(1:expand,each=dim(data)[1]),
                               data.frame(lapply(data,rep,times=expand))) 
+  dropNames <- c("lR","lM")
+  if (!return_Ffunctions && !is.null(design$Ffunctions)) 
+    dropNames <- c(dropNames,names(design$Ffunctions) )
+  data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% dropNames)]
   data[,c("R","rt")] <- Rrt
-  data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% c("lR","lM"))]
   missingFilter(data[,names(data)!="winner"],LT,UT,LC,UC,Rmissing)
 }
 

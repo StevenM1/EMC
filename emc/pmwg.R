@@ -190,12 +190,12 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
   rt_resolution <- rep(rt_resolution,length.out=length(data_list))
   for (i in 1:length(dadm_list)) {
     message("Processing data set ",i)
-    if (!is.null(design_list[[i]]$Ffunctions)) {
-      pars <- attr(data_list[[i]],"pars")
-      data_list[[i]] <- cbind.data.frame(data_list[[i]],data.frame(lapply(
-        design_list[[i]]$Ffunctions,function(f){f(data_list[[i]])})))
-      if (!is.null(pars)) attr(data_list[[i]],"pars") <- pars
-    }
+    # if (!is.null(design_list[[i]]$Ffunctions)) {
+    #   pars <- attr(data_list[[i]],"pars")
+    #   data_list[[i]] <- cbind.data.frame(data_list[[i]],data.frame(lapply(
+    #     design_list[[i]]$Ffunctions,function(f){f(data_list[[i]])})))
+    #   if (!is.null(pars)) attr(data_list[[i]],"pars") <- pars
+    # }
     dadm_list[[i]] <- design_model(data=data_list[[i]],design=design_list[[i]],
                                    model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
   }
