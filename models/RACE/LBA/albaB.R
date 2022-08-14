@@ -18,6 +18,8 @@ albaB <- list(
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "v"] <- exp(x[,nams != "v"])
     }
+    x <- cbind(x,b=x[,"B"] + x[,"A"],
+    v = x[,"v_0"] + x[,"v_D"]*dadm$SD + x[,"v_S"]*dadm$SS)
     x
   },
   # mapped parameter transform
@@ -25,9 +27,6 @@ albaB <- list(
     # transform parameters except v back to real line and add b
     # pars is a matrix output by map_p_vector  
   {
-    pars <- albaB$Ntransform(pars)
-    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"],
-      v = pars[,"v_0"] + pars[,"v_D"]*dadm$SD + pars[,"v_S"]*dadm$SS)
     pars
   },
   # p_vector transform, sets sv as a scaling parameter

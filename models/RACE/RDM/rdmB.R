@@ -4,7 +4,7 @@ source("models/RACE/RDM/rdm.R")
 
 rdmB <- list(
   type="RACE",
-  p_types=c("v","B","A","t0"),
+  p_types=c("v","B","A","t0","s"),
   # Transform to natural scale
   Ntransform=function(x) {
     exp(x)
@@ -14,9 +14,9 @@ rdmB <- list(
     # transform parameters back to real line 
     # pars is a matrix output by map_p_vector  
   {
-    rdmB$Ntransform(pars)
+    pars
   },
-  # p_vector transform scaling parameter by s=1 assumed in rdm.R
+  # p_vector transform 
   transform = function(x) x,
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) pars,

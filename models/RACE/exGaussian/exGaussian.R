@@ -14,7 +14,7 @@ exGaussian <- list(
     # transform parameters except v back to real line 
     # pars is a matrix output by map_p_vector  
   {
-    exGaussian$Ntransform(pars)
+    pars
   },
   # p_vector transform
   transform = function(x) x,

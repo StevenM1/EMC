@@ -56,7 +56,7 @@ dataPROBIT <- make_data(p_vector,design=designPROBIT,trials=1000)
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 save(samplers,file="probitIndividualBinary.RData")
 # runSingleProbitBinary.R to get 1000 samples
-print(load("probitIndividualBinary.RData"))
+print(load("models/SDT/Probit/examples/samples/probitIndividualBinary.RData"))
 
 plot_chains(samples,subfilter=100,filter="burn") # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=100,filter="burn")  # 1.01
@@ -115,7 +115,7 @@ for (i in names(p_vector))
 samplers <- make_samplers(dataPROBIT,designPROBIT,type="single")
 save(samplers,file="probitIndividual.RData")
 # runSingleProbit.R to get 1000 samples
-print(load("probitIndividual.RData"))
+print(load("models/SDT/Probit/examples/samples/probitIndividual.RData"))
 
 plot_chains(samples,subfilter=400) # Thoroughly converged by 400
 gd_pmwg(samples,subfilter=400)  # 1.01

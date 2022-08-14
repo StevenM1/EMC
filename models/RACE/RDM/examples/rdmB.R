@@ -24,10 +24,23 @@ design_B <- make_design(
   Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
   Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
-  Flist=list(v~lM,B~lR*E,A~1,t0~1),
+  Flist=list(v~lM,B~lR*E,A~1,t0~1,s~1),
+  constants=c(s=log(1)),
   model=rdmB)
 # rdm_B <- make_samplers(dat,design_B,type="standard",rt_resolution=.02)
 # save(rdm_B,file="rdmPNAS_B.RData")
+
+
+design_B_s <- make_design(
+  Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E)),
+  Rlevels=levels(dat$R),matchfun=function(d)d$S==d$lR,
+  Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat),
+  Flist=list(v~lM,B~lR*E,A~1,t0~1,s~lM),
+  constants=c(s=log(1)),
+  model=rdmB)
+# rdm_B_s <- make_samplers(dat,design_B_s,type="standard",rt_resolution=.02)
+# save(rdm_B_s,file="rdmPNAS_B_s.RData")
+
 
 # Let rates and t0 differ by emphasis
 design_Bvt0 <- make_design(
@@ -86,21 +99,27 @@ design_Bv <- make_design(
 
 # Load samples
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_B.RData"))
+
+print(load("models/RACE/RDM/examples/samples/rdmPNAS_B_s.RData"))
+
+
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bt0.RData"))
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bv.RData"))
 print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0.RData"))
 
 # Check sampling
 check_run(rdm_B)
+check_run(rdm_B_s,subfilter=1000)
 check_run(rdm_Bt0,subfilter=500)
 check_run(rdm_Bv,subfilter=1500)
 check_run(rdm_Bvt0,subfilter=1500)
 
+
 #### Model selection ----
 
 # Bvt0 wins with Bv second
-compare_IC(list(B=rdm_B,Bt0=rdm_Bt0,Bv=rdm_Bv,Bvt0=rdm_Bvt0),
-           subfilter=list(0,500,1500,1500))
+compare_IC(list(B=rdm_B,Bs=rdm_B_s,Bt0=rdm_Bt0,Bv=rdm_Bv,Bvt0=rdm_Bvt0),
+           subfilter=list(0,1000,500,1500,1500))
 # At the subject level, Bv is a close second, followed by Bt0
 ICs <- compare_ICs(list(B=rdm_B,Bt0=rdm_Bt0,Bv=rdm_Bv,Bvt0=rdm_Bvt0),
                    subfilter=list(0,500,1500,1500:2500))

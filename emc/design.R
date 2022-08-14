@@ -416,7 +416,8 @@ map_p <- function(p,dadm)
 
 make_design <- function(Flist,Ffactors,Rlevels,model,
   Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
-  adapt=NULL,report_p_vector=TRUE) 
+  adapt=NULL,report_p_vector=TRUE,
+  Rmap=NULL) 
   # Binds together elements that make up a design a list  
 {
 

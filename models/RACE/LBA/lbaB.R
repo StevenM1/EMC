@@ -18,15 +18,13 @@ lbaB <- list(
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "v"] <- exp(x[,nams != "v"])
     }
-    x
+    cbind(x,b=x[,"B"] + x[,"A"])
   },
   # mapped parameter transform
   Mtransform = function(pars,dadm=NULL) 
     # transform parameters except v back to real line and add b
     # pars is a matrix output by map_p_vector  
   {
-    pars <- lbaB$Ntransform(pars)
-    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
     pars
   },
   # p_vector transform, sets sv as a scaling parameter
