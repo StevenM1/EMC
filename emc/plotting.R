@@ -120,7 +120,7 @@ plot_density <- function(pmwg_mcmc,layout=c(2,3),
   if (!(class(pmwg_mcmc) %in% c("mcmc","mcmc.list"))) {
     if (plot_prior) {
       psamples <- get_prior_samples(pmwg_mcmc,selection,filter,thin,subfilter,n_prior)
-      if (mapped) psamples <- map_mcmc(psamples,design=design,
+      if (mapped) psamples <- map_mcmc(psamples,design=attr(pmwg_mcmc,"design_list")[[1]],
                                        model=attr(pmwg_mcmc,"model_list")[[1]])
       if (!is.null(attr(psamples,"isConstant")))
         psamples <- psamples[,!attr(psamples,"isConstant"),drop=FALSE]
