@@ -321,7 +321,7 @@ parameters_data_frame <- function(samples,filter="sample",thin=1,subfilter=0,
   selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[2]) 
   # extracts and stacks chains into a matrix  
 {
-  out <- as_mcmc.list(samples,selection=selection,filter=filter,
+  out <- as_mcmc.list(samples,selection=selection,filter=filter,thin=thin,
                       subfilter=subfilter,mapped=mapped,include_constants=include_constants)
   if (selection!="alpha") out <- as.data.frame(do.call(rbind,out)) else {
     out <- lapply(out,function(x){do.call(rbind,x)})
