@@ -108,10 +108,6 @@ make_dm <- function(form,da,Clist=NULL,Fcovariates=NULL)
 
 # model=NULL;prior = NULL; add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
 
-# add_acc=FALSE;compress=FALSE;verbose=FALSE;rt_check=FALSE
-
-# prior = NULL; add_acc=FALSE;compress=FALSE;verbose=FALSE;rt_check=FALSE;rt_resolution = NULL
-# data=add_accumulators(data,design$matchfun,type=model$type)
 
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.02,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
@@ -142,8 +138,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
       apply(do.call(cbind,lapply(designs,function(x){
         apply(x[attr(x,"expand"),,drop=FALSE],1,paste,collapse="_")})
       ),1,paste,collapse="+"),da$subjects,da$R,da$lR,da$rt,sep="+")
-    if (!is.null(Fcov)) cells <- paste(cells,apply(da[,Fcov],1,paste,collapse="+"),sep="+")
-    if (!is.null(Ffun)) cells <- paste(cells,apply(da[,Ffun],1,paste,collapse="+"),sep="+")
+    if (!is.null(Fcov)) cells <- paste(cells,apply(da[,Fcov,drop=FALSE],1,paste,collapse="+"),sep="+")
+    if (!is.null(Ffun)) cells <- paste(cells,apply(da[,Ffun,drop=FALSE],1,paste,collapse="+"),sep="+")
     contract <- !duplicated(cells)
     out <- da[contract,,drop=FALSE]
     attr(out,"contract") <- contract
@@ -329,7 +325,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     attr(dadm,"s_expand") <- da$subjects
     attr(dadm,"expand") <- 1:dim(dadm)[1]
   }
-  if (verbose & compress) message("Likelihood speedup factor: ",round(dim(da)[1]/dim(dadm)[1],1))
+  if (verbose & compress) message("Likelihood speedup factor: ",
+    round(dim(da)[1]/dim(dadm)[1],1)," (",dim(dadm)[1]," unique trials)")
   p_names <-  unlist(lapply(out,function(x){dimnames(x)[[2]]}),use.names=FALSE)
   
   # Pick out constants
