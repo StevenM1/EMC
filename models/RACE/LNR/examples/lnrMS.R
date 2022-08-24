@@ -104,17 +104,17 @@ print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData"))
 source("models/RACE/LBA/lbaB.R")
 print(load("models/RACE/LBA/examples/samples/sPNAS_Bv_sv.RData"))
 source("models/RACE/RDM/rdmB.R")
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0.RData"))
+print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0_s.RData"))
 
-compare_IC(list(DDM_avt0=sPNAS_avt0_full,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,
-                LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,2000))
+compare_IC(list(DDM=sPNAS_avt0_full,LBA=sPNAS_Bv_sv,RDM=rdm_Bvt0_s,
+                LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,4000))
 
 # Here we add in the version of the winning DDM model that did not use cell
 # coding. We see that there is very little effect on the ICs
 print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full_nocell.RData")) 
 
-compare_IC(list(DDM_avt0=sPNAS_avt0_full_nocell,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0=rdm_Bvt0,
-                LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,2000))
+compare_IC(list(DDM=sPNAS_avt0_full_nocell,LBA=sPNAS_Bv_sv,RDM=rdm_Bvt0_s,
+                LNR=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,4000))
 
 # For the remaining analysis add 4000 iterations to Bvt0 model
 
