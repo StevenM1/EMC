@@ -20,7 +20,7 @@ filter_obj <- function(obj, idx){
   dim_names <- dimnames(obj)
   if(is.null(dims)) return(obj)
   if(length(dims) == 2){
-    if(isSymmetric(round(obj, 5))) return(obj) #Don't extend priors and theta_mu_var_inv
+    if(isSymmetric(round(obj, 3))) return(obj) #Don't extend priors and theta_mu_var_inv
   } 
   obj <- obj[slice.index(obj, length(dims)) %in% idx]
   dims[length(dims)] <- length(idx)
@@ -241,7 +241,7 @@ as_Mcmc <- function(sampler,filter=stages,thin=1,subfilter=0,
 
 
 
-
+# samplers=pmwg_mcmc
 as_mcmc.list <- function(samplers,
                          selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1],
                          filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
@@ -360,7 +360,6 @@ get_design <- function(samples)
   dadm[,!(names(dadm) %in% c("subjects","trials","R","rt","winner"))]
 }
 
-
 mapped_designs <- function(samples,remove_subjects=TRUE) 
   # Show augmented data and corresponding mapped parameter  
 {
@@ -385,7 +384,6 @@ get_map <- function(samples,add_design=TRUE) {
   }
   out
 }
-
 
 p_names <- function(samples,mapped=FALSE,design=FALSE) 
   # parameter names of a pmwg object or list of pmwg objects or if mapped=TRUE
