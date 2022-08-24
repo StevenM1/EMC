@@ -17,7 +17,7 @@ rdmBt0natural <- list(
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "t0"] <- exp(x[,nams != "t0"])
     }
-    attr(x,"ok") <- x[,"t0"]>0
+    attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
     x
   },
   # mapped parameter transform
