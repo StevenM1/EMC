@@ -62,12 +62,16 @@ mapped_name_list <- function(design,model,save_design=FALSE)
 }
 
 
+# mcmc=mcmcList[[1]]; design=attr(samplers,"design_list")[[1]];model=attr(samplers,"model_list")[[1]]
 map_mcmc <- function(mcmc,design,model, include_constants = TRUE) 
   # Maps vector or matrix (usually mcmc object) of sampled parameters to native 
-  # model parameterization. NB: Does not apply Mtransform, only Ntransform 
+  # model parameterization. 
 {
   doMap <- function(mapi,pmat) t(mapi %*% t(pmat[,dimnames(mapi)[[2]],drop=FALSE]))
   
+  get_p_types <- function(nams)
+    unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
+
   if (!is.matrix(mcmc)) mcmc <- t(as.matrix(mcmc))
   map <- attr(sampled_p_vector(design),"map")
   constants <- design$constants
@@ -90,8 +94,13 @@ map_mcmc <- function(mcmc,design,model, include_constants = TRUE)
     if (dim(plist[[i]])[1]!=1) isConstant <- c(isConstant,
                                                apply(plist[[i]],2,function(x){all(x[1]==x[-1])}))
   }
-  out <- model$Ntransform(as.mcmc(do.call(cbind,plist)))
+  pmat <- do.call(cbind,plist)
+  cnams <- dimnames(pmat)[[2]]
+  dimnames(pmat)[[2]] <- get_p_types(cnams) 
+  out <- model$Ntransform(pmat)[,1:length(cnams)]
+  dimnames(out)[[2]] <- cnams
   if(!include_constants) out <- out[,!isConstant]
+  out <- as.mcmc(out)
   attr(out,"isConstant") <- isConstant
   out
 }
