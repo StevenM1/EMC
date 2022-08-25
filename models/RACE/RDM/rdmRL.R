@@ -5,11 +5,13 @@ source("models/RACE/RDM/rdm.R")
 
 rdmRL <- list(
   type="RACE",
-  p_types=c("v0","v","B","A","t0","alpha","w","q0"),
+  p_types=c("v0","v","B","A","t0","alpha","w","q0","s"),
 
   # Transform to natural scale
   Ntransform=function(x) {
-    exp(x)
+    x <- exp(x)
+    attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
+    x
   },
   
   # mapped parameter transform
@@ -18,7 +20,7 @@ rdmRL <- list(
     # pars is a matrix output by map_p_vector
     # da is an augmented data
   {
-    rdmRL$Ntransform(pars) 
+    pars 
   },
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
@@ -28,7 +30,7 @@ rdmRL <- list(
       parsList[[i]] <- update_pars(i,pars,dadm)
     do.call(rbind,parsList)
   },
-  # p_vector transform scaling parameter by s=1 assumed in rdm.R
+  # p_vector transform 
   transform = function(x) x,
   # Random function for racing accumulators
   rfun=function(lR,pars) rRDM(lR,pars),

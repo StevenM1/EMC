@@ -25,7 +25,7 @@ lnrMS <- list(
     # transform parameters except v back to real line 
     # pars is a matrix output by map_p_vector  
   {
-    lnrMS$Ntransform(pars)
+    pars
   },
   # p_vector transform scaling parameter by s=1 assumed in lnr.R
   transform = function(x) x,

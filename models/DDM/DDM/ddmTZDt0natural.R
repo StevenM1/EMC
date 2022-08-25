@@ -41,21 +41,20 @@ ddmTZDt0natural <- list(
       x[,islog] <- exp(x[,islog])
       x[,isprobit] <- pnorm(x[,isprobit])  
     }
+    x <- cbind(x,z=x[,"a"]*x[,"Z"],
+      sz = 2*x[,"SZ"]*x[,"a"]*apply(cbind(x[,"Z"],1-x[,"Z"]),1,min))
+    x <- cbind(x, d = x[,"t0"]*(2*x[,"DP"]-1))
+    attr(x,"ok") <- 
+      !( x[,"t0"] < 0 | abs(x[,"v"])>5 | x[,"a"]>2 | x[,"sv"]>2 | 
+         x[,"SZ"]>.75 | x[,"st0"]>.2) 
+    if (x[1,"sv"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"sv"] > .01
+    if (x[1,"SZ"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"SZ"] > .01  
     x
   },
   # mapped parameter transform
   Mtransform = function(pars,dadm=NULL) 
     # pars is a matrix output by map_p_vector  
   {
-    pars <- ddmTZDt0natural$Ntransform(pars)
-    pars <- cbind(pars,z=pars[,"a"]*pars[,"Z"],
-      sz = 2*pars[,"SZ"]*pars[,"a"]*apply(cbind(pars[,"Z"],1-pars[,"Z"]),1,min))
-    pars <- cbind(pars, d = pars[,"t0"]*(2*pars[,"DP"]-1))
-    attr(pars,"ok") <- 
-      !( pars[,"t0"] < 0 | abs(pars[,"v"])>5 | pars[,"a"]>2 | pars[,"sv"]>2 | 
-         pars[,"SZ"]>.75 | pars[,"st0"]>.2) 
-    if (pars[1,"sv"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"sv"] > .01
-    if (pars[1,"SZ"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"SZ"] > .01  
     pars
   },
   # p_vector transform, sets s as a scaling parameter

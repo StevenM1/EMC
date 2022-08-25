@@ -11,6 +11,9 @@
 # I use a different parameterization in terms of v=l (rate),
 # uniform start point variability from 0-A (A>=0), threshold b (>0) and hence 
 # B=b-A (>=0) as a threshold gap. Hence k = b-A/2 = B + A/2 and a=A 
+#
+# Added ability to set s = diffusive standard deviation, by scaling A, B and v
+# i.e., given s, same result for A/s, B/s, v/s with s=1
 
 #### distribution functions
 
@@ -100,7 +103,9 @@ dRDM <- function(rt,pars)
   
   rt <- rt - pars[,"t0"]
   out <- numeric(length(rt))
-  ok <- pars[,"v"] > 0
+  ok <- !pars[,"v"] < 0  # code handles rate zero case
+  if (any(dimnames(pars)[[2]]=="s")) # rescale
+     pars[,c("A","B","v")] <- pars[,c("A","B","v")]/pars[,"s"]
   out[ok] <- digt(rt[ok],k=pars[ok,"B"]+pars[ok,"A"]/2,l=pars[ok,"v"],a=pars[ok,"A"]/2)
   out
 }
@@ -203,7 +208,9 @@ pRDM <- function(rt,pars)
   
   rt <- rt - pars[,"t0"]
   out <- numeric(length(rt))
-  ok <- pars[,"v"] > 0
+  ok <- !pars[,"v"] < 0  # code handles rate zero case
+  if (any(dimnames(pars)[[2]]=="s")) # rescale
+     pars[,c("A","B","v")] <- pars[,c("A","B","v")]/pars[,"s"]
   out[ok] <- pigt(rt[ok],k=pars[ok,"B"]+pars[ok,"A"]/2,l=pars[ok,"v"],a=pars[ok,"A"]/2)
   out
   
@@ -249,7 +256,7 @@ rWald <- function(n,B,v,A)
   
   # Kluge to return Inf for negative rates
   out <- numeric(n)
-  ok <- v>0  
+  ok <- !v<0  
   nok <- sum(ok)
   bs <- B[ok]+runif(nok,0,A[ok])
   out[ok] <- rwaldt(nok,k=bs,l=v[ok])
@@ -262,13 +269,15 @@ rRDM <- function(lR,pars,p_types=c("v","B","A","t0"))
   # lR is an empty latent response factor lR with one level for each accumulator. 
   # pars is a matrix of corresponding parameter values named as in p_types
   # pars must be sorted so accumulators and parameter for each trial are in 
-  # contiguous rows.
+  # contiguous rows. "s" parameter will be used but can be omotted
   #
   # test
   # pars=cbind(B=c(1,2),v=c(1,1),A=c(0,0),t0=c(.2,.2)); lR=factor(c(1,2))
 {
   if (!all(p_types %in% dimnames(pars)[[2]])) 
     stop("pars must have columns ",paste(p_types,collapse = " "))
+  if (any(dimnames(pars)[[2]]=="s")) # rescale
+     pars[,c("A","B","v")] <- pars[,c("A","B","v")]/pars[,"s"]
   pars[,"B"][pars[,"B"]<0] <- 0 # Protection for negatives 
   pars[,"A"][pars[,"A"]<0] <- 0
   dt <- matrix(rWald(dim(pars)[1],B=pars[,"B"],v=pars[,"v"],A=pars[,"A"]),

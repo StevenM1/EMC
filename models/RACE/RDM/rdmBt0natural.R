@@ -4,7 +4,7 @@ source("models/RACE/RDM/rdm.R")
 
 rdmBt0natural <- list(
   type="RACE",
-  p_types=c("v","B","A","t0"),
+  p_types=c("v","B","A","t0","s"),
   # Transform to natural scale
   Ntransform=function(x) {
     get_p_types <- function(nams) 
@@ -17,6 +17,7 @@ rdmBt0natural <- list(
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "t0"] <- exp(x[,nams != "t0"])
     }
+    attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
     x
   },
   # mapped parameter transform
@@ -25,11 +26,9 @@ rdmBt0natural <- list(
     # pars is a matrix output by map_p_vector  
   {
     pars <- rdmBt0natural$Ntransform(pars)
-    attr(pars,"ok") <- pars[,"t0"]>0
-    pars
 
   },
-  # p_vector transform scaling parameter by s=1 assumed in rdm.R
+  # p_vector transform 
   transform = function(x) x,
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) pars,

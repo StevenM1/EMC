@@ -8,13 +8,16 @@ log_likelihood_race <- function(p_vector,dadm,min_ll=log(1e-10))
 {
   
   pars <- get_pars(p_vector,dadm)
+  if (is.null(attr(pars,"ok"))) 
+    ok <- !logical(dim(pars)[1]) else ok <- attr(pars,"ok")
+  
   lds <- numeric(dim(dadm)[1]) # log pdf (winner) or survivor (losers)
   lds[dadm$winner] <- log(attr(dadm,"model")$dfun(rt=dadm$rt[dadm$winner],
                                                   pars=pars[dadm$winner,]))
   n_acc <- length(levels(dadm$R))
   if (n_acc>1) lds[!dadm$winner] <-
     log(1-attr(dadm,"model")$pfun(rt=dadm$rt[!dadm$winner],pars=pars[!dadm$winner,]))
-  lds[is.na(lds)] <- 0
+  lds[is.na(lds) | !ok] <- 0
   lds <- lds[attr(dadm,"expand")] # decompress
   if (n_acc>1) {
     winner <- dadm$winner[attr(dadm,"expand")]
@@ -187,6 +190,28 @@ log_likelihood_ddm <- function(p_vector,dadm,min_ll=log(1e-10))
   like[attr(pars,"ok")][is.na(like[attr(pars,"ok")])] <- 0
   sum(pmax(min_ll,log(like[attr(dadm,"expand")])))
 }
+
+
+
+log_likelihood_DAS <- function(p_vector,dadm,min_ll=log(1e-10),
+  p_names=c("B","v")) # names of race parameters, defualt is wald, (c"mean","sd") for normal
+  # Discrete activation suppression: race winner time convolved with exponential
+  # with mean tau
+{
+  pars <- get_pars(p_vector,dadm)
+  n_acc <- length(levels(dadm$R))
+  ntrials <- dim(dadm)[1]/n_acc
+  like <- numeric(ntrials)
+  pwin <- pars[dadm$winner,c(p_names,"tau")]
+  ploose <- array(pars[!dadm$winner,p_names],dim=c(n_acc-1,ntrials,2))
+  rt <- dadm[dadm$winner,"rt"] - pars[dadm$winner,"t0"]
+  for (i in 1:ntrials)
+    like[i] <- dDAS(rt=rt[i],pwin=pwin[i,1:2],
+                    ploose=matrix(ploose[,i,],ncol=2),tau=pwin[i,3],
+                    dfun=attr(dadm,"model")$dfun,pfun=attr(dadm,"model")$pfun)
+  sum(pmax(min_ll,log(like[attr(dadm,"expand")])))  
+}
+
 
 
 #### sdt choice likelihoods ----

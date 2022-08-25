@@ -71,6 +71,9 @@ compareMLL <- function(mll,nboot=100000,digits=2,print_summary=TRUE) {
 compare_MLL(list(a=is2_ddm_a,afull=is2_ddm_a_full,at0full=is2_ddm_at0_full,
                  av=is2_ddm_av_full,avt0full=is2_ddm_avt0_full,
                  avt0fullnocell=is2_sPNAS_avt0_full_nocell))
+      # avt0full        at0full avt0fullnocell             av              a          afull 
+      #     0.65           0.24           0.10           0.01           0.00           0.00 
+          
 # We see that the full avt0 model wins as was the case for DIC, and that 
 # cell coding vs. no cell coding now makes quite a difference. This is 
 # because the same prior was used in both cases, but means different things in
@@ -111,25 +114,26 @@ compare_MLL(list(B=is2_lba_B,Bvt0=is2_lba_Bvt0,Bt0sv=is2_lba_Bt0_sv,Bvsv=is2_sPN
 #   0.60   0.32   0.08   0.00   0.00 
 # Similar, but liked the more complex model
 
-#### RDM ----
+#### RDM (only models with s variable) ----
 
-print(load("models/RACE/RDM/examples/samples/is2_rdm_B.RData"))
-print(load("models/RACE/RDM/examples/samples/is2_rdm_Bv.RData"))
-print(load("models/RACE/RDM/examples/samples/is2_rdm_Bvt0.RData"))
-print(load("models/RACE/RDM/examples/samples/is2_rdm_Bt0.RData"))
+print(load("models/RACE/RDM/examples/samples/is2_rdm_B_s.RData"))
+print(load("models/RACE/RDM/examples/samples/is2_rdm_Bv_s.RData"))
+print(load("models/RACE/RDM/examples/samples/is2_rdm_Bvt0_s.RData"))
+print(load("models/RACE/RDM/examples/samples/is2_rdm_Bt0_s.RData"))
 
 # Remember the IC results ...
-#         DIC wDIC   BPIC wBPIC EffectiveN  meanD  Dmean   minD
-# B    -16514    0 -16333     0        180 -16694 -16844 -16874
-# Bt0  -16511    0 -16309     0        202 -16714 -16863 -16916
-# Bv   -16628    0 -16420     1        208 -16836 -16999 -17044
-# Bvt0 -16648    1 -16403     0        245 -16893 -17054 -17137
+#          DIC wDIC   BPIC wBPIC EffectiveN  meanD  Dmean   minD
+# Bs    -16717    0 -16512 0.000        205 -16922 -17063 -17127
+# Bt0s  -16738    0 -16551 0.000        186 -16924 -17064 -17110
+# Bvs   -16856    0 -16629 0.005        227 -17083 -17235 -17309
+# Bvt0s -16878    1 -16640 0.995        238 -17116 -17276 -17355
 
-compare_MLL(list(B=is2_rdm_B,Bv=is2_rdm_Bv,Bt0=is2_rdm_Bt0,Bvt0=is2_rdm_Bvt0))
-#    B   Bv  Bt0 Bvt0 
-# 0.82 0.08 0.08 0.01  
-
-# !!! Big discrepancy !!! 
+compare_MLL(list(Bs=is2_rdm_B_s,Bvs=is2_rdm_Bv_s,Bt0s=is2_rdm_Bt0_s,Bvt0s=is2_rdm_Bvt0_s))
+ #   Bs   Bvs  Bt0s Bvt0s 
+ # 0.81  0.12  0.05  0.01
+ 
+# !!! Big discrepancy, simpler models clearly preferred. It seems likley there are
+#     some issues with the prior here.
 
 #### LNR ----
 

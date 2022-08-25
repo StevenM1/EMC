@@ -1,15 +1,13 @@
 # RDM_B parameterization with s=1 scaling (B = b-A done in rdm.R)
 
-source("models/RACE/RDM/rdm.R")
+source("models/RACE/DAS/DAS.R")
 
-rdmB <- list(
+dasWald <- list(
   type="RACE",
-  p_types=c("v","B","A","t0","s"),
+  p_types=c("v","B","tau","t0","s"),
   # Transform to natural scale
   Ntransform=function(x) {
-    x <- exp(x)
-    attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
-    x
+    exp(x)
   },
   # mapped parameter transform
   Mtransform = function(pars,dadm=NULL) 
@@ -23,13 +21,16 @@ rdmB <- list(
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) pars,
   # Random function for racing accumulators
-  rfun=function(lR,pars) rRDM(lR,pars),
-  # Density function (PDF) for single accumulator
-  dfun=function(rt,pars) dRDM(rt,pars),
-  # Probability function (CDF) for single accumulator
-  pfun=function(rt,pars) pRDM(rt,pars),
-  # Race likelihood combining pfun and dfun
+  rfun=function(lR,pars) rDAS(lR,pars,rtype="wald"),
+  # Density function (PDF) of choice race runner
+  dfun=f_wald,
+  # Density function (PDF) of choice race runner
+  pfun=F_wald,
+  # Density function (PDF) winner convolved with exponential
+  dDAS=dDAS,
+  # Race likelihood looping dDAS over trials
   log_likelihood=function(p_vector,dadm,min_ll=log(1e-10)) 
-    log_likelihood_race(p_vector=p_vector, dadm = dadm, min_ll = min_ll)
+    log_likelihood_DAS(p_vector=p_vector, dadm = dadm, min_ll = min_ll,
+                       pnames=c("B","v")) # must be in B, v order
 )
 

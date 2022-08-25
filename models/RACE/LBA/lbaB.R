@@ -7,16 +7,20 @@ lbaB <- list(
   p_types=c("v","sv","B","A","t0"),
   # Transform to natural scale
   Ntransform=function(x) {
-
-    get_p_types <- function(nams) 
+   
+    get_p_types <- function(nams)
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
 
     if (!is.matrix(x)) {
       nams <- get_p_types(names(x))
-      x[nams != "v"] <- exp(x[nams != "v"]) 
+      x[nams != "v"] <- exp(x[nams != "v"])
+      x <- c(x,b=x["B"] + x["A"])
+      attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
     } else {
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "v"] <- exp(x[,nams != "v"])
+      x <- cbind(x,b=x[,"B"] + x[,"A"])
+      attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
     }
     x
   },
@@ -25,8 +29,6 @@ lbaB <- list(
     # transform parameters except v back to real line and add b
     # pars is a matrix output by map_p_vector  
   {
-    pars <- lbaB$Ntransform(pars)
-    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
     pars
   },
   # p_vector transform, sets sv as a scaling parameter

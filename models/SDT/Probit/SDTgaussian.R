@@ -15,6 +15,7 @@ probit <- list(
       is_sd <- grepl("sd",dimnames(x)[[2]]) 
       x[,is_sd] <- exp(x[,is_sd]) 
     }
+    attr(x,"ok") <- rep(TRUE,dim(x)[1])
     x
   },
   # mapped parameter transform
@@ -22,8 +23,6 @@ probit <- list(
     # transform parameters except v back to real line 
     # pars is a matrix output by map_p_vector  
   {
-    pars <- probit$Ntransform(pars)
-    attr(pars,"ok") <- rep(TRUE,dim(pars)[1])
     pars
   },
   # p_vector transform

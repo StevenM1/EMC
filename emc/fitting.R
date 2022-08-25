@@ -89,6 +89,7 @@ run_burn <- function(samplers,iter=300,
 }
 
 
+# Old version fail handling
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                    max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
                    epsilon = NULL, verbose_run_stage = FALSE,
@@ -159,7 +160,10 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       if (all(is.finite(gd))) break else {
         run_try <- run_try + 1
         message("gelman diag try error ", run_try)
-        if (run_try > max_trys) stop("Gave up after ",max_trys," gelman diag errors.")
+        if (run_try > max_trys) {
+          message("Gave up after ",max_trys," gelman diag errors.")
+          return(samplers) 
+        }
       }
     }
     samplers <- samplers_new
@@ -206,7 +210,135 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   }
 }
 
+# New version fail handling
+run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
+                   max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
+                   epsilon = NULL, verbose_run_stage = FALSE,
+                   particles=NA,particle_factor=50, p_accept=NULL,
+                   cores_per_chain=1,cores_for_chains=NA,mix=NULL,
+                   min_es=NULL,min_iter=NULL,max_iter=NULL) 
+  # Repeatedly runs burn or sample to get subject average multivariate 
+  # gelman.diag of alpha samples < max_gd (if !through) or if all univariate
+  # psrf for every subject and parameter and multivariate < max_gd and
+  # if min_es specified at least that effective size in worst case and if 
+  # min_iter specified at least that many iterations. If max_iter specified
+  # pulls out after max_iter.
+  # Trys adding iter (if NA 1/3 initial length) of the length and keeps all or 
+  # extra minus first n_remove (initially iter, then grows by iter/2 on each
+  # expansion based on mean gd of alphas (mpsrf alone or with psrf depending on thorough)
+  # until success or max_trys. Verbose prints out progress after each try
+  # Cores used = cores_per_chain*cores_for_chains, latter set to number of chains by default
+{
+  
+  enough_samples <- function(samplers,min_es,min_iter,max_iter,filter="burn") {
+    if (!is.null(max_iter) && (sum(samplers[[1]]$samples$stage==filter) >= max_iter)) return(TRUE)
+    if (is.null(min_iter)) ok <- TRUE else
+      ok <- (sum(samplers[[1]]$samples$stage==filter)) > min_iter
+    if (!is.null(min_es)) {
+      es_min <- min(es_pmwg(as_mcmc.list(samplers,selection="alpha",filter=filter)))
+      ok <- ok & (es_min > min_es)
+      attr(ok,"es") <- es_min
+    }
+    ok
+  }
+  
+  if (thorough) {
+    max_name <- ", Max alpha mpsrf/psrf = "
+    message("Exit on max alpha psrf/mpsrf < ",max_gd)
+  } else {
+    max_name <- ", Max alpha msrf = "
+    message("Exit on max alpha mpsrf < ",max_gd)
+  }
+  n_chains <- length(samplers)
+  n <- chain_n(samplers)
+  if (is.na(cores_for_chains)) cores_for_chains <- n_chains
+  if (is.na(iter)) iter <- round(n[,1][1]/3)
+  n_remove <- iter
+  # Iterate until criterion
+  trys <- 0
+  data_list <- attr(samplers,"data_list")  
+  design_list <- attr(samplers,"design_list")
+  model_list <- attr(samplers,"model_list")
+  gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
+                filter="burn",mapped=mapped)
+  if (all(is.finite(gd))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
+  repeat {
+    new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
+    particle_factor <- new_particle_n$particle_factor
+    particles <- new_particle_n$particles
+    if(!any(is.na(gd_diff)) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
+    samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
+                             n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
+                             particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                             verbose=FALSE,verbose_run_stage=verbose_run_stage,
+                             mc.cores=cores_for_chains)
+    trys <- trys+1
+    bad_new <- !class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")
+    if (bad_new)  gd <- matrix(Inf) else
+      gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
+                    filter="burn",mapped=mapped)
+    if (all(is.finite(gd))) {
+      samplers <- samplers_new
+      if (shorten) {
+        samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
+        if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
+          gd_short <- matrix(Inf) else
+          gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
+                          filter="burn",mapped=mapped)
+        if (mean(gd_short) < mean(gd)) {
+          gd <- gd_short
+          samplers <- samplers_short
+            n_remove <- iter
+        } else {
+          n_remove <- round(n_remove + iter/2)
+        }
+      }
+    } else {
+      if (bad_new) {
+        message("Failed to get new samples.")
+        # bad_samplers <<- samplers
+        # bad_samplers_new <<- samplers_new
+      } else {
+        message("Gelman diag try error.")
+        samplers <- lapply(samplers_new,remove_iterations,select=n_remove,filter="burn")
+      }
+    }
+    enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
+    if (is.null(attr(enough,"es"))) es_message <- NULL else
+      es_message <- paste(", Effective samples =",round(attr(enough,"es")))
+    if (all(is.finite(gd))) {
+      gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
+      ok_gd <- all(gd < max_gd)
+      shorten <- !ok_gd
+    } else ok_gd <- FALSE
+    if (trys == max_trys || (ok_gd & enough)) {
+      if (verbose) {
+        message("\nFinal multivariate gelman.diag per participant")
+        message("Iterations = ",samplers[[1]]$samples$idx,", Mean mpsrf= ",
+                round(mean(gd),3),max_name,round(max(gd),3))
+      }
+      attr(samplers,"data_list") <- data_list
+      attr(samplers,"design_list") <- design_list
+      attr(samplers,"model_list") <- model_list
+      if (ok_gd) attr(samplers,"burnt") <- max_gd else attr(samplers,"burnt") <- NA 
+      return(samplers)
+    }
+    if (verbose) {
+      chain_n(samplers)[,"burn"][1]
+      message(trys,": Iterations burn = ",chain_n(samplers)[,"burn"][1],", Mean mpsrf= ",
+              round(mean(gd),3),max_name,round(max(gd),3),es_message)
+    }
+  }
+}
 
+# ndiscard=100;nstart=300;
+#                       particles=NA; particle_factor = 50; start_mu = NULL; start_var = NULL;
+#                       mix = NULL; verbose=TRUE;verbose_run_stage=FALSE;
+#                       epsilon = NULL; epsilon_upper_bound=15; p_accept=0.7;
+#                       cores_per_chain=1;cores_for_chains=NULL;
+#                       max_gd_trys=100;max_gd=1.2;
+#                       thorough=TRUE;mapped=FALSE; step_size = NA;
+#                       min_es=NULL;min_iter=NULL;max_iter=NULL
 auto_burn <- function(samplers,ndiscard=100,nstart=300,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
@@ -522,20 +654,24 @@ run_emc <- function(file_name,nsample=1000, ...)
       assign(sname[1],auto_burn(get(sname[1]), ...))
       save(list=sname,file=file_name)
     }
-    if (is.null(attr(get(sname[1]),"adapted")) && !is.na(attr(get(sname[1]),"burnt"))) {
+    if (is.null(attr(get(sname[1]),"adapted")) && !is.null(attr(get(sname[1]),"burnt")) && 
+        !is.na(attr(get(sname[1]),"burnt"))) {
       assign(sname[1],run_adapt(get(sname[1]), ...))
       save(list=sname,file=file_name)
     }
-    if (!is.null(attr(get(sname[1]),"adapted")) && attr(get(sname[1]),"adapted") && nsample > 0) {
+    if (!is.null(attr(get(sname[1]),"adapted")) && !is.null(attr(get(sname[1]),"adapted")) &&
+        attr(get(sname[1]),"adapted") && nsample > 0) {
       assign(sname[1],run_sample(get(sname[1]),iter=nsample, ...))
       save(list=sname,file=file_name)
     }
   } else { # file_name is actually a samplers object
     if (is.null(attr(file_name,"burnt")) || is.na(attr(file_name,"burnt")))
       file_name <- auto_burn(file_name, ...)
-    if (is.null(attr(file_name,"adapted")) && !is.na(attr(file_name,"burnt")))
+    if (is.null(attr(file_name,"adapted")) && !is.null(attr(file_name,"burnt")) &&
+        !is.na(attr(file_name,"burnt")))
       file_name <- run_adapt(file_name, ...)
-    if (!is.null(attr(file_name,"adapted")) && attr(file_name,"adapted") && nsample > 0)
+    if (!is.null(attr(file_name,"adapted")) && !is.null(attr(file_name,"adapted")) &&
+        attr(file_name,"adapted") && nsample > 0)
       file_name <- run_sample(file_name,iter=nsample, ...)
     return(file_name)
   }

@@ -140,8 +140,8 @@ lba_B <- make_samplers(data,design_B,type="standard",rt_resolution=.02)
 # fit by run_lba_B.R
 
 # Look at results 
-print(load("~/Documents/EMC/lba_B.RData"))
-print(load("~/Documents/EMC/lba_bLR.RData"))
+load("vignettes/TrialCovariates/samples/lba_B.RData")
+load("vignettes/TrialCovariates/samples/lba_bLR.RData")
 
 # Looks good
 check_run(lba_bLR)

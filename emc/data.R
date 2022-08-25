@@ -146,9 +146,9 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
     rt_check=FALSE)
-  pars <- model$Mtransform(map_p(
+  pars <- model$Ntransform(model$Mtransform(map_p(
     model$transform(add_constants(p_vector,design$constants)),data
-  ),data)
+  ),data))
   if (!is.null(design$adapt)) {
     if (expand>1) {
       expand <- 1
