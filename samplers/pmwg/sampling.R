@@ -14,9 +14,10 @@ pmwgs <- function(dadm, pars = NULL, ll_func = NULL, prior = NULL, ...) {
   samples <- variant_funs$sample_store(dadm, pars, ...)
   sampler <- list(
     data = dadm_list,
-    par_names = pars,
+    par_names = c(pars, names(dadm$subject_covariates)),
     subjects = subjects,
-    n_pars = length(pars),
+    n_pars = length(pars) + length(dadm$subject_covariates),
+    subject_covariates = dadm$subject_covariates,
     n_subjects = length(subjects),
     ll_func = ll_func,
     samples = samples,
@@ -63,10 +64,10 @@ start_proposals <- function(s, parameters, n_particles, pmwgs){
 new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL, 
                           eff_var = NULL, mix_proportion = c(0.5, 0.5, 0), 
                           likelihood_func = NULL, epsilon = NULL, subjects,
-                          components) 
+                          components, subject_covariates = 0) 
 {
   num_particles <- num_particles[s]
-  start_par <- 1
+  start_par <- length(subject_covariates) + 1
   group_pars <- variant_funs$get_group_level(parameters, s)
   n_components <- length(components)
   proposal_out <- numeric(length(group_pars$mu))
@@ -117,7 +118,7 @@ new_particle <- function (s, data, num_particles, parameters, eff_mu = NULL,
     proposal_out[idx] <- proposals[idx_ll,]
     start_par <- components[i] + 1
   }
-  
+  proposal_out <- c(proposal_out, subject_covariates)
   return(list(proposal = proposal_out, ll = ll, origin = origin))
 }
 
@@ -143,7 +144,7 @@ run_stage <- function(pmwgs,
   mix <- set_mix(stage, mix, verbose)
   # Set necessary local variables
   # Set stable (fixed) new_sample argument for this run
-  n_pars <- length(pmwgs$par_names)
+  n_pars <- pmwgs$n_pars
   components <- attr(pmwgs$data, "components")
   # Display stage to screen
   if(verbose){
@@ -167,7 +168,7 @@ run_stage <- function(pmwgs,
     particles <- rep(particles, pmwgs$n_subjects)
   }
   epsilon <- replicate(length(components), epsilon)
-  if(stage!= "burn") components <- pmwgs$n_pars
+  if(stage!= "burn") components <- pmwgs$n_pars - length(pmwgs$subject_covariates)
   # Build new sample storage
   pmwgs <- extend_sampler(pmwgs, iter, stage)
   # create progress bar
@@ -187,10 +188,10 @@ run_stage <- function(pmwgs,
 
     j <- start_iter + i
     # Gibbs step
-    pars <- variant_funs$gibbs_step(pmwgs, pmwgs$samples$alpha[,,j-1])
+    pars <- variant_funs$gibbs_step(pmwgs, rbind(pmwgs$samples$alpha[,,j-1], pmwgs$subject_covariates))
     # Particle step
     proposals=mclapply(X=1:pmwgs$n_subjects,FUN = new_particle, data, particles, pars, eff_mu, 
-                       eff_var, mix, pmwgs$ll_func, epsilon, subjects, components, mc.cores =n_cores)
+                       eff_var, mix, pmwgs$ll_func, epsilon, subjects, components, pmwgs$subject_covariates, mc.cores =n_cores)
     proposals <- array(unlist(proposals), dim = c(pmwgs$n_pars + 2, pmwgs$n_subjects))
     
     #Fill samples
@@ -211,29 +212,9 @@ run_stage <- function(pmwgs,
         }
       }
     }
-    # Test whether we can finish adaptation
-    # if (stage == "adapt") {
-    #   res <- test_sampler_adapted(pmwgs, n_unique, i, n_cores_conditional, variant_funs$get_conditionals, verbose, thin, thin_eff_only)
-    #   if (res == "success") {
-    #     break
-    #   } else if (res == "increase") {
-    #     n_unique <- n_unique + .n_unique
-    #   }
-    # }
+
   }
   if (verbose) close(pb)
-  # if (stage == "adapt") {
-  #   if (i == iter) {
-  #     message(paste(
-  #       "Particle Metropolis within Gibbs Sampler did not",
-  #       "finish adaptation phase early (all", i, "iterations were",
-  #       "run).\nYou should examine your samples and perhaps start",
-  #       "a longer adaptation run."
-  #     ))
-  #   } else {
-  #     pmwgs <- trim_na(pmwgs)
-  #   }
-  # }
   if(!is.null(thin) & !thin_eff_only){
     pmwgs <- thin_objects(pmwgs, thin, i)
   }
@@ -354,7 +335,7 @@ extract_samples <- function(sampler, stage = c("adapt", "sample"), thin, i, thin
 }
 
 sample_store_base <- function(data, par_names, iters = 1, stage = "init") {
-  subject_ids <- unique(data$subject)
+  subject_ids <- unique(data$subjects)
   n_pars <- length(par_names)
   n_subjects <- length(subject_ids)
   samples <- list(

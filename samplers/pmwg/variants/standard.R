@@ -3,7 +3,7 @@ library(Matrix)
 source("samplers/pmwg/sampling.R")
 
 sample_store_standard <- function(data, par_names, iters = 1, stage = "init", integrate = T, ...) {
-  subject_ids <- unique(data$subject)
+  subject_ids <- unique(data$subjects)
   n_pars <- length(par_names)
   n_subjects <- length(subject_ids)
   base_samples <- sample_store_base(data, par_names, iters, stage)

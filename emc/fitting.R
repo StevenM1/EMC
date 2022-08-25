@@ -13,7 +13,7 @@ run_stages <- function(sampler,iter=c(300,0,0),
   # start_mu and start_var are startpoints for the sampler. If let NULL we'll sample startpoints
   # Epsilon_upper_bound is a safety net
   # Eff_var and Eff_mu are the efficient distibutions as calculated in run_adapt and run_sample
-
+  
 {
   
   if (is.na(particles)) 
@@ -48,10 +48,10 @@ run_stages <- function(sampler,iter=c(300,0,0),
 
 
 run_burn <- function(samplers,iter=300,
-                       verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
-                       particles=NA,particle_factor=50, p_accept= 0.7, 
-                       cores_per_chain=1,cores_for_chains=NULL,epsilon_upper_bound=15,
-                       epsilon = NULL, start_mu = NULL, start_var = NULL) 
+                     verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
+                     particles=NA,particle_factor=50, p_accept= 0.7, 
+                     cores_per_chain=1,cores_for_chains=NULL,epsilon_upper_bound=15,
+                     epsilon = NULL, start_mu = NULL, start_var = NULL) 
   # This is the multi-chain version of run_chains but only for Burn
   # cores_per_chain is how many cores to give each chain
   # if cores_for chain > 1 we'll parallelize across chains
@@ -154,8 +154,8 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                                mc.cores=cores_for_chains)
       if (!class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")) 
         gd <- matrix(Inf) else
-        gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
-                    filter="burn",mapped=mapped)
+          gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
+                        filter="burn",mapped=mapped)
       if (all(is.finite(gd))) break else {
         run_try <- run_try + 1
         message("gelman diag try error ", run_try)
@@ -168,15 +168,15 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
       if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
         gd_short <- matrix(Inf) else
-        gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
-                          filter="burn",mapped=mapped)
-      if (mean(gd_short) < mean(gd)) {
-        gd <- gd_short
-        samplers <- samplers_short
-        n_remove <- iter
-      } else {
-        n_remove <- round(n_remove + iter/2)
-      }
+          gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
+                              filter="burn",mapped=mapped)
+        if (mean(gd_short) < mean(gd)) {
+          gd <- gd_short
+          samplers <- samplers_short
+          n_remove <- iter
+        } else {
+          n_remove <- round(n_remove + iter/2)
+        }
     }
     enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
     if (is.null(attr(enough,"es"))) es_message <- NULL else
@@ -259,11 +259,11 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
 
 
 run_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
-                       particles_adapt=NA,particle_factor_adapt=40, p_accept=.7,
-                       cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
-                       n_cores_conditional = 1, min_unique = 200, 
-                       step_size_adapt = 25, thin = NULL,
-                       verbose=TRUE,verbose_run_stage = FALSE){
+                      particles_adapt=NA,particle_factor_adapt=40, p_accept=.7,
+                      cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
+                      n_cores_conditional = 1, min_unique = 200, 
+                      step_size_adapt = 25, thin = NULL,
+                      verbose=TRUE,verbose_run_stage = FALSE){
   # Uses all the same arguments as run_stages and run_burn, but with:
   # max_trys, the amount of times to run adapt in step_size
   # After every step_size iterations it will check whether min_unique particles are there and adapt based on that
@@ -290,10 +290,8 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
                              particles=particles_adapt,particle_factor=particle_factor_adapt,epsilon=epsilon,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage,
                              mc.cores=cores_for_chains)
-    test_samples <- lapply(samplers_new, extract_samples, stage = "adapt", thin = thin, samplers_new[[1]]$samples$iteration, thin_eff_only = F)
-    keys <- unique(unlist(lapply(test_samples, names)))
-    test_samples <- setNames(do.call(mapply, c(abind, lapply(test_samples, '[', keys))), keys)
-    test_samples$iteration <- sum(test_samples$iteration)
+    samples_merged <- merge_samples(samplers_new)
+    test_samples <- extract_samples(samples_merged, stage = "adapt", thin = thin, samples_merged$samples$idx, thin_eff_only = F)
     # Only need information like n_pars & n_subjects, so only need to pass the first chain
     adapted <- test_adapted(samplers_new[[1]], test_samples, min_unique, n_cores_conditional, verbose_run_stage)
     if(trys > max_trys | adapted) break
@@ -313,10 +311,10 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
 #                         verbose_run_stage = FALSE
 # iter=1000
 run_sample <- function(samplers,iter=NA,verbose=TRUE,
-                        epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.7,
-                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
-                        n_cores_conditional = 1, step_size_sample = 50, thin = NULL,
-                        verbose_run_stage = FALSE)
+                       epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.7,
+                       cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
+                       n_cores_conditional = 1, step_size_sample = 50, thin = NULL,
+                       verbose_run_stage = FALSE)
   # Uses all the same arguments as run_stages and run_burn, but with:
   # iter: The amount of samples desired at the end from the sample stage
   # After step_size iterations it will update the conditional efficient distribution
@@ -341,11 +339,9 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
     if(step == n_steps){
       step_size <- ifelse(iter %% step_size_sample == 0, step_size_sample, iter %% step_size_sample)
     } 
-    test_samples <- lapply(samplers_new, extract_samples, 
-                           stage = c("adapt", "sample"), thin = thin, 50*trys, thin_eff_only = FALSE)
-    keys <- unique(unlist(lapply(test_samples, names)))
-    test_samples <- setNames(do.call(mapply, c(abind, lapply(test_samples, '[', keys))), keys)
-    test_samples$iteration <- sum(test_samples$iteration)
+    samples_merged <- merge_samples(samplers_new)
+    test_samples <- extract_samples(samples_merged, stage = c("adapt", "sample"), thin = thin, samples_merged$samples$idx, thin_eff_only = F)
+    
     conditionals=mclapply(X = 1:samplers_new[[1]]$n_subjects,
                           FUN = variant_funs$get_conditionals,samples = test_samples, 
                           samplers_new[[1]]$n_pars, mc.cores = n_cores_conditional)
@@ -364,10 +360,10 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
       if (step %% 15 == 0) cat("\n")
     }
     
-                     # tmp <- run_stage(samplers_new[[2]],stage="sample",iter=50,epsilon = epsilon,
-                     #   particles = particles, n_cores = cores_per_chain, 
-                     #    pstar = p_accept, verbose = TRUE, mix=mix, eff_mu = eff_mu,
-                     #    eff_var = eff_var,  epsilon_upper_bound=15)
+    # tmp <- run_stage(samplers_new[[2]],stage="sample",iter=50,epsilon = epsilon,
+    #   particles = particles, n_cores = cores_per_chain, 
+    #    pstar = p_accept, verbose = TRUE, mix=mix, eff_mu = eff_mu,
+    #    eff_var = eff_var,  epsilon_upper_bound=15)
     
   }
   if(verbose) cat("\n")

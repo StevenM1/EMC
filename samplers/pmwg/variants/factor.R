@@ -40,7 +40,7 @@ add_info_factor <- function(sampler, prior = NULL, ...){
 
 sample_store_factor <- function(data, par_names, iters = 1, stage = "init", integrate = T, ...) {
   n_factors <- list(...)$n_factors
-  subject_ids <- unique(data$subject)
+  subject_ids <- unique(data$subjects)
   n_pars <- length(par_names)
   n_subjects <- length(subject_ids)
   base_samples <- sample_store_base(data, par_names, iters, stage)
