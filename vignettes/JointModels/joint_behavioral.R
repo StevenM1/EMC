@@ -2,7 +2,7 @@ rm(list = ls())
 source("emc/emc.R")
 source("models/RACE/LBA/lbaB.R")
 
-load("~/EMC/Data/PNAS_InAndOut.RData")
+load("~/Documents/UVA/2022/EMC/Data/PNAS_InAndOut.RData")
 data$R <- as.factor(data$resp)
 data$subjects <- data$subject
 data$E <- as.factor(data$cond)
@@ -39,12 +39,12 @@ design_ses2 <- make_design(
   model=lbaB)
 
 # just make the sampler by adding our designs and data together in a list
-samplers <- make_samplers(list(dat1, dat2), list(design_ses1, design_ses2),type="standard",
-                          rt_resolution=.02)
+samplers <- make_samplers(list(dat1, dat2), list(design_ses1, design_ses2),type="factor",
+                          rt_resolution=.02, n_factors =1)
 
 # we can just run sample now!
 source("emc/emc.R")
-samples <- run_emc(samplers, nsample = 2500, cores_for_chains = 1, cores_per_chain = 6, verbose = T, verbose_run_stage = T)
+samples <- run_emc(samplers, nsample = 2500, cores_for_chains = 1, cores_per_chain = 1, verbose = T, verbose_run_stage = T)
 save(samples, file = "joint_PNAS.Rdata")
 load("joint_PNAS.Rdata")
 

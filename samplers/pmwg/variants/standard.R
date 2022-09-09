@@ -32,7 +32,7 @@ add_info_standard <- function(sampler, prior = NULL, ...){
 }
 
 get_startpoints_standard <- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, sd = 1)
+  if (is.null(start_mu)) start_mu <- rmvnorm(1, mean = pmwgs$prior$theta_mu_mean, sigma = pmwgs$prior$theta_mu_var)
   # If no starting point for group var just sample some
   if (is.null(start_var)) start_var <- riwish(pmwgs$n_pars * 3,diag(pmwgs$n_pars))
   start_a_half <- 1 / rgamma(n = pmwgs$n_pars, shape = 2, rate = 1)

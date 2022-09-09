@@ -21,7 +21,7 @@ add_info_blocked <- function(sampler, prior = NULL, ...){
 }
 
 get_startpoints_blocked <- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, sd = 1)
+  if (is.null(start_mu)) start_mu <- rmvnorm(1, mean = pmwgs$prior$theta_mu_mean, sigma = pmwgs$prior$theta_mu_var)
   # If no starting point for group var just sample some
   if (is.null(start_var)) {
     start_var <- matrix(nrow = 0, ncol = 0)

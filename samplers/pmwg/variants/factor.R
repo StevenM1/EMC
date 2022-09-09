@@ -58,7 +58,7 @@ sample_store_factor <- function(data, par_names, iters = 1, stage = "init", inte
 }
 
 get_startpoints_factor<- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, sd = 1)
+  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, mean = pmwgs$prior$theta_mu_mean, sd = sqrt(pmwgs$prior$theta_mu_var))
   # If no starting point for group var just sample some
   if (is.null(start_var)) start_var <- riwish(pmwgs$n_pars * 3,diag(pmwgs$n_pars))
   start_psi_inv <- diag(1, pmwgs$n_factors)
