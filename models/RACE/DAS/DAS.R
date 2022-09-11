@@ -121,7 +121,7 @@ dDAS <- function(rt,pwin,ploose,tau,dfun,pfun,soa=0,rel.tol = .Machine$double.ep
 # n=1000; rt <- c(1:n)/n
 # pars <- parsi <- cbind(rbind(pwin,ploose),tauA,tauB)        # 2 choice
 # pars <- parsi <- cbind(rbind(pwin,ploose,ploose),tauA,tauB) # 3 choice
-# dimnames(pars) <- list(NULL,c("a","vm","vp","tauA","tauB"))
+# dimnames(pars) <- list(NULL,c("a","v","vp","tauA","tauB"))
 # nacc <- dim(parsi)[1]
 # for (i in 2:n) pars <- rbind(pars,parsi)
 # winneri <- c(T,rep(F,nacc-1))
@@ -130,11 +130,11 @@ dDAS <- function(rt,pwin,ploose,tau,dfun,pfun,soa=0,rel.tol = .Machine$double.ep
 # 
 # # Wald race
 # attr(dadm,"model") <- list(dfun=f_wald,pfun=F_wald)
-# dimnames(pars)[[2]][1:3] <- c("a","vm","vp")
-# system.time({res <- lguts(dadm,pars,p_names=c("a","vm","vp"))})
-# system.time({res1 <- lguts(dadm,pars,p_names=c("a","vm","vp"),rel.tol=.001)})
-# system.time({res2 <- lguts(dadm,pars,p_names=c("a","vm","vp"),rel.tol=.01)})
-# system.time({res3 <- lguts(dadm,pars,p_names=c("a","vm","vp"),rel.tol=.1)})
+# dimnames(pars)[[2]][1:3] <- c("a","v","vp")
+# system.time({res <- lguts(dadm,pars,p_names=c("a","v","vp"))})
+# system.time({res1 <- lguts(dadm,pars,p_names=c("a","v","vp"),rel.tol=.001)})
+# system.time({res2 <- lguts(dadm,pars,p_names=c("a","v","vp"),rel.tol=.01)})
+# system.time({res3 <- lguts(dadm,pars,p_names=c("a","v","vp"),rel.tol=.1)})
 # sum(log(res[res>0]))
 # sum(log(res1[res1>0]))
 # sum(log(res2[res2>0]))

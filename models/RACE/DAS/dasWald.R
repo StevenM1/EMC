@@ -4,10 +4,12 @@ source("models/RACE/DAS/DAS.R")
 
 dasWald <- list(
   type="RACE",
-  p_types=c("v","B","tau","t0","s"),
+  p_types=c("v","B","tau","l","t0","s"),
   # Transform to natural scale
   Ntransform=function(x) {
-    exp(x)
+    pars <- exp(x)
+    pars$vp <- pars$v + pars$l
+    pars$vp[]
   },
   # mapped parameter transform
   Mtransform = function(pars,dadm=NULL) 
