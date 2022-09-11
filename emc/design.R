@@ -329,6 +329,10 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     round(dim(da)[1]/dim(dadm)[1],1)," (",dim(dadm)[1]," unique trials)")
   p_names <-  unlist(lapply(out,function(x){dimnames(x)[[2]]}),use.names=FALSE)
   
+  bad_constants <- names(design$constants)[!(names(design$constants) %in% p_names)]
+  if (length(bad_constants) > 0) 
+    stop("Constant(s) ",paste(bad_constants,collapse=" ")," not in design")
+  
   # Pick out constants
   sampled_p_names <- p_names[!(p_names %in% names(design$constants))]
   
@@ -403,14 +407,13 @@ map_p <- function(p,dadm)
 }
 
 
-# Ffunctions=NULL; constants=NULL
-# Ffactors=list(subjects=levels(dat$subjects),S=levels(dat$S),E=levels(dat$E))
-#   Fcovariates = list("MT")
-#   Rlevels=levels(dat$R); matchfun=function(d)d$S==d$lR
-#   Clist=list(lM=ADmat,lR=ADmat,S=ADmat,E=Emat)
-#   Flist=list(v~lM,B~lR*E,A~1,t0~MT)
-#   model=rdmB
-
+  # Ffactors=list(subjects=levels(corey1$subjects),S=levels(corey1$S),CI=levels(corey1$CI))
+  # Rlevels=levels(corey1$R);matchfun=function(d)d$S==d$lR
+  # Clist=list(lM=ADmat,lR=ADmat,S=ADmat,CI=ADmat)
+  # Flist=list(v~CI*lM,sv~lM,B~lR,A~1,t0~1)
+  # constants=c(sv=log(1),v=2)
+  # model=lbaB
+  
 make_design <- function(Flist,Ffactors,Rlevels,model,
   Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
   adapt=NULL,report_p_vector=TRUE,
