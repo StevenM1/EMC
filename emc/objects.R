@@ -111,7 +111,7 @@ merge_samples <- function(samples){
   sampled_objects <- lapply(samples, FUN = function(x) return(x$samples))
   keys <- unique(unlist(lapply(sampled_objects, names)))
   sampled_objects <- setNames(do.call(mapply, c(abind, lapply(sampled_objects, '[', keys))), keys)
-  sampled_objects$iteration <- sum(sampled_objects$iteration)
+  sampled_objects$idx <- sum(sampled_objects$idx)
   out_samples$samples <- sampled_objects
   return(out_samples)
 }

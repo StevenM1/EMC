@@ -17,7 +17,7 @@ add_info_diag <- function(sampler, prior = NULL, ...){
 }
 
 get_startpoints_diag <- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, sd = 1)
+  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, mean = pmwgs$prior$theta_mu_mean, sd = sqrt(pmwgs$prior$theta_mu_var))
   # If no starting point for group var just sample some
   if (is.null(start_var)) start_var <- diag(1/rgamma(pmwgs$n_pars, 10, 5)) #Bit stupid maybe as startpoint
   start_a_half <- 1 / rgamma(n = pmwgs$n_pars, shape = 2, rate = 1)

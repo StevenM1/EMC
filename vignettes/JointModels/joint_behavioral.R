@@ -24,6 +24,11 @@ design_ses1 <- make_design(
   model=lbaB)
 
 # The design for in scanner is the same, but with different data.
+# n_subjects <- unique(dat1$subjects)
+# subject_covariates <- list(
+#   toe_length <- rnorm(n_subjects, mean = 3, sd = 1),
+#   ear_width <- rnorm(n_subjects, mean = 2, sd = 1)
+# )
 dat2 <- data[data$scan == 1,]
 design_ses2 <- make_design(
   Ffactors=list(subjects=unique(dat2$subjects), E=unique(dat2$E)),
@@ -34,10 +39,12 @@ design_ses2 <- make_design(
   model=lbaB)
 
 # just make the sampler by adding our designs and data together in a list
-samplers <- make_samplers(list(dat1, dat2), list(design_ses1, design_ses2),type="standard",rt_resolution=.02)
+samplers <- make_samplers(list(dat1, dat2), list(design_ses1, design_ses2),type="factor",
+                          rt_resolution=.02, n_factors =1)
 
 # we can just run sample now!
-samples <- run_emc(samplers, nsample = 2500, cores_for_chains = 1, cores_per_chain = 20, verbose = T, verbose_run_stage = T)
+source("emc/emc.R")
+samples <- run_emc(samplers, nsample = 2500, cores_for_chains = 1, cores_per_chain = 1, verbose = T, verbose_run_stage = T)
 save(samples, file = "joint_PNAS.Rdata")
 load("joint_PNAS.Rdata")
 

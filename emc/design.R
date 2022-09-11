@@ -415,12 +415,11 @@ map_p <- function(p,dadm)
   # model=lbaB
   
 make_design <- function(Flist,Ffactors,Rlevels,model,
-  Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
-  adapt=NULL,report_p_vector=TRUE,
-  Rmap=NULL) 
+                        Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
+                        adapt=NULL,report_p_vector=TRUE,
+                        Rmap=NULL) 
   # Binds together elements that make up a design a list  
 {
-
   if (model$type=="SDT") Clist[["lR"]] <- contr.increasing(length(Rlevels),Rlevels)
   design <- list(Flist=Flist,Ffactors=Ffactors,Rlevels=Rlevels,
        Clist=Clist,matchfun=matchfun,constants=constants,

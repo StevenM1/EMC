@@ -114,6 +114,7 @@ dm_list <- function(dadm)
 
 extractDadms <- function(dadms, names = 1:length(dadms)){
   N_models <- length(dadms)
+  subject_covariates <- attr(dadms, "subject_covariates")
   pars <- attr(dadms[[1]], "sampled_p_names")
   prior <- attr(dadms[[1]], "prior")
   ll_func <- attr(dadms[[1]], "model")$log_likelihood
@@ -144,9 +145,11 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
     ll_func <- jointLL
     dadm_list <- do.call(mapply, c(list, total_dadm_list, SIMPLIFY = F))
   }
+  subject_covariates_ok <- unlist(lapply(subject_covariates, FUN = function(x) length(x) == length(subjects)))
+  if(!is.null(subject_covariates_ok)) if(any(!subject_covariates_ok)) stop("subject_covariates must be as long as the number of subjects")
   attr(dadm_list, "components") <- components
   return(list(ll_func = ll_func, pars = pars, prior = prior, 
-              dadm_list = dadm_list, subjects = subjects))
+              dadm_list = dadm_list, subjects = subjects, subject_covariates = subject_covariates))
 }
 
 
@@ -159,6 +162,7 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
                           n_chains=3,rt_resolution=0.02,
                           prior_list = NULL,
                           par_groups=NULL,
+                          subject_covariates = NULL,
                           n_factors=NULL,constraintMat = NULL,covariates=NULL)
   
 {
@@ -199,6 +203,7 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
     dadm_list[[i]] <- design_model(data=data_list[[i]],design=design_list[[i]],
                                    model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
   }
+  if(!is.null(subject_covariates)) attr(dadm_list, "subject_covariates") <- subject_covariates
   if (type == "standard") {
     source("samplers/pmwg/variants/standard.R")
     out <- pmwgs(dadm_list)

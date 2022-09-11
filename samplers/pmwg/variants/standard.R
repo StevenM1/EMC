@@ -3,7 +3,7 @@ library(Matrix)
 source("samplers/pmwg/sampling.R")
 
 sample_store_standard <- function(data, par_names, iters = 1, stage = "init", integrate = T, ...) {
-  subject_ids <- unique(data$subject)
+  subject_ids <- unique(data$subjects)
   n_pars <- length(par_names)
   n_subjects <- length(subject_ids)
   base_samples <- sample_store_base(data, par_names, iters, stage)
@@ -32,7 +32,7 @@ add_info_standard <- function(sampler, prior = NULL, ...){
 }
 
 get_startpoints_standard <- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rnorm(pmwgs$n_pars, sd = 1)
+  if (is.null(start_mu)) start_mu <- rmvnorm(1, mean = pmwgs$prior$theta_mu_mean, sigma = pmwgs$prior$theta_mu_var)
   # If no starting point for group var just sample some
   if (is.null(start_var)) start_var <- riwish(pmwgs$n_pars * 3,diag(pmwgs$n_pars))
   start_a_half <- 1 / rgamma(n = pmwgs$n_pars, shape = 2, rate = 1)
