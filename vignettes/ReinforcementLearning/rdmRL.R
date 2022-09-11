@@ -160,7 +160,7 @@ miletic1_rdm <- make_samplers(data,design,type="standard",rt_resolution=.001)
 # run by run_miletic1_rdm.R
 
 # Sampling looks good after 500, giving 4500 good samples
-print(load("vignettes/ReinforcementLearning/samples/miletic1_rdm.RData"))
+print(load("samples/vignettes/ReinforcementLearning/miletic1_rdm.RData"))
 check_run(miletic1_rdm,subfilter = 500)
 
 # Fit aggregated over participants and trials fairly good, although some misfit for t_T
@@ -213,7 +213,7 @@ miletic1_rdm_sim <- make_samplers(miletic1_rdm_simdat,design,type="standard")
 # run in run_miletic1_rdm_sim.R
 
 # Looks fine over last 1500
-print(load("vignettes/ReinforcementLearning/samples/miletic1_rdm_sim.RData"))
+print(load("samples/vignettes/ReinforcementLearning/miletic1_rdm_sim.RData"))
 check_run(miletic1_rdm_sim,subfilter=500)
 
 # Excellent stationary fit
