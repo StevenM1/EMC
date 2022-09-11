@@ -57,7 +57,7 @@ samplers <- make_samplers(wordfaceROC1,designFW1,type="single")
 # runSingleProbitFW1.R to get 1000 samples
 
 # Look at simulation, clearly not close at 1000, added another 2000
-print(load("models/SDT/Probit/examples/samples/probitFWsim.RData"))
+print(load("samples/models/SDT/Probit/examples/probitFWsim.RData"))
 plot_chains(samples,subfilter=200,layout=c(4,4))  # Fully converged
 gd_pmwg(samples,subfilter=200)
 plotACFs(samples,subfilter=200,layout=c(4,4)) # Quite autocorrelated
@@ -66,7 +66,7 @@ iat_pmwg(samples,subfilter=200)
 tabs <- plot_density(samples,subfilter=200,layout=c(4,4),pars=p_vector)
 
 # Look at data, quick convergence 
-print(load("models/SDT/Probit/examples/samples/probitFW1.RData")) 
+print(load("samples/models/SDT/Probit/examples/probitFW1.RData")) 
 plot_chains(samples,subfilter=100,layout=c(4,4)) # very fast convergence
 gd_pmwg(samples,subfilter=100) # 1.01
 plotACFs(samples,subfilter=100,layout=c(4,4)) # Quite autocorrelated
@@ -123,7 +123,7 @@ samplers <- make_samplers(wordfaceROC,designFW,type="standard")
 # Lets load in the results and look at them.
 
 
-print(load("models/SDT/Probit/examples/samples/probitFW.RData")) 
+print(load("samples/models/SDT/Probit/examples/probitFW.RData")) 
 # We can check the state of samplers
 chain_n(samples)
 # and check if adaptation has worked 
@@ -347,7 +347,7 @@ p_test(x=samples,y=samples,
 
 
 #### Parameter recovery study ----
-print(load("models/SDT/Probit/examples/samples/probitFW.RData")) 
+print(load("samples/models/SDT/Probit/examples/probitFW.RData")) 
 
 # Create a single simulated data set.
 
@@ -364,7 +364,7 @@ round(attr(new_dat_hyper,"pars"),2)
 samplers <- make_samplers(new_dat,design,type="standard")
 # save(samplers,file="RecoveryProbitFixed.RData")
 # run in runRecoveryProbitFixed.R
-print(load("models/SDT/Probit/examples/samples/RecoveryProbitFixed.RData"))
+print(load("samples/models/SDT/Probit/examples/RecoveryProbitFixed.RData"))
 pars <- attributes(attr(samples,"data_list")[[1]])$pars
 tabs <- plot_density(samples,selection="alpha",filter="burn",layout=c(2,7),pars=pars)
 # Some shrinkage but not bad
@@ -376,7 +376,7 @@ plot_alpha_recovery(tabs,layout=c(2,7),do_rmse=TRUE,do_coverage=TRUE)
 samplers <- make_samplers(new_dat_hyper,design,type="standard")
 # save(samplers,file="RecoveryProbitRandom.RData")
 # run in runRecoveryProbitRandom.R
-print(load("models/SDT/Probit/examples/samples/RecoveryProbitRandom.RData"))
+print(load("samples/models/SDT/Probit/examples/RecoveryProbitRandom.RData"))
 pars <- attributes(attr(samples,"data_list")[[1]])$pars
 tabs <- plot_density(samples,selection="alpha",filter="burn",layout=c(2,7),pars=pars)
 # Some shrinkage but not bad
