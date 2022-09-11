@@ -71,11 +71,11 @@ design_mu_sElM_t0 <- make_design(
 
 
 # Load saved samples
-print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu.RData"))
-print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_slM.RData"))
-print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_slM_t0.RData"))
-print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_sElM.RData"))
-print(load("models/RACE/LNR/examples/samples/lnrPNAS_mu_sElM_t0.RData"))
+print(load("samples/models/RACE/LNR/examples/lnrPNAS_mu.RData"))
+print(load("samples/models/RACE/LNR/examples/lnrPNAS_mu_slM.RData"))
+print(load("samples/models/RACE/LNR/examples/lnrPNAS_mu_slM_t0.RData"))
+print(load("samples/models/RACE/LNR/examples/lnrPNAS_mu_sElM.RData"))
+print(load("samples/models/RACE/LNR/examples/lnrPNAS_mu_sElM_t0.RData"))
 
 # Sampling checks
 check_run(lnr_mu,layout=c(3,5),subfilter=500)
@@ -100,18 +100,18 @@ sort(table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]}))))
 # LBA model and best (16 parameter) RDM and best (21 parameter) LNR, muElMt0 
 # comes in second. 
 source("models/DDM/DDM/ddmTZD.R")
-print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_avt0_full.RData")) 
 source("models/RACE/LBA/lbaB.R")
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bv_sv.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bv_sv.RData"))
 source("models/RACE/RDM/rdmB.R")
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0_s.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bvt0_s.RData"))
 
 compare_IC(list(DDM=sPNAS_avt0_full,LBA=sPNAS_Bv_sv,RDM=rdm_Bvt0_s,
                 LNRmulMt0=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,4000))
 
 # Here we add in the version of the winning DDM model that did not use cell
 # coding. We see that there is very little effect on the ICs
-print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full_nocell.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_avt0_full_nocell.RData")) 
 
 compare_IC(list(DDM=sPNAS_avt0_full_nocell,LBA=sPNAS_Bv_sv,RDM=rdm_Bvt0_s,
                 LNR=lnr_mu_sElM_t0),subfilter=list(500,2000,1500,4000))
