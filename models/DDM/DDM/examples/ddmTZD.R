@@ -167,7 +167,7 @@ samplers <- make_samplers(dat,design_a,type="standard",
 
 
 #### Load Wiener fit results ----
-print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_a.RData")) 
 
 #### Check convergence ----
 
@@ -539,7 +539,7 @@ design_a_full <- make_design(
 # Fits are run by sPNAS_a_full.R 
 
 #### Load Full DDM fitting results ----
-print(load("models/DDM/DDM/examples/samples/sPNAS_a_full.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_a_full.RData")) 
 
 #### Convergence ----
 
@@ -709,7 +709,7 @@ head(new_dat)
 samplers <- make_samplers(new_dat,design_a_full,type="standard")
 # save(samplers,file="RecoveryDDMfull.RData")
 # run in RecoveryDDMfull.R
-print(load("models/DDM/DDM/examples/samples/RecoveryDDMfull.RData"))
+print(load("samples/models/DDM/DDM/examples/RecoveryDDMfull.RData"))
 
 tabs <- plot_density(DDMfull,selection="alpha",layout=c(2,3),mapped=TRUE,
                      pars=attributes(attr(DDMfull,"data_list")[[1]])$pars)
@@ -754,7 +754,7 @@ design_avt0_full <- make_design(
 # save(samplers,file="sPNAS_avt0_full.RData")
 
 #### Load full DDM with rate and t0 emphasis effects ----
-print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_avt0_full.RData")) 
 
 
 #### Check convergence ----
@@ -999,8 +999,8 @@ design_av_full <- make_design(
 # samplers <- make_samplers(dat,design_av_full,type="standard")
 # save(samplers,file="sPNAS_av_full.RData")
 
-print(load("models/DDM/DDM/examples/samples/sPNAS_at0_full.RData"))
-print(load("models/DDM/DDM/examples/samples/sPNAS_av_full.RData"))
+print(load("samples/models/DDM/DDM/examples/sPNAS_at0_full.RData"))
+print(load("samples/models/DDM/DDM/examples/sPNAS_av_full.RData"))
 
 # SZ was slow to converge in mu, needed to 750 for at0 and 500 for av, so ran 
 # enough samples to get 1000 left 1000 left without these. 
@@ -1029,7 +1029,7 @@ design_avt0_full_nocell <- make_design(
 # save(samplers,file="sPNAS_av_full_nocell.RData")
 
 # We see it makes very little difference to the DIC and BPIC
-print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full_nocell.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_avt0_full_nocell.RData")) 
 compare_IC(list(avt0nocell=sPNAS_avt0_full_nocell,avt0=sPNAS_avt0_full,at0=sPNAS_at0_full,av=sPNAS_av_full,a=sPNAS_a_full),
            subfilter=list(500,500,750,500,0))
 
