@@ -8,7 +8,6 @@ probit <- list(
   p_types=c("mean","sd","threshold"),
   # Transform to natural scale
   Ntransform=function(x) {
-    # transform parameters except v back to real line 
     if (!is.matrix(x)) {
       is_sd <- grepl("sd",names(x)) 
       x[is_sd] <- exp(x[is_sd]) 
@@ -16,7 +15,6 @@ probit <- list(
       is_sd <- grepl("sd",dimnames(x)[[2]]) 
       x[,is_sd] <- exp(x[,is_sd]) 
     }
-    attr(x,"ok") <- rep(TRUE,dim(x)[1])
     x
   },
   # p_vector transform
@@ -33,7 +31,9 @@ probit <- list(
     }
   },
   # Trial dependent parameter transform
-  Ttransform = function(pars,dadm) pars,
+  Ttransform = function(pars,dadm) {
+    pars
+  },
   # Random function for discrete choices
   rfun=function(lR,pars) rPROBIT(lR,pars),
   # probability of choice between lower and upper thresholds (lt & ut)

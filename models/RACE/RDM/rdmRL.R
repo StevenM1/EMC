@@ -9,9 +9,7 @@ rdmRL <- list(
 
   Ntransform=function(x) {
   # Transform to natural scale
-    x <- exp(x)
-    attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
-    x
+    exp(x)
   },
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
@@ -19,7 +17,9 @@ rdmRL <- list(
                          levels(dadm$subjects))
     for (i in levels(dadm$subjects))
       parsList[[i]] <- update_pars(i,pars,dadm)
-    do.call(rbind,parsList)
+    pars <- do.call(rbind,parsList)
+    attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
+    pars
   },
   # p_vector transform 
   transform = function(x) x,

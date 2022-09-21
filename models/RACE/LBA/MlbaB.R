@@ -14,20 +14,25 @@ MlbaB <- list(
     if (!is.matrix(x)) {
       nams <- get_p_types(names(x))
       x[nams != "v"] <- exp(x[nams != "v"])
-      x <- c(x,b=x["B"] + x["A"])
-      attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
     } else {
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "v"] <- exp(x[,nams != "v"])
-      x <- cbind(x,b=x[,"B"] + x[,"A"])
-      attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
     }
     x
   },
   # p_vector transform, sets sv as a scaling parameter
   transform = function(p) p,
   # Trial dependent parameter transform
-  Ttransform = function(pars,dadm) pars,
+  Ttransform = function(pars,dadm) {
+    if (!is.matripars(pars)) {
+      pars <- c(pars,b=pars["B"] + pars["A"])
+      attr(pars,"ok") <- (pars["t0"] > .05) & ((pars["A"] > 1e-6) | pars[,"A"] == 0)
+    } else {
+      pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
+      attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
+    }
+    pars
+  },
   # Random function for racing accumulator
   rfun=function(lR,pars) rLBA(lR,pars,posdrift=TRUE),
   # Density function (PDF) for single accumulator

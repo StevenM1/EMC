@@ -17,13 +17,15 @@ rdmBt0natural <- list(
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "t0"] <- exp(x[,nams != "t0"])
     }
-    attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
     x
   },
   # p_vector transform 
   transform = function(x) x,
   # Trial dependent parameter transform
-  Ttransform = function(pars,dadm) pars,
+  Ttransform = function(pars,dadm) {
+    attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
+    pars
+  },
   # Random function for racing accumulators
   rfun=function(lR,pars) rRDM(lR,pars),
   # Density function (PDF) for single accumulator

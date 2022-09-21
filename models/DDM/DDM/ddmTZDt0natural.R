@@ -41,22 +41,29 @@ ddmTZDt0natural <- list(
       x[,islog] <- exp(x[,islog])
       x[,isprobit] <- pnorm(x[,isprobit])  
     }
-    x <- cbind(x,z=x[,"a"]*x[,"Z"],
-      sz = 2*x[,"SZ"]*x[,"a"]*apply(cbind(x[,"Z"],1-x[,"Z"]),1,min))
-    x <- cbind(x, d = x[,"t0"]*(2*x[,"DP"]-1))
-    attr(x,"ok") <- 
-      !( x[,"t0"] < 0 | abs(x[,"v"])>5 | x[,"a"]>2 | x[,"sv"]>2 | 
-         x[,"SZ"]>.75 | x[,"st0"]>.2) 
-    if (x[1,"sv"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"sv"] > .01
-    if (x[1,"SZ"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"SZ"] > .01  
     x
   },
   # p_vector transform, sets s as a scaling parameter
   transform = function(p) p,
   # Trial dependent parameter transform
-  Ttransform = function(pars,dadm) pars,
+  # Trial dependent parameter transform
+  Ttransform = function(pars,dadm) {
+    pars <- cbind(pars,z=pars[,"a"]*pars[,"Z"],
+      sz = 2*pars[,"SZ"]*pars[,"a"]*apply(cbind(pars[,"Z"],1-pars[,"Z"]),1,min))
+    pars <- cbind(pars, d = pars[,"t0"]*(2*pars[,"DP"]-1))
+    attr(pars,"ok") <- 
+      !( abs(pars[,"v"])> 20 | pars[,"a"]> 10 | pars[,"sv"]> 10 | pars[,"SZ"]> .999 | pars[,"st0"]>.2) 
+    if (pars[1,"sv"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"sv"] > .001
+    if (pars[1,"SZ"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"SZ"] > .001    
+    pars
+  },
   # Random function
-  rfun=function(lR,pars) rDDM(lR,pars,precision=3),
+  rfun=function(lR,pars) {
+    ok <- !( abs(pars[,"v"])> 20 | pars[,"a"]> 10 | pars[,"sv"]> 10 | pars[,"SZ"]> .999 | pars[,"st0"]>.2) 
+    if (pars[1,"sv"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"sv"] > .001
+    if (pars[1,"SZ"] !=0) attr(pars,"ok") <- attr(pars,"ok") & pars[,"SZ"] > .001  
+    rDDM(lR,pars,precision=3,ok)
+  },
   # Density function (PDF)
   dfun=function(rt,R,pars) dDDM(rt,R,pars,precision=3),
   # Probability function (CDF)
