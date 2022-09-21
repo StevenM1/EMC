@@ -120,7 +120,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   # These elements of model define the paramaterization being used
   #   ptypes defines the parameter types for which designs must be specified
   #   transform if a function acting on p_vector before mapping
-  #   Mtransform is a function acting on the output of map_p
+  #   Ntransform is a function acting on the output of map_p
 # rt_resolution specifies maximum resolution of rt, NULL = no rounding
 # Compress only keeps unique rows in terms of all parameters design matrices
 #  R, lR and rt (at given resolution). Must always be used in estimation,
@@ -293,8 +293,9 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     data.frame(lapply(da[!(names(da) %in% c("R","rt"))],function(x){
       if (all(is.na(x))) rep(0,length(x)) else x}))
   
-  if (is.null(model$p_types) | is.null(model$transform) | is.null(model$Mtransform))
-    stop("p_types, transform and Mtransform must be supplied")
+  if (is.null(model$p_types) | is.null(model$transform) | 
+      is.null(model$Ntransform) | is.null(model$Ttransform))
+    stop("p_types, transform and Ntransform must be supplied")
   if (!all(unlist(lapply(design$Flist,class))=="formula"))
     stop("Flist must contain formulas")
   nams <- unlist(lapply(design$Flist,function(x)as.character(terms(x)[[2]])))

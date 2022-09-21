@@ -22,8 +22,8 @@ ddmTZDt0natural <- list(
   #   0 < SZ < 1: rtdists start-point variability, sz = 2*SZ*min(c(a*Z,a*(1-Z)) 
   #   0 < DP < 1: rtdists d = t0(upper)-t0(lower) = (2*DP-1)*t0  # 
   # 
-  # Transform to natural scale
   Ntransform=function(x) {
+  # Transform to natural scale
     
     get_p_types <- function(nams) 
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
@@ -50,12 +50,6 @@ ddmTZDt0natural <- list(
     if (x[1,"sv"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"sv"] > .01
     if (x[1,"SZ"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"SZ"] > .01  
     x
-  },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
   },
   # p_vector transform, sets s as a scaling parameter
   transform = function(p) p,

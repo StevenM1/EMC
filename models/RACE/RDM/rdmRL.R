@@ -7,20 +7,11 @@ rdmRL <- list(
   type="RACE",
   p_types=c("v0","v","B","A","t0","alpha","w","q0","s"),
 
-  # Transform to natural scale
   Ntransform=function(x) {
+  # Transform to natural scale
     x <- exp(x)
-    attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
+    attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
     x
-  },
-  
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) # ,data,model=NULL 
-    # transform parameters back to real line 
-    # pars is a matrix output by map_p_vector
-    # da is an augmented data
-  {
-    pars 
   },
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {

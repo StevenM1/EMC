@@ -5,8 +5,8 @@ source("models/RACE/LNR/lnr.R")
 lnrMS <- list(
   type="RACE",
   p_types=c("m","s","t0"),
-  # Transform to natural scale
   Ntransform=function(x) {
+  # Transform to natural scale
 
     get_p_types <- function(nams) 
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
@@ -19,13 +19,6 @@ lnrMS <- list(
       x[,nams != "m"] <- exp(x[,nams != "m"])
     }
     x
-  },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
-    # transform parameters except m back to real line 
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
   },
   # p_vector transform scaling parameter by s=1 assumed in lnr.R
   transform = function(x) x,

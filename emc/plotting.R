@@ -779,9 +779,9 @@ plot_adapt <- function(data=NULL,design=NULL,model=NULL,
                  add_response=TRUE       # simulate data
     for (i in 1:reps) {
       if (is.matrix(p_vectors)) p_v <- p_vectors[i,] else p_v <- p_vectors
-      pars <- model$Mtransform(map_p(
+      pars <- map_p(
         model$transform(add_constants(p_v,design$constants)),
-      dadm))
+      dadm)
       repList[[i]] <- adapt_data(dadm,design,model,pars,return_all=TRUE,add_response=add_response) 
     }
     repList

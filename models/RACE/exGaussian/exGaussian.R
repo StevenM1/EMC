@@ -5,16 +5,9 @@ source("models/RACE/exGaussian/exG.R")
 exGaussian <- list(
   type="RACE",
   p_types=c("mu","sigma","tau"),
-  # Transform to natural scale
   Ntransform=function(x) {
+  # Transform to natural scale
     exp(x)
-  },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
-    # transform parameters except v back to real line 
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
   },
   # p_vector transform
   transform = function(x) x,
