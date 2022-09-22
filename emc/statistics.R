@@ -10,8 +10,8 @@ es_pmwg <- function(pmwg_mcmc,selection="alpha",summary_alpha=mean,
     if (class(pmwg_mcmc)=="pmwgs") 
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
                            thin=thin,subfilter=subfilter) else
-                             pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                                       thin=thin,subfilter=subfilter)                        
+      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                           thin=thin,subfilter=subfilter)                        
   }
   if (attr(pmwg_mcmc,"selection")=="LL") 
     stop("Effective size not sensible for LL\n")
@@ -127,8 +127,8 @@ iat_pmwg <- function(pmwg_mcmc,
     if (class(pmwg_mcmc)=="pmwgs") 
       pmwg_mcmc <- as_Mcmc(pmwg_mcmc,selection=selection,filter=filter,
                            thin=thin,subfilter=subfilter) else
-                             pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
-                                                       thin=thin,subfilter=subfilter)                        
+      pmwg_mcmc <- as_mcmc.list(pmwg_mcmc,selection=selection,filter=filter,
+                                thin=thin,subfilter=subfilter)                        
   }
   if ( selection=="LL" ) stop("IAT not appropriate for LL") else
     if (selection=="alpha") {
@@ -258,7 +258,7 @@ pmwg_IC <- function(samplers,filter="sample",subfilter=0,use_best_fit=TRUE,
     
     if (class(samplers)=="pmwgs") 
       alpha <- as_Mcmc(samplers,selection="alpha",filter=filter,subfilter=subfilter) else
-        alpha <- as_mcmc.list(samplers,selection="alpha",filter=filter,subfilter=subfilter)                        
+      alpha <- as_mcmc.list(samplers,selection="alpha",filter=filter,subfilter=subfilter)                        
     mean_pars <- lapply(alpha,function(x){apply(do.call(rbind,x),2,mean)})
     # log-likelihood for each subject using their mean parameter vector
     ll_func <- attr(samplers,"design_list")[[1]]$model$log_likelihood

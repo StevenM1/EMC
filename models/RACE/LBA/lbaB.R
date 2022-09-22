@@ -5,8 +5,8 @@ source("models/RACE/LBA/lba.R")
 lbaB <- list(
   type="RACE",
   p_types=c("v","sv","B","A","t0"),
-  # Transform to natural scale
   Ntransform=function(x) {
+  # Transform to natural scale
    
     get_p_types <- function(nams)
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
@@ -23,13 +23,6 @@ lbaB <- list(
       attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
     }
     x
-  },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
-    # transform parameters except v back to real line and add b
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
   },
   # p_vector transform, sets sv as a scaling parameter
   transform = function(p) p,

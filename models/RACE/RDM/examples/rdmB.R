@@ -182,20 +182,20 @@ design_Bvt0_s <- make_design(
 #### Check convergence ----
 
 # Load samples
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_B.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bt0.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bv.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_B.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bt0.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bv.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bvt0.RData"))
 
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_B_A.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bt0_A.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bv_A.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0_A.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_B_A.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bt0_A.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bv_A.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bvt0_A.RData"))
 
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_B_s.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bt0_s.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bv_s.RData"))
-print(load("models/RACE/RDM/examples/samples/rdmPNAS_Bvt0_s.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_B_s.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bt0_s.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bv_s.RData"))
+print(load("samples/models/RACE/RDM/examples/rdmPNAS_Bvt0_s.RData"))
 
 
 
@@ -235,9 +235,9 @@ table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]})))
 # Comparing with the best DDM (16 parameter) model to the best (15 parameter)
 # LBA model and best (16 parameter) RDM the latter comes third. 
 source("models/DDM/DDM/ddmTZD.R")
-print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_avt0_full.RData")) 
 source("models/RACE/LBA/lbaB.R")
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bv_sv.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bv_sv.RData"))
 compare_IC(list(DDM_avt0=sPNAS_avt0_full,LBA_Bvsv=sPNAS_Bv_sv,RDM_Bvt0s=rdm_Bvt0_s),
            subfilter=list(501:1500,2001:3000,4001:5000))
 

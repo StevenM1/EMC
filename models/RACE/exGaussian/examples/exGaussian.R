@@ -29,7 +29,7 @@ designEXG <- make_design(
 # samplers <- make_samplers(dat,designEXG,type="standard",rt_resolution=.02)
 # save(samplers,file="sPNAS_exg.RData")
 
-print(load("models/RACE/exGaussian/examples/samples/sPNAS_exg.RData"))
+print(load("samples/models/RACE/exGaussian/examples/sPNAS_exg.RData"))
 check_run(samplers,layout=c(3,6),width=12,subfilter=500)
 
 

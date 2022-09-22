@@ -35,7 +35,7 @@ design_a_MT <- make_design(
 
 #### Check model works with large single subject data set (6000 trials)
 # Use Wiener model fit to get plausible parameters
-print(load("models/DDM/DDM/examples/samples/sPNAS_a.RData")) 
+print(load("samples/models/DDM/DDM/examples/sPNAS_a.RData")) 
 p_vector <- sampled_p_vector(design_a_MT,doMap = FALSE)
 p_vector[c(1:6,8)] <- apply(parameters_data_frame(sPNAS_a),2,mean)
 p_vector[6] <- exp(p_vector[6]) # put t0 on natural scale
@@ -104,7 +104,7 @@ plot_defective_density(data,layout=c(2,3),factors=c("S","E"))
 # pars <- iMeans
 # attr(data,"pars") <- pars
 # save(pars,file="vignettes/TrialCovariates/samples/ddm_pars.RData")
-print(load("vignettes/TrialCovariates/samples/ddm_pars.RData"))
+print(load("samples/vignettes/TrialCovariates/ddm_pars.RData"))
 head(pars)
 
 
@@ -134,8 +134,8 @@ ddm_a_st0 <- make_samplers(data,design_a_st0,type="standard",rt_resolution=.02)
 # fit by run_ddm_st0.R, ~ 1.9hr run time
 
 # Look at results 
-print(load("vignettes/TrialCovariates/samples/ddm_a_st0.RData"))
-print(load("vignettes/TrialCovariates/samples/ddm_a_MT.RData"))
+print(load("samples/vignettes/TrialCovariates/ddm_a_st0.RData"))
+print(load("samples/vignettes/TrialCovariates/ddm_a_MT.RData"))
 
 # Looks good
 check_run(ddm_a_st0)
@@ -153,7 +153,7 @@ compare_IC(list(st0=ddm_a_st0,MT=ddm_a_MT))
 # pp_MT <- post_predict(ddm_a_MT,n_post=1000,n_cores=19)
 # pp_st0 <- post_predict(ddm_a_st0,n_post=1000,n_cores=19)
 # save(pp_MT,pp_st0,file="pp_MT.RData")
-print(load("vignettes/TrialCovariates/samples/pp_MT.RData"))
+print(load("samples/vignettes/TrialCovariates/pp_MT.RData"))
 
 # Standard (cell) fit virtually identical. Again a bit slow so look at pdf
 # vignettes/TrialCovariates/samples/fit_MT.pdf and fit_st0.pdf
@@ -166,7 +166,7 @@ plot_fit(attr(ddm_a_MT,"data_list")[[1]],pp_MT,layout=c(2,3),factors=c("E","S"))
 # rMT <- plot_trials(pp=pp_MT,data=attr(ddm_a_MT,"data_list")[[1]],Fcovariates="MT",layout=c(2,3))
 # dev.off()
 
-print(load("vignettes/TrialCovariates/samples/rMTst0.RData"))
+print(load("samples/vignettes/TrialCovariates/rMTst0.RData"))
 
 # Clear and consistent correlations
 round(unlist(lapply(rMT,function(x){mean(x)})),2)

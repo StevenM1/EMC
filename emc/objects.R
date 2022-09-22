@@ -243,8 +243,8 @@ as_Mcmc <- function(sampler,filter=stages,thin=1,subfilter=0,
 
 # samplers=pmwg_mcmc
 as_mcmc.list <- function(samplers,
-                         selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1],
-                         filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
+  selection=c("alpha","mu","variance","covariance","correlation","LL","epsilon")[1],
+  filter="burn",thin=1,subfilter=0,mapped=FALSE,include_constants=FALSE) 
   # Combines as_Mcmc of samplers and returns mcmc.list
   # mapped = TRUE map mu or alpha to model parameters (constants indicated by
   # attribute isConstant)
@@ -268,10 +268,10 @@ as_mcmc.list <- function(samplers,
   if (mapped) {
     if (selection == "alpha") {
       mcmcList <- lapply(mcmcList,function(x){lapply(x,map_mcmc, include_constants = include_constants,
-                                                     design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])})
+        design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])})
     } else if (selection=="mu") {
       mcmcList <- lapply(mcmcList,map_mcmc, include_constants = include_constants,
-                         design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
+        design=attr(samplers,"design_list")[[1]],model=attr(samplers,"model_list")[[1]])
     } else warning("Can only map alpha or mu to model parameterization")
   } 
   if (include_constants) {

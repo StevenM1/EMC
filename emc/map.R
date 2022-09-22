@@ -18,11 +18,9 @@ get_pars <- function(p_vector,dadm) {
   # to the natural scale, and create trial-dependent parameters
   attr(dadm,"model")$Ttransform(
     attr(dadm,"model")$Ntransform(
-      attr(dadm,"model")$Mtransform(
-        map_p(
-          attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
-        dadm),
-      dadm)
+      map_p(
+        attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
+      dadm),
     ),
   dadm)
 }

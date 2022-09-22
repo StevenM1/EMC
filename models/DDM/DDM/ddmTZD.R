@@ -50,12 +50,6 @@ ddmTZD <- list(
     if (x[1,"SZ"] !=0) attr(x,"ok") <- attr(x,"ok") & x[,"SZ"] > .01  
     x
   },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
-  },
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) pars,
   # p_vector transform, sets s as a scaling parameter

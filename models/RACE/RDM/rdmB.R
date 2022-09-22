@@ -7,16 +7,10 @@ rdmB <- list(
   p_types=c("v","B","A","t0","s"),
   # Transform to natural scale
   Ntransform=function(x) {
-    x <- exp(x)
-    attr(x,"ok") <- (x["t0"] > .05) & ((x["A"] > 1e-6) | x[,"A"] == 0)
-    x
-  },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
     # transform parameters back to real line 
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
+    x <- exp(x)
+    attr(x,"ok") <- (x[,"t0"] > .05) & ((x[,"A"] > 1e-6) | x[,"A"] == 0)
+    x
   },
   # p_vector transform 
   transform = function(x) x,

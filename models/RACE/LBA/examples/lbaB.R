@@ -140,12 +140,12 @@ design_Bvt0_sv_NOa_n <- make_design(
 # save(ppPNAS_Bv_sv,sPNAS_Bv_sv,file="sPNAS_Bv_sv.RData")
 
 #### Load model results ----
-print(load("models/RACE/LBA/examples/samples/sPNAS_B.RData")) 
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bvt0.RData"))
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bt0_sv.RData"))
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bv_sv.RData"))
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bvt0_sv.RData")) # Failed model, forced to adapt and sample 
-print(load("models/RACE/LBA/examples/samples/sPNAS_Bvt0_sv_NOa_n.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_B.RData")) 
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bvt0.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bt0_sv.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bv_sv.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bvt0_sv.RData")) # Failed model, forced to adapt and sample 
+print(load("samples/models/RACE/LBA/examples/sPNAS_Bvt0_sv_NOa_n.RData"))
 
 
 #### Check convergence ----
@@ -199,7 +199,7 @@ table(unlist(lapply(ICs,function(x){row.names(x)[which.min(x$BPIC)]})))
 # both models fit well but the small overestimation of error RT in the speed
 # condition evident in the DDM is no longer evident.
 source("models/DDM/DDM/ddmTZD.R")
-print(load("models/DDM/DDM/examples/samples/sPNAS_avt0_full.RData"))
+print(load("samples/models/DDM/DDM/examples/sPNAS_avt0_full.RData"))
 compare_IC(list(avt0=sPNAS_avt0_full,Bvsv=sPNAS_Bv_sv),subfilter=list(500,2000))
 
 

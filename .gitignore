@@ -3,11 +3,6 @@
 .RData
 .Ruserdata
 /testModels
-/models/SDT/Probit/examples/samples
-/models/DDM/DDM/examples/samples
-/models/RACE/LBA/examples/samples
-/models/RACE/RDM/examples/samples
-/models/RACE/LNR/examples/samples
-/models/RACE/exGaussian/examples/samples
-/vignettes/ReinforcementLearning/samples
-/vignettes/TrialCovariates/samples
+/samples
+/Data/ConflictData
+/Data/PM

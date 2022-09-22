@@ -20,13 +20,6 @@ normal <- list(
     }
     x
   },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm=NULL) 
-    # transform parameters except v back to real line 
-    # pars is a matrix output by map_p_vector  
-  {
-    normal$Ntransform(pars)
-  },
   # p_vector transform
   transform = function(x) x,
   # Trial dependent parameter transform

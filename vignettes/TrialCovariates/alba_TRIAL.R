@@ -61,7 +61,7 @@ design_bLR1 <- make_design(
   model=albaB)
 
 # Use LBA model fit to get plausible parameters
-print(load("models/RACE/LBA/examples/samples/sPNAS_B.RData"))
+print(load("samples/models/RACE/LBA/examples/sPNAS_B.RData"))
 mpar <- apply(parameters_data_frame(sPNAS_B),2,mean)
 p_vector <- sampled_p_vector(design_bLR,doMap = FALSE)
 p_vector[1:2] <- c(1,1); names(p_vector)[1:2] <- c("v_0","v_D") 
@@ -140,8 +140,8 @@ lba_B <- make_samplers(data,design_B,type="standard",rt_resolution=.02)
 # fit by run_lba_B.R
 
 # Look at results 
-load("vignettes/TrialCovariates/samples/lba_B.RData")
-load("vignettes/TrialCovariates/samples/lba_bLR.RData")
+load("samples/vignettes/TrialCovariates/lba_B.RData")
+load("samples/vignettes/TrialCovariates/lba_bLR.RData")
 
 # Looks good
 check_run(lba_bLR)

@@ -26,13 +26,6 @@ albaB <- list(
     }
     x
   },
-  # mapped parameter transform
-  Mtransform = function(pars,dadm) 
-    # transform parameters except v back to real line and add b
-    # pars is a matrix output by map_p_vector  
-  {
-    pars
-  },
   # p_vector transform, sets sv as a scaling parameter
   transform = function(p) {p},
   # Trial dependent parameter transform
