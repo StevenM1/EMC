@@ -4,26 +4,23 @@ source("models/RACE/LBA/lba.R")
 
 lbaB <- list(
   type="RACE",
+  # p_vector transform, sets sv as a scaling parameter
   p_types=c("v","sv","B","A","t0"),
-  Ntransform=function(x) {
+  transform = function(p) p,
   # Transform to natural scale
-   
+  Ntransform=function(x) {
     get_p_types <- function(nams)
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
 
     if (!is.matrix(x)) {
       nams <- get_p_types(names(x))
       x[nams != "v"] <- exp(x[nams != "v"])
-      x <- c(x,b=x["B"] + x["A"])
     } else {
       nams <- get_p_types(dimnames(x)[[2]])
       x[,nams != "v"] <- exp(x[,nams != "v"])
-      x <- cbind(x,b=x[,"B"] + x[,"A"])
     }
     x
   },
-  # p_vector transform, sets sv as a scaling parameter
-  transform = function(p) p,
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
     if (!is.matripars(pars)) {
