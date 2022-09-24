@@ -23,7 +23,7 @@ lbaB <- list(
   },
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
-    if (!is.matripars(pars)) {
+    if (!is.matrix(pars)) {
       pars <- c(pars,b=pars["B"] + pars["A"])
       attr(pars,"ok") <- (pars["t0"] > .05) & ((pars["A"] > 1e-6) | pars[,"A"] == 0)
     } else {

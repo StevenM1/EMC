@@ -21,18 +21,17 @@ add_Ffunctions <- function(data,design)
 }
 
 
-# data=NULL; model=NULL
-# trials=NULL;expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
-# n_cores=1
-# design=design_bLR1; trials=3
-# Fcovariates=data.frame(b_L=rep(c(3,1),each=9),b_R=rep(c(1,3),each=9))
+# data=NULL; expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
+# Fcovariates=NULL;n_cores=1;return_Ffunctions=FALSE
+# 
+# model=lbaB;trials=2
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
                       Fcovariates=NULL,n_cores=1,return_Ffunctions=FALSE)
   # Simulates data using rfun from model specified by a formula list (Flist) 
   # a factor contrast list (Clist, if null data frame creation defaults used) 
-  # using model (list specifying p_types, transform, Ntransform and rfun).
+  # using model (list specifying p_types, transforms and rfun).
   # If data is supplied that determines the design, with data sorted by subjects
   #   and a trials = 1:n trials/subject factor added (or overwriting any existing)
   #   NB: trials differs from generated where numbering is cell specific. 
@@ -146,9 +145,9 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
     add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
     rt_check=FALSE)
-  pars <- model$Ntransform(map_p(
+  pars <- model$Ttransform(model$Ntransform(map_p(
     model$transform(add_constants(p_vector,design$constants)),data
-  ))
+  )),data)
   if (!is.null(design$adapt)) {
     if (expand>1) {
       expand <- 1
