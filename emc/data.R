@@ -94,12 +94,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   
   if (is.null(model)) if (is.null(design$model)) 
     stop("Must specify model as not in design") else model <- design$model
-  if (is.vector(p_vector)) {
-    ss <- design$Ffactors$subjects
-    p_vector <- matrix(rep(p_vector,each=length(ss)),nrow=length(ss),
-           dimnames=list(ss,names(p_vector)))
-  }
-    
+  if (!is.matrix(p_vector)) p_vector <- pmat(p_vector,design) 
   if ( is.null(data) ) {
     if (mapped_p) trials <- 1
     if ( is.null(trials) )

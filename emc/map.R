@@ -1,6 +1,15 @@
 # Parameter transformation and mapping
 
+pmat <- function(p_vector,design) 
+    # puts vector form of p_vector into matrix form  
+{
+  ss <- design$Ffactors$subjects
+  matrix(rep(p_vector,each=length(ss)),nrow=length(ss),
+           dimnames=list(ss,names(p_vector)))
+}
+    
 
+  
 add_constants <- function(p,constants) 
   # augments parameter matrix or vector p with constant parameters (also used in data)
 {
@@ -20,8 +29,7 @@ get_pars <- function(p_vector,dadm) {
     attr(dadm,"model")$Ntransform(
       map_p(
         attr(dadm,"model")$transform(add_constants(p_vector,attr(dadm,"constants"))),
-      dadm),
-    ),
+      dadm)),
   dadm)
 }
 
@@ -111,6 +119,7 @@ mapped_par <- function(p_vector,design,model=NULL,
   if (is.null(model)) if (is.null(design$model)) 
     stop("Must specify model as not in design") else model <- design$model
   if (remove_subjects) design$Ffactors$subjects <- design$Ffactors$subjects[1]
+  if (!is.matrix(p_vector)) p_vector <- pmat(p_vector,design) 
   dadm <- design_model(make_data(p_vector,design,model,trials=1),design,model,
                        rt_check=FALSE,compress=FALSE)
   ok <- !(names(dadm) %in% c("subjects","trials","R","rt","winner"))
