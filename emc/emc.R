@@ -5,7 +5,6 @@ require(MASS)        # PMwG
 require(abind)       # PMwG
 require(MCMCpack)    # PMwG IS2
 require(corpcor)     # PMwG IS2
-require(condMVNorm)  # PMwG IS2
 require(parallel)    # PMwG IS2
 require(mvtnorm)     # PMwG IS2
 

@@ -74,7 +74,7 @@ get_logp=function(prop_theta,stepsize_particles, max_particles, mu_tilde,var_til
     n_total <- 0
     lw <- numeric()
     # generate the particles from the conditional MVnorm AND mix of group level proposals
-    conditional = condMVNorm::condMVN(mean=mu_tilde[j,],sigma=var_tilde[j,,],
+    conditional = condMVN(mean=mu_tilde[j,],sigma=var_tilde[j,,],
                                       dependent.ind=c(1:info$n_randeffect),
                                       given.ind=info$given.ind,
                                       X.given=prop_theta[info$X.given_ind],
@@ -114,5 +114,33 @@ add_info_base <- function(samples){
     hyper = attributes(samples)
   )
   return(info)
+}
+
+condMVN <- function (mean, sigma, dependent.ind, given.ind, X.given, check.sigma = TRUE) 
+{
+  if (missing(dependent.ind)) 
+    return("You must specify the indices of dependent random variables in `dependent.ind'")
+  if (missing(given.ind) & missing(X.given)) 
+    return(list(condMean = mean[dependent.ind], condVar = as.matrix(sigma[dependent.ind, 
+                                                                          dependent.ind])))
+  if (length(given.ind) == 0) 
+    return(list(condMean = mean[dependent.ind], condVar = as.matrix(sigma[dependent.ind, 
+                                                                          dependent.ind])))
+  if (length(X.given) != length(given.ind)) 
+    stop("lengths of `X.given' and `given.ind' must be same")
+  if (check.sigma) {
+    if (!isSymmetric(sigma)) 
+      stop("sigma is not a symmetric matrix")
+    eigenvalues <- eigen(sigma, only.values = TRUE)$values
+    if (any(eigenvalues < 1e-08)) 
+      stop("sigma is not positive-definite")
+  }
+  B <- sigma[dependent.ind, dependent.ind]
+  C <- sigma[dependent.ind, given.ind, drop = FALSE]
+  D <- sigma[given.ind, given.ind]
+  CDinv <- C %*% chol2inv(chol(D))
+  cMu <- c(mean[dependent.ind] + CDinv %*% (X.given - mean[given.ind]))
+  cVar <- B - CDinv %*% t(C)
+  list(condMean = cMu, condVar = cVar)
 }
 

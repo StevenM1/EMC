@@ -387,6 +387,34 @@ extend_sampler <- function(sampler, n_samples, stage) {
   return(sampler)
 }
 
+condMVN <- function (mean, sigma, dependent.ind, given.ind, X.given, check.sigma = TRUE) 
+{
+  if (missing(dependent.ind)) 
+    return("You must specify the indices of dependent random variables in `dependent.ind'")
+  if (missing(given.ind) & missing(X.given)) 
+    return(list(condMean = mean[dependent.ind], condVar = as.matrix(sigma[dependent.ind, 
+                                                                          dependent.ind])))
+  if (length(given.ind) == 0) 
+    return(list(condMean = mean[dependent.ind], condVar = as.matrix(sigma[dependent.ind, 
+                                                                          dependent.ind])))
+  if (length(X.given) != length(given.ind)) 
+    stop("lengths of `X.given' and `given.ind' must be same")
+  if (check.sigma) {
+    if (!isSymmetric(sigma)) 
+      stop("sigma is not a symmetric matrix")
+    eigenvalues <- eigen(sigma, only.values = TRUE)$values
+    if (any(eigenvalues < 1e-08)) 
+      stop("sigma is not positive-definite")
+  }
+  B <- sigma[dependent.ind, dependent.ind]
+  C <- sigma[dependent.ind, given.ind, drop = FALSE]
+  D <- sigma[given.ind, given.ind]
+  CDinv <- C %*% chol2inv(chol(D))
+  cMu <- c(mean[dependent.ind] + CDinv %*% (X.given - mean[given.ind]))
+  cVar <- B - CDinv %*% t(C)
+  list(condMean = cMu, condVar = cVar)
+}
+
 trim_na <- function(sampler) {
   idx <- 1:sampler$samples$idx
   sampler$samples$stage <- sampler$samples$stage[idx]
