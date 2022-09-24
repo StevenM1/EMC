@@ -11,13 +11,8 @@ lnrMS <- list(
     get_p_types <- function(nams) 
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
     
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      x[nams != "m"] <- exp(x[nams != "m"]) 
-    } else {
-      nams <- get_p_types(dimnames(x)[[2]])
-      x[,nams != "m"] <- exp(x[,nams != "m"])
-    }
+    nams <- get_p_types(dimnames(x)[[2]])
+    x[,nams != "m"] <- exp(x[,nams != "m"])
     x
   },
   # p_vector transform scaling parameter by s=1 assumed in lnr.R

@@ -28,19 +28,11 @@ ddmTZDt0natural <- list(
     get_p_types <- function(nams) 
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
     
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      islog <- nams %in%  c("a","sv","st0","s")
-      isprobit <- nams %in%  c("Z","SZ","DP")
-      x[islog] <- exp(x[islog]) 
-      x[isprobit] <- pnorm(x[isprobit])
-    } else { 
-      nams <- get_p_types(dimnames(x)[[2]])
-      islog <- nams %in%  c("a","sv","st0","s")
-      isprobit <- nams %in%  c("Z","SZ","DP")
-      x[,islog] <- exp(x[,islog])
-      x[,isprobit] <- pnorm(x[,isprobit])  
-    }
+    nams <- get_p_types(dimnames(x)[[2]])
+    islog <- nams %in%  c("a","sv","st0","s")
+    isprobit <- nams %in%  c("Z","SZ","DP")
+    x[,islog] <- exp(x[,islog])
+    x[,isprobit] <- pnorm(x[,isprobit])  
     x
   },
   # p_vector transform, sets s as a scaling parameter

@@ -408,13 +408,9 @@ map_p <- function(p,dadm)
 }
 
 
-  # Ffactors=list(subjects=levels(corey1$subjects),S=levels(corey1$S),CI=levels(corey1$CI))
-  # Rlevels=levels(corey1$R);matchfun=function(d)d$S==d$lR
-  # Clist=list(lM=ADmat,lR=ADmat,S=ADmat,CI=ADmat)
-  # Flist=list(v~CI*lM,sv~lM,B~lR,A~1,t0~1)
-  # constants=c(sv=log(1),v=2)
-  # model=lbaB
-  
+# Flist=list(v ~ 0 + lM + CV, sv ~ 0 + lM, B ~ 0 + lR, A ~ 0 + S, t0 ~ 0 + FA)
+# Ffactors=list(subjects=1,FA=1:2,S=c("left","right"),CV=NULL);Rlevels=c("left","right")
+# Clist=Clist7;constants=c(sv_lMFALSE=log(1));model=lbaB
 make_design <- function(Flist,Ffactors,Rlevels,model,
                         Clist=NULL,matchfun=NULL,constants=NULL,Fcovariates=NULL,Ffunctions=NULL,
                         adapt=NULL,report_p_vector=TRUE,

@@ -12,13 +12,8 @@ lbaB <- list(
     get_p_types <- function(nams)
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
 
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      x[nams != "v"] <- exp(x[nams != "v"])
-    } else {
-      nams <- get_p_types(dimnames(x)[[2]])
-      x[,nams != "v"] <- exp(x[,nams != "v"])
-    }
+    nams <- get_p_types(dimnames(x)[[2]])
+    x[,nams != "v"] <- exp(x[,nams != "v"])
     x
   },
   # Trial dependent parameter transform

@@ -8,13 +8,8 @@ probit <- list(
   p_types=c("mean","sd","threshold"),
   # Transform to natural scale
   Ntransform=function(x) {
-    if (!is.matrix(x)) {
-      is_sd <- grepl("sd",names(x)) 
-      x[is_sd] <- exp(x[is_sd]) 
-    } else {
-      is_sd <- grepl("sd",dimnames(x)[[2]]) 
-      x[,is_sd] <- exp(x[,is_sd]) 
-    }
+    is_sd <- grepl("sd",dimnames(x)[[2]]) 
+    x[,is_sd] <- exp(x[,is_sd]) 
     x
   },
   # p_vector transform

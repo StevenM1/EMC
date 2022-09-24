@@ -11,13 +11,8 @@ normal <- list(
     get_p_types <- function(nams) 
       unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
     
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      x[nams == "sd"] <- exp(x[nams == "sd"]) 
-    } else {
-      nams <- get_p_types(dimnames(x)[[2]])
-      x[,nams == "sd"] <- exp(x[,nams == "sd"])
-    }
+    nams <- get_p_types(dimnames(x)[[2]])
+    x[,nams == "sd"] <- exp(x[,nams == "sd"])
     x
   },
   # Trial dependent parameter transform
