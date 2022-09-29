@@ -22,9 +22,9 @@ add_Ffunctions <- function(data,design)
 
 
 # data=NULL; expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
-# Fcovariates=NULL;n_cores=1;return_Ffunctions=FALSE
+# Fcovariates=NULL;n_cores=1;return_Ffunctions=FALSE; trials=NULL; model=NULL
 # 
-# model=lbaB;trials=2
+# data=dataEXG; design=designEXG
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,

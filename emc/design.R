@@ -320,7 +320,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   out <- lapply(design$Flist,make_dm,da=da,Fcovariates=Fcovariates)
   if (!is.null(rt_resolution) & !is.null(da$rt)) da$rt <- round(da$rt/rt_resolution)*rt_resolution
   if (compress) dadm <- compress_dadm(da,designs=out,
-    Fcov=names(design$Fcovariates),Ffun=names(design$Ffunctions)) else {
+    Fcov=design$Fcovariates,Ffun=names(design$Ffunctions)) else {
     dadm <- da
     attr(dadm,"designs") <- out
     attr(dadm,"s_expand") <- da$subjects
