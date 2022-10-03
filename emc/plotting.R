@@ -337,7 +337,7 @@ profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="")
 # subject=NULL;factors=NULL;layout=NULL;mfcol=TRUE;xlim=NULL;bw = "nrd0";adjust=1;
 # correct_fun=NULL;rt="top";accuracy="topright"
 # 
-# subject="I"; layout=c(2,4)
+# data=dataEXG;layout=c(1,2);factors="S"
 plot_defective_density <- function(data,subject=NULL,factors=NULL,
                                    layout=NULL,mfcol=TRUE,
                                    xlim=NULL,bw = "nrd0",adjust=1,
@@ -358,6 +358,10 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
       stop("factors must name factors in data")
     fnams <- factors
   }
+  alldat <- dat
+  cellsall <- alldat[,fnams,drop=FALSE]
+  for (i in fnams) cellsall[,i] <- paste(i,cellsall[,i],sep="=")
+  cellsall <- apply(cellsall,1,paste,collapse=" ")
   # Remove missing
   dat <- dat[is.finite(dat$rt),]
   cells <- dat[,fnams,drop=FALSE]
@@ -367,8 +371,8 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
     if (mfcol) par(mfcol=layout) else par(mfrow=layout) 
   R <- levels(dat$R)
   for (i in sort(unique(cells))) {
+    pR <- table(alldat$R[cellsall==i])/dim(alldat[cellsall==i,])[1]
     dati <- dat[cells==i,]
-    pR <- table(dati$R)/dim(dati)[1]
     mrt <- tapply(dati$rt,dati$R,median)
     dens <- setNames(vector(mode="list",length=length(R)),R)
     for (j in R) if (length(dati$rt[dati$R==j])>1) {
@@ -378,11 +382,15 @@ plot_defective_density <- function(data,subject=NULL,factors=NULL,
     rx <- do.call(rbind,lapply(dens,function(x){range(x$x)}))
     if (is.null(xlim)) xlimi <- c(min(rx[,1]),max(rx[,2])) else xlimi <- xlim
     ylim <- c(0,max(unlist(lapply(dens,function(x){max(x$y)}))))
-    plot(dens[[1]],xlim=xlimi,ylim=ylim,lty=1,main=i,xlab="RT")
+    ltys <- c(1:length(mrt))[!is.na(mrt)]
+    plot(dens[[1]],xlim=xlimi,ylim=ylim,lty=ltys[1],main=i,xlab="RT")
     if (length(dens)>1) for (j in 2:length(dens))
-      lines(dens[[j]],lty=j)
-    if (!is.null(accuracy) && length(R) > 1)
-      legend(accuracy,paste(names(pR),round(pR,2),sep="="),lty=1:length(pR),bty="n",title="p(R)")
+      lines(dens[[j]],lty=ltys[j])
+    if (!is.null(accuracy) && length(R) > 1) {
+      ltys <- 1:length(pR)
+      ltys[is.na(mrt)] <- NA
+      legend(accuracy,paste(names(pR),round(pR,2),sep="="),lty=ltys,bty="n",title="p(R)")
+    }
     if (!is.null(rt))
       legend(rt,paste(names(pR),round(mrt,3),sep="="),bty="n",title="Med(RT)")
   }
@@ -771,7 +779,7 @@ plot_adapt <- function(data=NULL,design=NULL,model=NULL,
       if (is.matrix(p_vector)) p_vectors <- p_vector[s,] else
         p_vectors <- p_vector
     dadm <- design_model(
-      add_accumulators(datas,design$matchfun,type=model$type),
+      add_accumulators(datas,design$matchfun,type=model$type,Fcovariates=design$Fcovariates),
       design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
       rt_check=FALSE,rt_resolution = NULL)
     repList <- vector(mode="list",length=length(reps))  
@@ -798,7 +806,7 @@ plot_adapt <- function(data=NULL,design=NULL,model=NULL,
     if (is.null(model)) stop("Must supply model if not in design.")
     if (is.null(attr(data,"adapt"))) {
       dadm <- design_model(
-        add_accumulators(data,design$matchfun,type=model$type),
+        add_accumulators(data,design$matchfun,type=model$type,Fcovariates=design$Fcovariates),
         design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
         rt_check=FALSE,rt_resolution = NULL)
       attr(data,"adapt") <- setNames(
@@ -810,7 +818,7 @@ plot_adapt <- function(data=NULL,design=NULL,model=NULL,
     targets <- adapt[[1]][[adapt_type]]$target 
     # Get empirical R and rt averages over subjects    
     dadm <- design_model(
-      add_accumulators(data,design$matchfun,type=model$type),
+      add_accumulators(data,design$matchfun,type=model$type,Fcovariates=design$Fcovariates),
       design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
       rt_check=FALSE,rt_resolution = NULL)
     Rrt <- lapply(levels(data$subjects),function(x){

@@ -22,9 +22,10 @@ contr.increasing <- function(n,levels=NULL)
 
 #### Make design matrices ----
 
-# matchfun=design$matchfun;simulate=TRUE;type=model$type
+# matchfun=design$matchfun;simulate=TRUE;type=model$type; Fcovariates=design$Fcovariates
+# simulate=FALSE; matchfun=design$matchfun;type=model$type;Fcovariates=design$Fcovariates
 
-add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE") 
+add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE",Fcovariates=NULL) 
   # Augments data for use in race model likelihood calculation or simulation.
   # Must have an R = response factor (levels give number of accumulators).
   # Must have a "subjects" factor and optionally a "trials" indicator column with 
@@ -39,10 +40,10 @@ add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE")
 # lM and winner columns.
 {
   if (!is.factor(data$R)) stop("data must have a factor R")
-  factors <- names(data)[!names(data) %in% c("R","rt")]
+  factors <- names(data)[!names(data) %in% c("R","rt","trials",Fcovariates)]
   if (type %in% c("RACE","SDT")) { 
     datar <- cbind(do.call(rbind,lapply(1:length(levels(data$R)),function(x){data})),
-                   lR=factor(rep(levels(data$R),each=dim(data)[1])))
+                   lR=factor(rep(levels(data$R),each=dim(data)[1]),levels=levels(data$R)))
     if (!is.null(matchfun)) {
       lM <- matchfun(datar)
       if (any(is.na(lM)) || !(is.logical(lM))) 
@@ -57,7 +58,12 @@ add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE")
     datar$winner[is.na(datar$winner)] <- FALSE
   }
   # sort cells together
-  datar[order(apply(datar[,c(factors,"lR")],1,paste,collapse="")),]
+  if ("trials" %in% names(data))
+    datar[order(apply(datar[,c(factors)],1,paste,collapse="_"),
+                as.numeric(datar$trials),as.numeric(datar$lR)),] else
+    datar[order(apply(datar[,c(factors)],1,paste,collapse="_"),
+                as.numeric(datar$lR)),]
+  # datar[order(apply(datar[,c(factors,"lR")],1,paste,collapse="")),]
 }
 
 # form=design$Flist[[4]];Clist=NULL
@@ -107,7 +113,11 @@ make_dm <- function(form,da,Clist=NULL,Fcovariates=NULL)
 
 
 # model=NULL;prior = NULL; add_acc=TRUE;rt_resolution=0.02;verbose=TRUE;compress=TRUE;rt_check=TRUE
-
+# 
+# data=add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type,Fcovariates=design$Fcovariates)
+# add_acc=FALSE;compress=FALSE;verbose=FALSE;rt_check=FALSE; rt_resolution=0.02
+# 
+# data=dataEXG;design=designEXG
 
 design_model <- function(data,design,model=NULL,prior = NULL,
   add_acc=TRUE,rt_resolution=0.02,verbose=TRUE,compress=TRUE,rt_check=TRUE) 
@@ -261,13 +271,13 @@ design_model <- function(data,design,model=NULL,prior = NULL,
       if (!is.null(attr(data,"LT")) && attr(data,"LT") > attr(data,"LC"))
         stop("Lower censor must be greater than lower truncation")
     }
-    if (!any(data$rt==-Inf) & !is.null(attr(data,"LC")))
+    if (!any(data$rt[!is.na(data$rt)]==-Inf) & !is.null(attr(data,"LC")))
       attr(data,"LC") <- NULL else 
-        if (any(data$rt==-Inf) & is.null(attr(data,"LC")))
+        if (any(data$rt[!is.na(data$rt)]==-Inf) & is.null(attr(data,"LC")))
           stop("Data must have an LC attribute if any rt = -Inf")
-    if (!any(data$rt==Inf) & !is.null(attr(data,"UC")))
+    if (!any(data$rt[!is.na(data$rt)]==Inf) & !is.null(attr(data,"UC")))
       attr(data,"LC") <- NULL else 
-        if (any(data$rt==Inf) & is.null(attr(data,"UC")))
+        if (any(data$rt[!is.na(data$rt)]==Inf) & is.null(attr(data,"UC")))
           stop("Data must have an UC attribute if any rt = Inf")
     if (!is.null(attr(data,"UC"))) check_rt(attr(data,"UC"),data)
     if (!is.null(attr(data,"LC"))) check_rt(attr(data,"LC"),data,upper=FALSE)
@@ -277,8 +287,8 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     }
   }
   
-  if (add_acc)
-    da <- add_accumulators(data,design$matchfun,type=model$type) else da <- data
+  if (!add_acc) da <- data else
+    da <- add_accumulators(data,design$matchfun,type=model$type,Fcovariates=design$Fcovariates)  
   da <- da[order(da$subjects),] # fixes different sort in add_accumulators depending on subject type 
 
   if (!is.null(design$Ffunctions)) for (i in names(design$Ffunctions)) {
@@ -287,11 +297,11 @@ design_model <- function(data,design,model=NULL,prior = NULL,
   }
 
   
-  # NOT SURE THIS IS NEEDED, BUT CANT HURT 
-  # Add dummy content for covariates in sampled_p_vector calls
-  da[!(names(da) %in% c("R","rt"))] <- 
-    data.frame(lapply(da[!(names(da) %in% c("R","rt"))],function(x){
-      if (all(is.na(x))) rep(0,length(x)) else x}))
+  # # NOT SURE THIS IS NEEDED, BUT CANT HURT 
+  # # Add dummy content for covariates in sampled_p_vector calls
+  # da[!(names(da) %in% c("R","rt"))] <- 
+  #   data.frame(lapply(da[!(names(da) %in% c("R","rt"))],function(x){
+  #     if (all(is.na(x))) rep(0,length(x)) else x}))
   
   if (is.null(model$p_types) | is.null(model$transform) | 
       is.null(model$Ntransform) | is.null(model$Ttransform))
@@ -460,7 +470,7 @@ sampled_p_vector <- function(design,model=NULL,doMap=TRUE)
     data <- cbind.data.frame(data,covs)
   }
   dadm <- design_model(
-      add_accumulators(data,matchfun=design$matchfun,type=model$type),
+      add_accumulators(data,matchfun=design$matchfun,type=model$type,Fcovariates=design$Fcovariates),
       design,model,add_acc=FALSE,verbose=FALSE,rt_check=FALSE,compress=FALSE)
   sampled_p_names <- attr(dadm,"sampled_p_names")
   out <- setNames(numeric(length(sampled_p_names)),sampled_p_names)

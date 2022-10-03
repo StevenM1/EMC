@@ -25,6 +25,10 @@ add_Ffunctions <- function(data,design)
 # Fcovariates=NULL;n_cores=1;return_Ffunctions=FALSE; trials=NULL; model=NULL
 # 
 # data=dataEXG; design=designEXG
+# design=designEXG; trials=10
+# 
+# data=dataRDEX; design=designRDEX
+# design=designRDEX; trials=10
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
@@ -45,7 +49,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   #   response = stimulus  matchfun = function(d)d$S==d$lR
   # If mapped_p is true instead returns cbind(da,pars), augmented data and 
   # mapped pars.
-  # Fcovariates = list of functions to specify covariates
+  # Fcovariates = list of functions to specify covariates or data frame
   # n_cores: parallel generation over subjects for RL models 
 {
   
@@ -128,7 +132,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
         data <- cbind.data.frame(data,Fcovariates)
       }
       empty_covariates <- design$Fcovariates[!(design$Fcovariates %in% names(Fcovariates))]
-      if (length(empty_covariates)>0) data[[empty_covariates]] <- NA
+      if (length(empty_covariates)>0) data[[empty_covariates]] <- 0
     }
   } else {
     LT <- attr(data,"LT"); UT <- attr(data,"UT")
@@ -142,7 +146,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   if ( is.null(model$Ntransform) ) model$Ntransform <- identity
   if ( is.null(model$Ttransform) ) model$Ttransform <- identity
   data <- design_model(
-    add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type),
+    add_accumulators(data,design$matchfun,simulate=TRUE,type=model$type,Fcovariates=design$Fcovariates),
     design,model,add_acc=FALSE,compress=FALSE,verbose=FALSE,
     rt_check=FALSE)
   pars <- model$Ttransform(model$Ntransform(map_p(
@@ -170,7 +174,7 @@ make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
   if (!return_Ffunctions && !is.null(design$Ffunctions)) 
     dropNames <- c(dropNames,names(design$Ffunctions) )
   data <- data[data$lR==levels(data$lR)[1],!(names(data) %in% dropNames)]
-  data[,c("R","rt")] <- Rrt
+  for (i in dimnames(Rrt)[[2]]) data[[i]] <- Rrt[,i]
   missingFilter(data[,names(data)!="winner"],LT,UT,LC,UC,Rmissing)
 }
 
