@@ -316,16 +316,18 @@ plot_alpha_recovery <- function(tabs,layout=c(2,3),
 }
 
 
-profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="") 
+
+profile_pmwg <- function(pname,p,p_min,p_max,dadm,n_point=100,main="",cores=1) 
   
 {
-  x <- seq(p_min,p_max,length.out=n_point)  
-  ll <- numeric(n_point)
-  pi <- p
-  for (i in 1:n_point) {
-    pi[pname] <- x[i]
-    ll[i] <- attr(dadm,"model")$log_likelihood(pi,dadm)
+  
+  lfun <- function(i,x,p,pname,dadm) {
+    p[pname] <- x[i]
+    attr(dadm,"model")$log_likelihood(p,dadm)
   }
+  
+  x <- seq(p_min,p_max,length.out=n_point)  
+  ll <- unlist(mclapply(1:n_point,lfun,dadm=dadm,x=x,p=p,pname=pname,mc.cores = cores))
   plot(x,ll,type="l",xlab=pname,ylab="LL",main=main)
   abline(v=p[pname])
   c(true=p[pname],max=x[which.max(ll)],miss=p[pname]-x[which.max(ll)])
