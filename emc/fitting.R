@@ -54,7 +54,7 @@ run_burn <- function(samplers,iter=300,
                      epsilon = NULL, start_mu = NULL, start_var = NULL) 
   # This is the multi-chain version of run_chains but only for Burn
   # cores_per_chain is how many cores to give each chain
-  # if cores_for chain > 1 we'll parallelize across chains
+  # if cores_for chain > 1 will parallelize across chains
   # Initializes (if needed)
   # For the other arguments see run_stages
 {
