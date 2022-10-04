@@ -6,18 +6,8 @@ lnrMS <- list(
   type="RACE",
   p_types=c("m","s","t0"),
   Ntransform=function(x) {
-    # transform parameters except v back to real line 
-
-    get_p_types <- function(nams) 
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-    
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      x[nams != "m"] <- exp(x[nams != "m"]) 
-    } else {
-      nams <- get_p_types(dimnames(x)[[2]])
-      x[,nams != "m"] <- exp(x[,nams != "m"])
-    }
+    # Transform to natural scale
+   x[,dimnames(x)[[2]] != "m"] <- exp(x[,dimnames(x)[[2]] != "m"])
     x
   },
   # p_vector transform scaling parameter by s=1 assumed in lnr.R

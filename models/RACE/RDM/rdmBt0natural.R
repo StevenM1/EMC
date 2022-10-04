@@ -7,16 +7,7 @@ rdmBt0natural <- list(
   p_types=c("v","B","A","t0","s"),
   # Transform to natural scale
   Ntransform=function(x) {
-    get_p_types <- function(nams) 
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      x[nams != "t0"] <- exp(x[nams != "t0"]) 
-    } else {
-      nams <- get_p_types(dimnames(x)[[2]])
-      x[,nams != "t0"] <- exp(x[,nams != "t0"])
-    }
+    x[,dimnames(x)[[2]]  != "t0"] <- exp(x[,dimnames(x)[[2]]  != "t0"])
     x
   },
   # p_vector transform 

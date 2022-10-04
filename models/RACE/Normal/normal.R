@@ -7,17 +7,7 @@ normal <- list(
   p_types=c("mean","sd"),
   # Transform to natural scale
   Ntransform=function(x) {
-    
-    get_p_types <- function(nams) 
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-    
-    if (!is.matrix(x)) {
-      nams <- get_p_types(names(x))
-      x[nams == "sd"] <- exp(x[nams == "sd"]) 
-    } else {
-      nams <- get_p_types(dimnames(x)[[2]])
-      x[,nams == "sd"] <- exp(x[,nams == "sd"])
-    }
+    x[,dimnames(x)[[2]] == "sd"] <- exp(x[,dimnames(x)[[2]] == "sd"])
     x
   },
   # p_vector transform

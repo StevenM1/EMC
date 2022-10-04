@@ -24,13 +24,8 @@ ddmTZD <- list(
   # 
   # Transform to natural scale
   Ntransform=function(x) {
-    
-    get_p_types <- function(nams) 
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-    
-    nams <- get_p_types(dimnames(x)[[2]])
-    islog <- nams %in%  c("a","sv","t0","st0","s")
-    isprobit <- nams %in%  c("Z","SZ","DP")
+    islog <- dimnames(x)[[2]] %in% c("a","sv","t0","st0","s")
+    isprobit <- dimnames(x)[[2]] %in% c("Z","SZ","DP")
     x[,islog] <- exp(x[,islog])
     x[,isprobit] <- pnorm(x[,isprobit])  
     x

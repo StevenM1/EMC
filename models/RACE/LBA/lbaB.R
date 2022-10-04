@@ -9,11 +9,7 @@ lbaB <- list(
   transform = function(p) p,
   # Transform to natural scale
   Ntransform=function(x) {
-    get_p_types <- function(nams)
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-
-    nams <- get_p_types(dimnames(x)[[2]])
-    x[,nams != "v"] <- exp(x[,nams != "v"])
+    x[,dimnames(x)[[2]] != "v"] <- exp(x[,dimnames(x)[[2]] != "v"])
     x
   },
   # Trial dependent parameter transform

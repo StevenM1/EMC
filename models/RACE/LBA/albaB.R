@@ -7,12 +7,7 @@ albaB <- list(
   p_types=c("v_0","v_S","v_D","sv","B","A","t0"),
   # Transform to natural scale
   Ntransform=function(x) {
-
-    get_p_types <- function(nams)
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-
-    nams <- get_p_types(dimnames(x)[[2]])
-    x[,nams != "v"] <- exp(x[,nams != "v"])
+    x[,dimnames(x)[[2]] != "v"] <- exp(x[,dimnames(x)[[2]] != "v"])
     x
   },
   # p_vector transform, sets sv as a scaling parameter

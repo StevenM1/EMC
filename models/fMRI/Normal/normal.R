@@ -8,11 +8,7 @@ normal <- list(
   # Transform to natural scale
   Ntransform=function(x) {
 
-    get_p_types <- function(nams) 
-      unlist(lapply(strsplit(nams,"_"),function(x){x[[1]]}))
-    
-    nams <- get_p_types(dimnames(x)[[2]])
-    x[,nams == "sd"] <- exp(x[,nams == "sd"])
+    x[,dimnames(x)[[2]] == "sd"] <- exp(x[,dimnames(x)[[2]] == "sd"])
     x
   },
   # Trial dependent parameter transform
