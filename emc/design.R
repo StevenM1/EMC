@@ -327,7 +327,7 @@ design_model <- function(data,design,model=NULL,prior = NULL,
     }
   }
   if(model$type != "MRI") for (i in model$p_types) attr(design$Flist[[i]],"Clist") <- design$Clist[[i]]
-  out <- lapply(design$Flist,make_dm,da=da,Fcovariates=Fcovariates)
+  out <- lapply(design$Flist,make_dm,da=da,Fcovariates=design$Fcovariates)
   if (!is.null(rt_resolution) & !is.null(da$rt)) da$rt <- round(da$rt/rt_resolution)*rt_resolution
   if (compress) dadm <- compress_dadm(da,designs=out,
     Fcov=design$Fcovariates,Ffun=names(design$Ffunctions)) else {
