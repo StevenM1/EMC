@@ -24,11 +24,7 @@ add_Ffunctions <- function(data,design)
 # data=NULL; expand=1;mapped_p=FALSE;LT=NULL;UT=NULL;LC=NULL;UC=NULL;
 # Fcovariates=NULL;n_cores=1;return_Ffunctions=FALSE; trials=NULL; model=NULL
 # 
-# data=dataEXG; design=designEXG
-# design=designEXG; trials=10
-# 
-# data=dataRDEX; design=designRDEX
-# design=designRDEX; trials=10
+# design=designDASC; trials=2
 
 make_data <- function(p_vector,design,model=NULL,trials=NULL,data=NULL,expand=1,
                       mapped_p=FALSE,LT=NULL,UT=NULL,LC=NULL,UC=NULL,
