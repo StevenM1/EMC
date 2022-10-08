@@ -349,12 +349,15 @@ compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
   if (print_summary) {
     wDIC <- lapply(out,function(x)x["wDIC"])
     wBPIC <- lapply(out,function(x)x["wBPIC"])
-    print(round(cbind(
-      do.call(rbind,lapply(wDIC,function(x){
-        setNames(data.frame(t(x)),paste("wDIC",rownames(x),sep="_"))})),
-      do.call(rbind,lapply(wBPIC,function(x){
+    pDIC <- do.call(rbind,lapply(wDIC,function(x){
+        setNames(data.frame(t(x)),paste("wDIC",rownames(x),sep="_"))}))
+    pBPIC <- do.call(rbind,lapply(wBPIC,function(x){
         setNames(data.frame(t(x)),paste("wBPIC",rownames(x),sep="_"))}))
-    ),digits))
+    print(round(cbind(pDIC,pBPIC),digits))
+    mnams <- unlist(lapply(strsplit(dimnames(pDIC)[[2]],"_"),function(x){x[[2]]}))
+    cat("\nWinners\n")
+    print(rbind(DIC=table(mnams[apply(pDIC,1,which.min)]),
+                BPIC=table(mnams[apply(pBPIC,1,which.min)])))
   }
   invisible(out)
 }
