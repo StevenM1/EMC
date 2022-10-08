@@ -14,13 +14,8 @@ MlbaB <- list(
   transform = function(p) p,
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
-    if (!is.matrix(pars)) {
-      pars <- c(pars,b=pars["B"] + pars["A"])
-      attr(pars,"ok") <- (pars["t0"] > .05) & ((pars["A"] > 1e-6) | pars[,"A"] == 0)
-    } else {
-      pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
-      attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
-    }
+    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
+    attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
     pars
   },
   # Random function for racing accumulator

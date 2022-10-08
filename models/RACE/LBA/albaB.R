@@ -14,16 +14,9 @@ albaB <- list(
   transform = function(p) {p},
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
-    
-    if (!is.matrix(pars)) {
-      pars <- c(pars,v = pars["v_0"] + pars["v_D"]*dadm$SD + pars["v_S"]*dadm$SS)
-      pars <- c(pars,b=pars["B"] + pars["A"])
-      attr(pars,"ok") <- (pars["t0"] > .05) & ((pars["A"] > 1e-6) | pars[,"A"] == 0)
-    } else {
-      pars <- cbind(pars,v = pars[,"v_0"] + pars[,"v_D"]*dadm$SD + pars[,"v_S"]*dadm$SS)
-      pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
-      attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
-    }
+    pars <- cbind(pars,v = pars[,"v_0"] + pars[,"v_D"]*dadm$SD + pars[,"v_S"]*dadm$SS)
+    pars <- cbind(pars,b=pars[,"B"] + pars[,"A"])
+    attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
     pars
     
   },
