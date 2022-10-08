@@ -295,9 +295,9 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       }
     } else {
       if (bad_new) {
-        message("Failed to get new samples.")
         # bad_samplers <<- samplers
         # bad_samplers_new <<- samplers_new
+        warning("Failed to get new samples.")
       } else {
         message("Gelman diag try error.")
         samplers <- lapply(samplers_new,remove_iterations,select=n_remove,filter="burn")
