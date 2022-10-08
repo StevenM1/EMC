@@ -356,8 +356,8 @@ compare_ICs <- function(sList,filter="sample",subfilter=0,use_best_fit=TRUE,
     print(round(cbind(pDIC,pBPIC),digits))
     mnams <- unlist(lapply(strsplit(dimnames(pDIC)[[2]],"_"),function(x){x[[2]]}))
     cat("\nWinners\n")
-    print(rbind(DIC=table(mnams[apply(pDIC,1,which.min)]),
-                BPIC=table(mnams[apply(pBPIC,1,which.min)])))
+    print(rbind(DIC=table(mnams[apply(pDIC,1,which.max)]),
+                BPIC=table(mnams[apply(pBPIC,1,which.max)])))
   }
   invisible(out)
 }
