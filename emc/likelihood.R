@@ -17,7 +17,7 @@ log_likelihood_race <- function(p_vector,dadm,min_ll=log(1e-10))
   n_acc <- length(levels(dadm$R))
   if (n_acc>1) lds[!dadm$winner] <-
     log(1-attr(dadm,"model")$pfun(rt=dadm$rt[!dadm$winner],pars=pars[!dadm$winner,]))
-  lds[is.na(lds) | !ok] <- 0
+  lds[is.na(lds) | !ok] <- min_ll    #SM changed this from 0!
   lds <- lds[attr(dadm,"expand")] # decompress
   if (n_acc>1) {
     winner <- dadm$winner[attr(dadm,"expand")]
@@ -25,7 +25,8 @@ log_likelihood_race <- function(p_vector,dadm,min_ll=log(1e-10))
     if (n_acc==2)
       ll <- ll + lds[!winner] else
         ll <- ll + apply(matrix(lds[!winner],nrow=n_acc-1),2,sum)
-    ll[is.na(ll)] <- 0
+    ll[is.na(ll)] <- min_ll          # 0  SM changed this from 0! exp(0) = pretty good
+#    print(sum(pmax(min_ll, ll)))
     sum(pmax(min_ll,ll))
   } else sum(pmax(min_ll,lds))
 }
@@ -185,8 +186,9 @@ log_likelihood_ddm <- function(p_vector,dadm,min_ll=log(1e-10))
 {
   pars <- get_pars(p_vector,dadm)
   like <- numeric(dim(dadm)[1]) 
-  if (any(attr(pars,"ok"))) like[attr(pars,"ok")] <- 
-    attr(dadm,"model")$dfun(dadm$rt[attr(pars,"ok")],dadm$R[attr(pars,"ok")],pars[attr(pars,"ok"),,drop=FALSE])
+  if (any(attr(pars,"ok"))) {
+    like[attr(pars,"ok")] <- attr(dadm,"model")$dfun(dadm$rt[attr(pars,"ok")],dadm$R[attr(pars,"ok")],pars[attr(pars,"ok"),,drop=FALSE])
+  }
   like[attr(pars,"ok")][is.na(like[attr(pars,"ok")])] <- 0
   sum(pmax(min_ll,log(like[attr(dadm,"expand")])))
 }
