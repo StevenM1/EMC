@@ -163,7 +163,8 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
                           prior_list = NULL,
                           par_groups=NULL,
                           subject_covariates = NULL,
-                          n_factors=NULL,constraintMat = NULL,covariates=NULL)
+                          n_factors=NULL,constraintMat = NULL,covariates=NULL,
+                          compress=TRUE)
   
 {
   if (!(type %in% c("standard","diagonal","blocked","factor","factorRegression","single")))
@@ -201,7 +202,7 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
     #   if (!is.null(pars)) attr(data_list[[i]],"pars") <- pars
     # }
     dadm_list[[i]] <- design_model(data=data_list[[i]],design=design_list[[i]],
-                                   model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]])
+                                   model=model_list[[i]],rt_resolution=rt_resolution[i],prior=prior_list[[i]], compress=compress)
   }
   if(!is.null(subject_covariates)) attr(dadm_list, "subject_covariates") <- subject_covariates
   if (type == "standard") {
