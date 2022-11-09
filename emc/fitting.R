@@ -216,7 +216,7 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                    epsilon = NULL, verbose_run_stage = FALSE,
                    particles=NA,particle_factor=50, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
-                   min_es=NULL,min_iter=NULL,max_iter=NULL) 
+                   min_es=NULL,min_iter=NULL,max_iter=NULL,save_fn=NULL) 
   # Repeatedly runs burn or sample to get subject average multivariate 
   # gelman.diag of alpha samples < max_gd (if !through) or if all univariate
   # psrf for every subject and parameter and multivariate < max_gd and
@@ -283,15 +283,21 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
         samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
         if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
           gd_short <- matrix(Inf) else
-          gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
-                          filter="burn",mapped=mapped)
-        if (mean(gd_short) < mean(gd)) {
-          gd <- gd_short
-          samplers <- samplers_short
+            gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
+                                filter="burn",mapped=mapped)
+          if (mean(gd_short) < mean(gd)) {
+            gd <- gd_short
+            samplers <- samplers_short
             n_remove <- iter
-        } else {
-          n_remove <- round(n_remove + iter/2)
-        }
+          } else {
+            n_remove <- round(n_remove + iter/2)
+          }
+      }
+      if(!is.null(save_fn)) {
+        attr(samplers,"data_list") <- data_list
+        attr(samplers,"design_list") <- design_list
+        attr(samplers,"model_list") <- model_list
+        save(samplers, file=save_fn)
       }
     } else {
       if (bad_new) {
@@ -346,7 +352,7 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
                       cores_per_chain=1,cores_for_chains=NULL,
                       max_gd_trys=100,max_gd=1.2,
                       thorough=TRUE,mapped=FALSE, step_size = NA,
-                      min_es=NULL,min_iter=NULL,max_iter=NULL
+                      min_es=NULL,min_iter=NULL,max_iter=NULL, save_fn=NULL
 )
   # Will run burn until convergence through run_stages and run_gd
   # ndiscard and nstart together form the first batch of samples ran, of which ndiscard then discarded
@@ -356,6 +362,7 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
   # If thorough gd should be lower than criterion for all parameters
   # If mapped parameters are transformed back to the 'interpretable' scale before gd is run. 
   # Min_iter, min_es (effective sample size), max_iter and max_gd determine when run_gd is done
+  # If !is.null(save_fn), every try is saved in save_fn
   
 {
   source(samplers[[1]]$source)
@@ -378,6 +385,7 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
     attr(samplers,"data_list") <- data_list
     attr(samplers,"design_list") <- design_list
     attr(samplers,"model_list") <- model_list
+    if(!is.null(save_fn)) save(samplers, file=save_fn)
   } 
   if (max_gd_trys==0) return(samplers)
   message("Beginning iterations to achieve Rhat < ",max_gd)
@@ -386,7 +394,7 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
          epsilon=epsilon, particles=particles,particle_factor=particle_factor, min_es=min_es,
          min_iter=min_iter, 
          max_iter=max_iter, mix=mix, iter = step_size, verbose_run_stage = verbose_run_stage,
-         cores_per_chain=cores_per_chain,cores_for_chains=cores_for_chains)
+         cores_per_chain=cores_per_chain,cores_for_chains=cores_for_chains, save_fn=save_fn)
 }
 
 
@@ -402,6 +410,7 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   # If the conditional distribution can be created it will finish adaptation and you can start sampling.
   # Thin whether to ONLY thin the samples passed to the creation of the conditional. Probably not necessary
   # Thin doesn't thin the actual ouptut
+  
   if(verbose) message("Running adapt stage")
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -446,12 +455,13 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
                        epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.7,
                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                        n_cores_conditional = 1, step_size_sample = 50, thin = NULL,
-                       verbose_run_stage = FALSE)
+                       verbose_run_stage = FALSE, save_fn=NULL)
   # Uses all the same arguments as run_stages and run_burn, but with:
   # iter: The amount of samples desired at the end from the sample stage
   # After step_size iterations it will update the conditional efficient distribution
   # Thin whether to ONLY thin the samples passed to the creation of the conditional. Probably not necessary
   # Thin doesn't thin the actual ouptut
+  # If !is.null(save_fn), every iteration is saved in save_fn
 {
   if(!attr(samplers, "adapted")){
     warning("samplers should be adapted before you can run sample stage")
@@ -487,6 +497,15 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage, eff_mu = eff_mu,
                              eff_var = eff_var,
                              mc.cores=cores_for_chains)
+    if(!is.null(save_fn)) {
+      samplers <- samplers_new
+      attr(samplers,"data_list") <- data_list
+      attr(samplers,"design_list") <- design_list
+      attr(samplers,"model_list") <- model_list
+      attr(samplers,"burnt") <- burnt
+      attr(samplers, "adapted") <- adapted
+      save(samplers, file=save_fn)
+    }
     if(verbose) {
       cat(paste(step*step_size_sample," "))
       if (step %% 15 == 0) cat("\n")
