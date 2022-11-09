@@ -58,11 +58,13 @@ add_accumulators <- function(data,matchfun=NULL,simulate=FALSE,type="RACE",Fcova
     datar$winner[is.na(datar$winner)] <- FALSE
   }
   # sort cells together
-  if ("trials" %in% names(data))
+  if ("trials" %in% names(data)) {
     datar[order(apply(datar[,c(factors)],1,paste,collapse="_"),
-                as.numeric(datar$trials),as.numeric(datar$lR)),] else
+                as.numeric(datar$trials),as.numeric(datar$lR)),] 
+  } else {
     datar[order(apply(datar[,c(factors)],1,paste,collapse="_"),
                 as.numeric(datar$lR)),]
+  }
   # datar[order(apply(datar[,c(factors,"lR")],1,paste,collapse="")),]
 }
 
