@@ -9,7 +9,10 @@ rdmRL <- list(
 
   Ntransform=function(x) {
   # Transform to natural scale
-    exp(x)
+    probit_scale <- c('alpha', 'q0')
+    x[,!dimnames(x)[[2]] %in% probit_scale] <- exp(x[,!dimnames(x)[[2]] %in% probit_scale])
+    x[,dimnames(x)[[2]] %in% probit_scale] <- pnorm(x[,dimnames(x)[[2]] %in% probit_scale])
+    x
   },
   # Trial dependent parameter transform
   Ttransform = function(pars,dadm) {
@@ -18,7 +21,7 @@ rdmRL <- list(
     for (i in levels(dadm$subjects))
       parsList[[i]] <- update_pars(i,pars,dadm)
     pars <- do.call(rbind,parsList)
-    attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0)
+    attr(pars,"ok") <- (pars[,"t0"] > .05) & ((pars[,"A"] > 1e-6) | pars[,"A"] == 0) # & (pars[,'v'] > 1e-6) & (pars[,'v'] < 1e3) & (pars[,'B'] > .1) & (pars[,'alpha'] < 1)
     pars
   },
   # p_vector transform 

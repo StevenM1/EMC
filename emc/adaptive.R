@@ -11,6 +11,54 @@ augment = function(s,da,design)
     c(out,rep(NA,maxn-length(out)))
   }
   
+  getIndexThis <- function(da, outcomes) {
+    ## gets index of Q-value corresponding to the accumulator
+    # NB: outcomes is sorted by trial order, da is *not*
+    # so we need to return an index that takes this into account
+    da$lS <- da[cbind(1:nrow(da), match(as.character(da$lR), colnames(da)))]
+    da$colNumbers <- match(as.character(da$lS), colnames(outcomes))
+    
+    return(cbind(da$trials, da$colNumbers))
+#     rowIdx <- da$trials
+#     colIdx <- c()
+#     for(i in 1:length(rowIdx)) {
+# #      print(i)
+#       trialN <- rowIdx[i]
+#       thislR <- as.character(da[trialN, 'lR'])
+#       thisS <- da[trialN, as.character(thislR)]
+#       thisC <- which(colnames(outcomes)==as.character(thisS))
+#       colIdx <- c(colIdx, thisC)
+#     }
+#     return(cbind(rowIdx, colIdx))
+    #return(cbind(da$trials, match(da[cbind(da$trials, match(da$lR, colnames(da)))], colnames(outcomes))))
+  }
+  
+  getIndexOther <- function(da, outcomes) {
+    ## ONLY WORKS FOR 2AFC!!
+    ## gets index of Q-value corresponding to the *OTHER* accumulator (in an advantage framework)
+    lROptions <- unique(as.character(da$lR))
+    da$lRother <- ifelse(da$lR==lROptions[1], lROptions[2], lROptions[1])
+    da$lSOther <- da[cbind(1:nrow(da), match(as.character(da$lRother), colnames(da)))]
+    da$colNumbers <- match(as.character(da$lSOther), colnames(outcomes))
+    return(cbind(da$trials, da$colNumbers))
+    # return(cbind(da$trials, match(da[cbind(da$trials, match(da$lRother, colnames(da)))], colnames(outcomes))))
+  }
+  
+  makeOutcomes <- function(x) {
+    stim <- unique(c(x$low, x$high))
+    x <- x[x$lR=='high',]  # get unique trials only   TO DO FIX THIS
+    x <- x[order(x$trials),] # must be ordered by trial n for this matrix
+
+    ## NB: changed
+#    outcomes <- data.frame(matrix(NA, nrow=nrow(x), ncol=length(stim)))
+    outcomes <- data.frame(matrix(NA, nrow=max(x$trials), ncol=length(stim)))
+    colnames(outcomes) <- stim
+    for(trial in unique(x$trials)) {
+      outcomes[trial,as.character(x[trial,as.character(x[trial,'R'])])] <- x[trial,'reward']
+    }
+    return(outcomes)
+  }
+  
   if (!is.null(design$adapt$stimulus)) {
     targets <- design$adapt$stimulus$targets
     par <- design$adapt$stimulus$output_name
@@ -19,13 +67,23 @@ augment = function(s,da,design)
     out <- sapply(targets[1,],getIndex,cname=dimnames(targets)[[1]][1],
                   da=da[da$subjects==s,],maxn=maxn)
     stimulus <- list(index=out)
-    # accumulator x stimulus x trials
+    # accumulator x stimulus x trials      
+    ## SM: why not stimulus x trials, and match to accumulators at a later point (via getIndex)? would make using c much easier
     stimulus$learn <- array(NA,dim=c(dim(targets),maxn/dim(targets)[1]),
                              dimnames=list(rownames(targets),targets[1,],NULL))
     stimulus$targets <- targets
     stimulus$par <- par
   } # add other types here 
-  list(stimulus=stimulus)
+  
+  if('trials' %in% colnames(da)) {
+    outcomes <- makeOutcomes(da[da$subjects==s,])
+    return(list(stimulus=stimulus, outcomes=outcomes, 
+                index=getIndexThis(da[da$subjects==s,], outcomes),
+                indexOther=getIndexOther(da[da$subjects==s,], outcomes)))
+  }
+  else {
+    return(list(stimulus=stimulus))
+  }
 }
 
 # ARCHITECTURE OF FOLLOWING FUNCTION WILL NEED UPDATING FOR MULTIPLE ADAPT TYPES  
@@ -37,8 +95,36 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
   # in which case rfun must be supplied), or return npars filling in adapted 
   # parameters or if return_learning returns learning (e.g., Q values)
 {
-  
   adapt <- attr(da,"adapt")$design
+  
+  if(adapt$useC & !any(is.na(da$R)) & !mapped_p & !return_all) {
+    outcomes <- attr(da, 'adapt')[[s]]$outcomes
+    index <- attr(da, 'adapt')[[s]]$index
+    npars <- npars[da$subjects==s,]
+    da <- da[da$subjects==s,]
+    
+    # update
+    learningRates <- matrix(npars[1,'alpha'], nrow=nrow(outcomes), ncol=ncol(outcomes))  # TODO make this more flexible
+    startValues <- rep(npars[1,'q0'], ncol(outcomes))  # TODO make this more flexible
+    updated <- adapt.c.dmc(startValues = startValues,
+                           learningRates = learningRates,
+                           feedback = as.matrix(outcomes),
+                           learningRule='SARSA')
+    colnames(updated$adaptedValues) <- colnames(outcomes)
+    Q <- updated$adaptedValues[index]
+    
+    # Advantage framework (2AFC ONLY!!)
+    if(('ws' %in% adapt$stimulus$output_par_names) & ('wd' %in% adapt$stimulus$output_par_names)) {
+      indexOther <- attr(da, 'adapt')[[s]]$indexOther
+      Q <- cbind(Q, updated$adaptedValues[indexOther])
+    }
+    
+    ## function
+    npars[,adapt$stimulus$output_name] <- adapt$stimulus$output_fun(npars[,adapt$stimulus$output_par_names], Q)
+    
+    return(npars)
+  }
+  
   index <- attr(da,"adapt")[[s]]$stimulus$index 
   learn <- attr(da,"adapt")[[s]]$stimulus$learn 
   npars <- npars[da$subjects==s,]
@@ -81,11 +167,20 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
     # pick out fixed pars
     pars <- setNames(data.frame(matrix(parArr[,i,,][,ok,adapt$fixed_pars,drop=FALSE],
       ncol=length(adapt$fixed_pars))),adapt$fixed_pars)
+    
+    # SM: advantage framework, ONLY 2AFC SO FAR!
+    Q <- as.vector(learn[,,i][,ok])
+    if(('ws' %in% adapt$stimulus$output_par_names) & ('wd' %in% adapt$stimulus$output_par_names)) {
+      Q <- cbind(Q, as.vector(learn[c(2,1),,i][,ok]))
+    }
+    
     # calculate and add output_par
     pars[[adapt$stimulus$output_name]] <- adapt$stimulus$output_fun(
       output_pars=matrix(parArr[,i,ok,adapt$stimulus$output_par_names],
                          ncol=length(adapt$stimulus$output_par_names)),
-      Q=as.vector(learn[,,i][,ok]))
+      Q=Q) #as.vector(learn[,,i][,ok]))
+    
+    
     if (add_response) { # Simulate trial
       Rrt <- rfun(factor(levels=dimnames(adapt$stimulus$targets)[[1]]),pars)
       Rfac <- Rrt[,"R"]
