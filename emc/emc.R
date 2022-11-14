@@ -7,6 +7,7 @@ require(MCMCpack)    # PMwG IS2
 require(corpcor)     # PMwG IS2
 require(parallel)    # PMwG IS2
 require(mvtnorm)     # PMwG IS2
+require(matrixcalc)
 
 
 source("emc/objects.R")    # pmwg object manipulation + mcmc creation functions
