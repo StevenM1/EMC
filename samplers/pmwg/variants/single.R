@@ -195,9 +195,14 @@ run_stage <- function(pmwgs,
         covMat   <- cov(t(pmwgs$samples$alpha[,k,(j-1-n_window):(j-1)]))
         if(!is.positive.semi.definite(covMat)){
           save(covMat, file = "wrongCov.RData")
-          covMat <- as.matrix(nearPD(covMat)$mat)
         }
-        eff_var[,,k] <- covMat
+        if(is.negative.semi.definite(covMat)){
+          save(covMat, file = "wrongCov.RData")
+          print("Negative (semi)-definite matrix detected")
+        } else{
+          covMat <- as.matrix(nearPD(covMat)$mat)
+          eff_var[,,k] <- covMat  
+        }
       }
       # eff_mu <- apply(pmwgs$samples$alpha[,,(j-1-n_window):(j-1)], 1:2, mean)
     }
@@ -230,6 +235,7 @@ run_stage <- function(pmwgs,
 }
 
 particle_draws <- function(n, mu, covar) {
+  
   if (n <= 0) {
     return(NULL)
   }

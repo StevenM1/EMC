@@ -382,3 +382,79 @@ compare_MLL <- function(mll,nboot=100000,digits=2,print_summary=TRUE)
   invisible(out)
 }
 
+sub_block_sampling <- function(samplers, h_cut = .95, verbose){
+  if(verbose) message("Tough to estimate model, new strategy:")
+  calc_mean_corr <- function(samples, par_idx, cut = half){
+    samples_idx <- round(samples$samples$idx/2):samples$samples$idx
+    n_pars <- samples$n_pars
+    all_corrs <- apply(samples$samples$alpha[par_idx,,samples_idx], 2, FUN = function(x) cor(t(x)))
+    return(matrix(rowMeans(all_corrs), n_pars, n_pars))
+  }
+  shared_ll_idx <- attr(samplers[[1]]$data, "shared_ll_idx")
+  models <- unique(shared_ll_idx)
+  components <- c()
+  for(model in models){
+    par_idx <- shared_ll_idx == model
+    chain_corrs <- lapply(samplers, calc_mean_corr, par_idx)
+    mean_corrs <- apply(do.call(abind, list(chain_corrs, along = 3)), 1:2, mean)
+    distance <- 1 - abs(mean_corrs)
+    clusters <- hclust(as.dist(distance))
+    sub_blocks <- cutree(clusters, h = h_cut)
+    if(verbose) message(paste0("Blocking with ", max(sub_blocks), " blocks"))
+    components <- c(components, sub_blocks + max(0, max(components))) # max(c()) returns -Inf
+  }
+  samplers <- lapply(samplers, FUN = function(x){
+    attr(x$data, "components") <- components
+    return(x)
+  }) 
+  return(samplers)
+}
+
+# create_burn_proposals <- function(samplers, verbose){
+#   get_corrs <- function(sampler, samples_idx, sub){
+#     return(var(t(sampler$samples$alpha[,sub, samples_idx])))
+#   }
+#   if(verbose) message("creating proposal distributions for burn-in")
+#   n_pars <- samplers[[1]]$n_pars
+#   n_subjects <- samplers[[1]]$n_subjects
+#   samples_idx <- round(samplers[[1]]$samples$idx/2):samplers[[1]]$samples$idx
+#   eff_var <- array(NA_real_, dim = c(n_pars, n_pars, n_subjects))
+#   for(sub in 1:n_subjects){
+#     corrs_per_chain <- lapply(samplers, FUN = get_corrs, samples_idx, sub)
+#     mean_corrs <- apply(do.call(abind, list(corrs_per_chain, along = 3)), 1:2, mean)
+#     if(is.negative.semi.definite(mean_corrs)){
+#       eff_var[,,sub] <- attr(samplers[[1]], "eff_var")[,,sub]
+#     } else{
+#       eff_var[,,sub] <-  as.matrix(nearPD(mean_corrs)$mat)
+#     }
+#   }
+#   samplers <- lapply(samplers, FUN = function(x){
+#     attr(x, "eff_var") <- eff_var
+#     return(x)
+#   })
+#   return(samplers)
+# }
+
+create_burn_proposals <- function(samplers, verbose){
+  get_corrs <- function(sampler, samples_idx, sub){
+    return(var(t(sampler$samples$alpha[,sub, samples_idx])))
+  }
+  if(verbose) message("updating proposal distributions for burn-in")
+  n_pars <- samplers[[1]]$n_pars
+  n_subjects <- samplers[[1]]$n_subjects
+  n_chains <- length(samplers)
+  samples_idx <- round(samplers[[1]]$samples$idx/2):samplers[[1]]$samples$idx
+  for(j in 1:n_chains){
+    eff_var <- array(NA_real_, dim = c(n_pars, n_pars, n_subjects))
+    for(sub in 1:n_subjects){
+      mean_corrs <- get_corrs(samplers[[j]], samples_idx, sub)
+      if(is.negative.semi.definite(mean_corrs)){
+        eff_var[,,sub] <- attr(samplers[[j]], "eff_var")[,,sub]
+      } else{
+        eff_var[,,sub] <-  as.matrix(nearPD(mean_corrs)$mat)
+      }
+    }
+    attr(samplers[[j]], "eff_var") <- eff_var
+  }
+  return(samplers)
+}

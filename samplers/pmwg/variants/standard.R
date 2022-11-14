@@ -32,7 +32,7 @@ add_info_standard <- function(sampler, prior = NULL, ...){
 }
 
 get_startpoints_standard <- function(pmwgs, start_mu, start_var){
-  if (is.null(start_mu)) start_mu <- rmvnorm(1, mean = pmwgs$prior$theta_mu_mean, sigma = pmwgs$prior$theta_mu_var)
+  if (is.null(start_mu)) start_mu <- mvtnorm::rmvnorm(1, mean = pmwgs$prior$theta_mu_mean, sigma = pmwgs$prior$theta_mu_var)
   # If no starting point for group var just sample some
   if (is.null(start_var)) start_var <- riwish(pmwgs$n_pars * 3,diag(pmwgs$n_pars))
   start_a_half <- 1 / rgamma(n = pmwgs$n_pars, shape = 2, rate = 1)
@@ -73,7 +73,7 @@ gibbs_step_standard <- function(sampler, alpha){
     save(var_mu, file = "non-sym-var.RData")
     chol_var_mu <- t(chol(nearPD(var_mu)$mat)) # t() because I want lower triangle.
   }  # New sample for mu.
-  tmu <- rmvnorm(1, mean_mu, chol_var_mu %*% t(chol_var_mu))[1, ]
+  tmu <- mvtnorm::rmvnorm(1, mean_mu, chol_var_mu %*% t(chol_var_mu))[1, ]
   names(tmu) <- sampler$par_names
   
   # New values for group var
@@ -97,8 +97,8 @@ gibbs_step_standard <- function(sampler, alpha){
   return(list(tmu = tmu,tvar = tvar,tvinv = tvinv,a_half = a_half,alpha = alpha))
 }
 
-get_conditionals_standard <- function(s, samples, n_pars){
-  iteration <- samples$iteration
+get_conditionals_standard <- function(s, samples, n_pars, iteration = NULL){
+  iteration <- ifelse(is.null(iteration), samples$iteration, iteration)
   pts2_unwound <- apply(samples$theta_var,3,unwind)
   all_samples <- rbind(samples$alpha[, s,],samples$theta_mu,pts2_unwound)
   mu_tilde <- rowMeans(all_samples)
