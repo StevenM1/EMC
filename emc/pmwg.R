@@ -120,7 +120,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
   ll_func <- attr(dadms[[1]], "model")$log_likelihood
   subjects <- unique(factor(sapply(dadms, FUN = function(x) levels(x$subjects))))
   dadm_list <- dm_list(dadms[[1]])
-  components <- length(pars)
+  components <- rep(1, length(pars))
   if(N_models > 1){
     total_dadm_list <- vector("list", length = N_models)
     k <- 1
@@ -133,7 +133,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
       tmp_list[as.numeric(unique(dadm$subjects))] <- dm_list(dadm)
       total_dadm_list[[k]] <- tmp_list
       curr_pars <- attr(dadm, "sampled_p_names")
-      components <- c(components, max(components) + length(curr_pars))
+      components <- c(components, rep(k, length(curr_pars)))
       pars <- c(pars, paste(names[k], curr_pars, sep = "|"))
       prior$theta_mu_mean <- c(prior$theta_mu_mean, attr(dadm, "prior")$theta_mu_mean) 
       if(is.matrix(prior$theta_mu_var)){
@@ -148,6 +148,7 @@ extractDadms <- function(dadms, names = 1:length(dadms)){
   subject_covariates_ok <- unlist(lapply(subject_covariates, FUN = function(x) length(x) == length(subjects)))
   if(!is.null(subject_covariates_ok)) if(any(!subject_covariates_ok)) stop("subject_covariates must be as long as the number of subjects")
   attr(dadm_list, "components") <- components
+  attr(dadm_list, "shared_ll_idx") <- components
   return(list(ll_func = ll_func, pars = pars, prior = prior, 
               dadm_list = dadm_list, subjects = subjects, subject_covariates = subject_covariates))
 }
@@ -163,7 +164,7 @@ make_samplers <- function(data_list,design_list,model_list=NULL,
                           prior_list = NULL,
                           par_groups=NULL,
                           subject_covariates = NULL,
-                          n_factors=NULL,constraintMat = NULL,covariates=NULL,
+                          n_factors=NULL,constraintMat = NULL,covariates=NULL, 
                           compress=TRUE)
   
 {

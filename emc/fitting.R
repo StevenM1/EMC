@@ -4,7 +4,7 @@ run_stages <- function(sampler,iter=c(300,0,0),
                        verbose=FALSE,verbose_run_stage=FALSE,
                        particles=NA,particle_factor=50, p_accept= NULL, n_cores=1,
                        epsilon = NULL, start_mu = NULL, start_var = NULL, mix=NULL,  
-                       epsilon_upper_bound=15, eff_var = NULL, eff_mu = NULL) 
+                       epsilon_upper_bound=15) 
   # Initializes (if needed) then runs burn, adapt and sample depending on iter
   # Verbose and verbose_run_stage are whether to keep you updated on EMC and PMwG output
   # Number of particles is set at particle_factor*sqrt(number of parameters) if particles is NA
@@ -12,8 +12,7 @@ run_stages <- function(sampler,iter=c(300,0,0),
   # Epsilon is a start value for the p_star tuning, best left at default
   # start_mu and start_var are startpoints for the sampler. If let NULL we'll sample startpoints
   # Epsilon_upper_bound is a safety net
-  # Eff_var and Eff_mu are the efficient distibutions as calculated in run_adapt and run_sample
-  
+
 {
   
   if (is.na(particles)) 
@@ -40,14 +39,24 @@ run_stages <- function(sampler,iter=c(300,0,0),
   if (verbose) message("Running sample stage")
   sampler <- run_stage(sampler, stage = "sample", iter = iter[3], epsilon = epsilon,
                        particles = particles, n_cores = n_cores, # pdist_update_n=pdist_update_n,
-                       pstar = p_accept, verbose = verbose_run_stage, mix=mix, eff_mu = eff_mu,
-                       eff_var = eff_var,  epsilon_upper_bound=epsilon_upper_bound)  
+                       pstar = p_accept, verbose = verbose_run_stage, mix=mix,
+                       epsilon_upper_bound=epsilon_upper_bound)  
   sampler
 }
 
+enough_samples <- function(samplers,min_es,min_iter,max_iter,filter="burn") {
+  if (!is.null(max_iter) && (sum(samplers[[1]]$samples$stage==filter) >= max_iter)) return(TRUE)
+  if (is.null(min_iter)) ok <- TRUE else
+    ok <- (sum(samplers[[1]]$samples$stage==filter)) > min_iter
+  if (!is.null(min_es)) {
+    es_min <- min(es_pmwg(as_mcmc.list(samplers,selection="alpha",filter=filter)))
+    ok <- ok & (es_min > min_es)
+    attr(ok,"es") <- es_min
+  }
+  ok
+}
 
-
-run_burn <- function(samplers,iter=300,
+run_burn <- function(samplers,iter=300, step_size = 50,
                      verbose=TRUE,verbose_run_stage=FALSE,mix=NULL,
                      particles=NA,particle_factor=50, p_accept= 0.7, 
                      cores_per_chain=1,cores_for_chains=NULL,epsilon_upper_bound=15,
@@ -64,22 +73,21 @@ run_burn <- function(samplers,iter=300,
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
   run_try <- 0
-  repeat {
+  samplers_new <- samplers
+  n_steps <- ceiling(iter/step_size)
+  for(step in 1:n_steps){
+    if(step == n_steps){
+      step_size <- ifelse(iter %% step_size == 0, step_size, iter %% step_size)
+    }
+    if(step != 1){
+      samplers_new <- create_burn_proposals(samplers_new, verbose)
+    }
     samplers_new <- mclapply(samplers,run_stages,iter=c(iter, 0,0),
                              verbose=verbose,verbose_run_stage=verbose_run_stage,
                              particles=particles,particle_factor=particle_factor, 
                              p_accept=p_accept, mix=mix, epsilon = epsilon, start_mu = start_mu, start_var = start_var,
                              epsilon_upper_bound=epsilon_upper_bound,
                              n_cores=cores_per_chain, mc.cores = cores_for_chains)
-    if (class(samplers_new)=="try-error" || 
-        any(lapply(samplers_new,class)=="try-error")) {
-      save(samplers,iter,particles,particle_factor,p_accept, # pdist_update_n,
-           epsilon_upper_bound,file="fail_run_stage.RData")
-      run_try <- run_try + 1
-      if (verbose) message("run_stage try error", run_try)
-      if (run_try > 10)
-        stop("Fail after 10 run_stage try errors, see saved samplers in fail_run_stage.RData")
-    } else break
   }
   samplers <- samplers_new
   attr(samplers,"data_list") <- data_list
@@ -89,134 +97,15 @@ run_burn <- function(samplers,iter=300,
 }
 
 
-# Old version fail handling
-run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
-                   max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
-                   epsilon = NULL, verbose_run_stage = FALSE,
-                   particles=NA,particle_factor=50, p_accept=NULL,
-                   cores_per_chain=1,cores_for_chains=NA,mix=NULL,
-                   min_es=NULL,min_iter=NULL,max_iter=NULL) 
-  # Repeatedly runs burn or sample to get subject average multivariate 
-  # gelman.diag of alpha samples < max_gd (if !through) or if all univariate
-  # psrf for every subject and parameter and multivariate < max_gd and
-  # if min_es specified at least that effective size in worst case and if 
-  # min_iter specified at least that many iterations. If max_iter specified
-  # pulls out after max_iter.
-  # Trys adding iter (if NA 1/3 initial length) of the length and keeps all or 
-  # extra minus first n_remove (initially iter, then grows by iter/2 on each
-  # expansion based on mean gd of alphas (mpsrf alone or with psrf depending on thorough)
-  # until success or max_trys. Verbose prints out progress after each try
-  # Cores used = cores_per_chain*cores_for_chains, latter set to number of chains by default
-{
-  
-  enough_samples <- function(samplers,min_es,min_iter,max_iter,filter="burn") {
-    if (!is.null(max_iter) && (sum(samplers[[1]]$samples$stage==filter) >= max_iter)) return(TRUE)
-    if (is.null(min_iter)) ok <- TRUE else
-      ok <- (sum(samplers[[1]]$samples$stage==filter)) > min_iter
-    if (!is.null(min_es)) {
-      es_min <- min(es_pmwg(as_mcmc.list(samplers,selection="alpha",filter=filter)))
-      ok <- ok & (es_min > min_es)
-      attr(ok,"es") <- es_min
-    }
-    ok
-  }
-  
-  if (thorough) {
-    max_name <- ", Max alpha mpsrf/psrf = "
-    message("Exit on max alpha psrf/mpsrf < ",max_gd)
-  } else {
-    max_name <- ", Max alpha msrf = "
-    message("Exit on max alpha mpsrf < ",max_gd)
-  }
-  n_chains <- length(samplers)
-  n <- chain_n(samplers)
-  if (is.na(cores_for_chains)) cores_for_chains <- n_chains
-  if (is.na(iter)) iter <- round(n[,1][1]/3)
-  n_remove <- iter
-  # Iterate until criterion
-  trys <- 0
-  data_list <- attr(samplers,"data_list")  
-  design_list <- attr(samplers,"design_list")
-  model_list <- attr(samplers,"model_list")
-  gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
-                filter="burn",mapped=mapped)
-  if (all(is.finite(gd))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
-  repeat {
-    run_try <- 0
-    repeat {
-      new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
-      particle_factor <- new_particle_n$particle_factor
-      particles <- new_particle_n$particles
-      if(!any(is.na(gd_diff)) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
-      samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
-                               n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
-                               particles=particles,particle_factor=particle_factor,epsilon=epsilon,
-                               verbose=FALSE,verbose_run_stage=verbose_run_stage,
-                               mc.cores=cores_for_chains)
-      if (!class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")) 
-        gd <- matrix(Inf) else
-          gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
-                        filter="burn",mapped=mapped)
-      if (all(is.finite(gd))) break else {
-        run_try <- run_try + 1
-        message("gelman diag try error ", run_try)
-        if (run_try > max_trys) {
-          message("Gave up after ",max_trys," gelman diag errors.")
-          return(samplers) 
-        }
-      }
-    }
-    samplers <- samplers_new
-    trys <- trys+1
-    if (shorten) {
-      samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
-      if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
-        gd_short <- matrix(Inf) else
-          gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
-                              filter="burn",mapped=mapped)
-        if (mean(gd_short) < mean(gd)) {
-          gd <- gd_short
-          samplers <- samplers_short
-          n_remove <- iter
-        } else {
-          n_remove <- round(n_remove + iter/2)
-        }
-    }
-    enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
-    if (is.null(attr(enough,"es"))) es_message <- NULL else
-      es_message <- paste(", Effective samples =",round(attr(enough,"es")))
-    if (all(is.finite(gd))) {
-      gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
-      ok_gd <- all(gd < max_gd)
-      shorten <- !ok_gd
-    } else ok_gd <- FALSE
-    if (trys == max_trys || (ok_gd & enough)) {
-      if (verbose) {
-        message("\nFinal multivariate gelman.diag per participant")
-        message("Iterations = ",samplers[[1]]$samples$idx,", Mean mpsrf= ",
-                round(mean(gd),3),max_name,round(max(gd),3))
-      }
-      attr(samplers,"data_list") <- data_list
-      attr(samplers,"design_list") <- design_list
-      attr(samplers,"model_list") <- model_list
-      if (ok_gd) attr(samplers,"burnt") <- max_gd else attr(samplers,"burnt") <- NA 
-      return(samplers)
-    }
-    if (verbose) {
-      chain_n(samplers)[,"burn"][1]
-      message(trys,": Iterations burn = ",chain_n(samplers)[,"burn"][1],", Mean mpsrf= ",
-              round(mean(gd),3),max_name,round(max(gd),3),es_message)
-    }
-  }
-}
 
 # New version fail handling
 run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
                    max_gd=1.1,thorough=TRUE, mapped=FALSE, shorten = TRUE,
                    epsilon = NULL, verbose_run_stage = FALSE,
+                   blocking = FALSE, h_cut = .8,
                    particles=NA,particle_factor=50, p_accept=NULL,
                    cores_per_chain=1,cores_for_chains=NA,mix=NULL,
-                   min_es=NULL,min_iter=NULL,max_iter=NULL,save_fn=NULL) 
+                   min_es=NULL,min_iter=NULL,max_iter=NULL, save_fn=NULL) 
   # Repeatedly runs burn or sample to get subject average multivariate 
   # gelman.diag of alpha samples < max_gd (if !through) or if all univariate
   # psrf for every subject and parameter and multivariate < max_gd and
@@ -229,19 +118,6 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   # until success or max_trys. Verbose prints out progress after each try
   # Cores used = cores_per_chain*cores_for_chains, latter set to number of chains by default
 {
-  
-  enough_samples <- function(samplers,min_es,min_iter,max_iter,filter="burn") {
-    if (!is.null(max_iter) && (sum(samplers[[1]]$samples$stage==filter) >= max_iter)) return(TRUE)
-    if (is.null(min_iter)) ok <- TRUE else
-      ok <- (sum(samplers[[1]]$samples$stage==filter)) > min_iter
-    if (!is.null(min_es)) {
-      es_min <- min(es_pmwg(as_mcmc.list(samplers,selection="alpha",filter=filter)))
-      ok <- ok & (es_min > min_es)
-      attr(ok,"es") <- es_min
-    }
-    ok
-  }
-  
   if (thorough) {
     max_name <- ", Max alpha mpsrf/psrf = "
     message("Exit on max alpha psrf/mpsrf < ",max_gd)
@@ -261,62 +137,48 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
   model_list <- attr(samplers,"model_list")
   gd <- gd_pmwg(as_mcmc.list(samplers,filter="burn"),!thorough,FALSE,
                 filter="burn",mapped=mapped)
-  if (all(is.finite(gd))) gd_diff <- apply(gd, 1, max) - 1.5*max_gd else gd_diff <- NA
+  last_improved <- TRUE
   repeat {
-    new_particle_n <- adaptive_particles(gd_diff, max_gd, particle_factor, particles)
-    particle_factor <- new_particle_n$particle_factor
-    particles <- new_particle_n$particles
-    if(!any(is.na(gd_diff)) & any(gd_diff > .5)) samplers <- check_stuck(samplers) # Maybe a dumb heuristic
+    prev_gd <- gd
+    samplers <- create_burn_proposals(samplers, verbose)
     samplers_new <- mclapply(samplers,run_stages,iter=c(iter,0,0),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                              particles=particles,particle_factor=particle_factor,epsilon=epsilon,
                              verbose=FALSE,verbose_run_stage=verbose_run_stage,
                              mc.cores=cores_for_chains)
     trys <- trys+1
-    bad_new <- !class(samplers_new)=="list" || !all(unlist(lapply(samplers_new,class))=="pmwgs")
-    if (bad_new)  gd <- matrix(Inf) else
-      gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
-                    filter="burn",mapped=mapped)
-    if (all(is.finite(gd))) {
-      samplers <- samplers_new
-      if (shorten) {
-        samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
-        if (!class(samplers_short)=="list" || !all(unlist(lapply(samplers_short,class))=="pmwgs")) 
-          gd_short <- matrix(Inf) else
-            gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE,
-                                filter="burn",mapped=mapped)
-          if (mean(gd_short) < mean(gd)) {
-            gd <- gd_short
-            samplers <- samplers_short
-            n_remove <- iter
-          } else {
-            n_remove <- round(n_remove + iter/2)
-          }
-      }
-      if(!is.null(save_fn)) {
-        attr(samplers,"data_list") <- data_list
-        attr(samplers,"design_list") <- design_list
-        attr(samplers,"model_list") <- model_list
-        save(samplers, file=save_fn)
-      }
-    } else {
-      if (bad_new) {
-        # bad_samplers <<- samplers
-        # bad_samplers_new <<- samplers_new
-        warning("Failed to get new samples.")
+    gd <- gd_pmwg(as_mcmc.list(samplers_new,filter="burn"),!thorough,FALSE,
+                  filter="burn",mapped=mapped)
+    samplers <- samplers_new
+    if (shorten) {
+      samplers_short <- lapply(samplers,remove_iterations,select=n_remove,filter="burn")
+      gd_short <- gd_pmwg(as_mcmc.list(samplers_short,filter="burn"),!thorough,FALSE, filter="burn",mapped=mapped)
+      if (mean(gd_short) < mean(gd)) {
+        gd <- gd_short
+        samplers <- samplers_short
+        n_remove <- iter
       } else {
-        message("Gelman diag try error.")
-        samplers <- lapply(samplers_new,remove_iterations,select=n_remove,filter="burn")
+        n_remove <- round(n_remove + iter/2)
       }
     }
+    if(!is.null(save_fn)) {
+      attr(samplers,"data_list") <- data_list
+      attr(samplers,"design_list") <- design_list
+      attr(samplers,"model_list") <- model_list
+      save(samplers, file=save_fn)
+    }
     enough <- enough_samples(samplers,min_es,min_iter,max_iter,filter=filter)
-    if (is.null(attr(enough,"es"))) es_message <- NULL else
+    if (is.null(attr(enough,"es"))){
+      es_message <- NULL 
+    } else{
       es_message <- paste(", Effective samples =",round(attr(enough,"es")))
+    }
     if (all(is.finite(gd))) {
-      gd_diff <- (gd[,ncol(gd)] - 2*max_gd)
       ok_gd <- all(gd < max_gd)
       shorten <- !ok_gd
-    } else ok_gd <- FALSE
+    } else {
+      ok_gd <- FALSE
+    } 
     if (trys == max_trys || (ok_gd & enough)) {
       if (verbose) {
         message("\nFinal multivariate gelman.diag per participant")
@@ -328,6 +190,19 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
       attr(samplers,"model_list") <- model_list
       if (ok_gd) attr(samplers,"burnt") <- max_gd else attr(samplers,"burnt") <- NA 
       return(samplers)
+    } else{
+      if(mean(gd) > (mean(prev_gd))){
+        if(!last_improved){
+          new_particle_n <- adaptive_particles(particle_factor, particles, verbose)
+          particle_factor <- new_particle_n$particle_factor
+          particles <- new_particle_n$particles
+          last_improved <- TRUE
+        } else{
+          last_improved <- FALSE 
+        }
+      } else{
+        last_improved <- TRUE
+      }
     }
     if (verbose) {
       chain_n(samplers)[,"burn"][1]
@@ -345,14 +220,15 @@ run_gd <- function(samplers,iter=NA,max_trys=100,verbose=FALSE,burn=TRUE,
 #                       max_gd_trys=100;max_gd=1.2;
 #                       thorough=TRUE;mapped=FALSE; step_size = NA;
 #                       min_es=NULL;min_iter=NULL;max_iter=NULL
-auto_burn <- function(samplers,ndiscard=100,nstart=300,
+auto_burn <- function(samplers,ndiscard=100,nstart=250,
                       particles=NA, particle_factor = 50, start_mu = NULL, start_var = NULL,
                       mix = NULL, verbose=TRUE,verbose_run_stage=FALSE,
-                      epsilon = NULL, epsilon_upper_bound=15, p_accept=0.7,
+                      epsilon = NULL, epsilon_upper_bound=15, p_accept=0.8,
                       cores_per_chain=1,cores_for_chains=NULL,
                       max_gd_trys=100,max_gd=1.2,
-                      thorough=TRUE,mapped=FALSE, step_size = NA,
-                      min_es=NULL,min_iter=NULL,max_iter=NULL, save_fn=NULL
+                      thorough=TRUE,mapped=FALSE, step_size = 50,
+                      min_es=NULL,min_iter=NULL,max_iter=NULL, blocking = F, 
+                      h_cut = .8, save_fn=NULL
 )
   # Will run burn until convergence through run_stages and run_gd
   # ndiscard and nstart together form the first batch of samples ran, of which ndiscard then discarded
@@ -362,7 +238,6 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
   # If thorough gd should be lower than criterion for all parameters
   # If mapped parameters are transformed back to the 'interpretable' scale before gd is run. 
   # Min_iter, min_es (effective sample size), max_iter and max_gd determine when run_gd is done
-  # If !is.null(save_fn), every try is saved in save_fn
   
 {
   source(samplers[[1]]$source)
@@ -370,36 +245,41 @@ auto_burn <- function(samplers,ndiscard=100,nstart=300,
   data_list <- attr(samplers,"data_list")  
   design_list <- attr(samplers,"design_list")
   model_list <- attr(samplers,"model_list")
-  if (is.null(samplers[[1]]$samples$idx) || samplers[[1]]$samples$idx==1) {
-    discard_message <- paste("(first ",ndiscard," then removed)")
-    message("Getting initial ",ndiscard + nstart," samples ",discard_message)
-    run_try <- 0
-    samplers_new <- mclapply(samplers,run_stages,iter=c(nstart + ndiscard,0,0),
-                             n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
-                             particles=particles,particle_factor=particle_factor,epsilon=epsilon,
-                             verbose=FALSE,verbose_run_stage=verbose_run_stage,
-                             mc.cores=cores_for_chains)
-    samplers <- samplers_new
-    if(ndiscard!= 0) samplers <- lapply(samplers,remove_iterations,select=ndiscard+1)
-    message("Finished initial run")
-    attr(samplers,"data_list") <- data_list
-    attr(samplers,"design_list") <- design_list
-    attr(samplers,"model_list") <- model_list
-    if(!is.null(save_fn)) save(samplers, file=save_fn)
-  } 
+  if(ndiscard <= 0) stop("ndiscard must be greater than 0 to construct proposals")
+  discard_message <- paste("(first ",ndiscard," then removed)")
+  message("Getting initial ",ndiscard + nstart," samples ",discard_message)
+  run_try <- 0
+  samplers_new <- mclapply(samplers,run_stages,iter=c(ndiscard,0,0),
+                           n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
+                           particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                           verbose=FALSE,verbose_run_stage=verbose_run_stage,
+                           mc.cores=cores_for_chains)
+  samplers_new <- create_burn_proposals(samplers_new, verbose)
+  samplers_new <- mclapply(samplers_new,run_stages,iter=c(nstart,0,0),
+                           n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
+                           particles=particles,particle_factor=particle_factor,epsilon=epsilon,
+                           verbose=FALSE,verbose_run_stage=verbose_run_stage,
+                           mc.cores=cores_for_chains)
+  samplers <- samplers_new
+  samplers <- lapply(samplers,remove_iterations,select=ndiscard+1)
+  message("Finished initial run")
+  attr(samplers,"data_list") <- data_list
+  attr(samplers,"design_list") <- design_list
+  attr(samplers,"model_list") <- model_list
+  if(!is.null(save_fn)) save(samplers, file=save_fn)
   if (max_gd_trys==0) return(samplers)
   message("Beginning iterations to achieve Rhat < ",max_gd)
   run_gd(samplers, max_trys=max_gd_trys,verbose=verbose,
          max_gd=max_gd,thorough=thorough, mapped=mapped, p_accept = p_accept,
          epsilon=epsilon, particles=particles,particle_factor=particle_factor, min_es=min_es,
-         min_iter=min_iter, 
+         min_iter=min_iter, blocking = blocking, h_cut = h_cut,
          max_iter=max_iter, mix=mix, iter = step_size, verbose_run_stage = verbose_run_stage,
          cores_per_chain=cores_per_chain,cores_for_chains=cores_for_chains, save_fn=save_fn)
 }
 
 
 run_adapt <- function(samplers,max_trys=25,epsilon = NULL, 
-                      particles_adapt=NA,particle_factor_adapt=40, p_accept=.7,
+                      particles_adapt=NA,particle_factor_adapt=40, p_accept=.8,
                       cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                       n_cores_conditional = 1, min_unique = 200, 
                       step_size_adapt = 25, thin = NULL,
@@ -410,7 +290,6 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
   # If the conditional distribution can be created it will finish adaptation and you can start sampling.
   # Thin whether to ONLY thin the samples passed to the creation of the conditional. Probably not necessary
   # Thin doesn't thin the actual ouptut
-  
   if(verbose) message("Running adapt stage")
   source(samplers[[1]]$source)
   if (is.null(cores_for_chains)) cores_for_chains <- length(samplers)
@@ -452,7 +331,7 @@ run_adapt <- function(samplers,max_trys=25,epsilon = NULL,
 #                         verbose_run_stage = FALSE
 # iter=1000
 run_sample <- function(samplers,iter=NA,verbose=TRUE,
-                       epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.7,
+                       epsilon = NULL, particles_sample=NA,particle_factor_sample=25, p_accept=.8,
                        cores_per_chain=1,cores_for_chains=NULL,mix=NULL,
                        n_cores_conditional = 1, step_size_sample = 50, thin = NULL,
                        verbose_run_stage = FALSE, save_fn=NULL)
@@ -461,7 +340,6 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
   # After step_size iterations it will update the conditional efficient distribution
   # Thin whether to ONLY thin the samples passed to the creation of the conditional. Probably not necessary
   # Thin doesn't thin the actual ouptut
-  # If !is.null(save_fn), every iteration is saved in save_fn
 {
   if(!attr(samplers, "adapted")){
     warning("samplers should be adapted before you can run sample stage")
@@ -483,20 +361,21 @@ run_sample <- function(samplers,iter=NA,verbose=TRUE,
     } 
     samples_merged <- merge_samples(samplers_new)
     test_samples <- extract_samples(samples_merged, stage = c("adapt", "sample"), thin = thin, samples_merged$samples$idx, thin_eff_only = F)
-    
-    conditionals=mclapply(X = 1:samplers_new[[1]]$n_subjects,
-                          FUN = variant_funs$get_conditionals,samples = test_samples, 
-                          samplers_new[[1]]$n_pars, mc.cores = n_cores_conditional)
-    conditionals <- array(unlist(conditionals), dim = c(samplers_new[[1]]$n_pars, 
-                                                        samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
-    eff_mu <- conditionals[,1,] #First column is the means
-    eff_var <- conditionals[,2:(samplers_new[[1]]$n_pars+1),] #Other columns are the variances
+    for(i in 1:length(samplers_new)){
+      iteration = test_samples$iteration * i/length(samplers_new)
+      conditionals <- parallel::mclapply(X = 1:samplers_new[[1]]$n_subjects,
+                                         FUN = variant_funs$get_conditionals,samples = test_samples,
+                                         samplers_new[[1]]$n_pars, iteration =  iteration,
+                                         mc.cores = n_cores_conditional)
+      conditionals <- array(unlist(conditionals), dim = c(samplers_new[[1]]$n_pars,
+                                                          samplers_new[[1]]$n_pars + 1, samplers_new[[1]]$n_subjects))
+      attr(samplers_new[[i]], "eff_mu") <- conditionals[,1,] #First column is the means
+      attr(samplers_new[[i]], "eff_var") <- eff_var <- conditionals[,2:(samplers_new[[1]]$n_pars+1),] #Other columns are the variances
+    }
     samplers_new <- mclapply(samplers_new,run_stages,iter=c(0,0,step_size_sample),
                              n_cores=cores_per_chain,p_accept = p_accept, mix=mix,
                              particles=particles_sample,particle_factor=particle_factor_sample,epsilon=epsilon,
-                             verbose=FALSE,verbose_run_stage=verbose_run_stage, eff_mu = eff_mu,
-                             eff_var = eff_var,
-                             mc.cores=cores_for_chains)
+                             verbose=FALSE,verbose_run_stage=verbose_run_stage, mc.cores=cores_for_chains)
     if(!is.null(save_fn)) {
       samplers <- samplers_new
       attr(samplers,"data_list") <- data_list
@@ -575,27 +454,24 @@ test_adapted <- function(sampler, test_samples, min_unique, n_cores_conditional 
   }
 }
 
-# min_particles = 50; max_particles = 500;min_factor = 25; max_factor = 100; percent_up = 10; percent_down = 5
-adaptive_particles <- function(gd_diff, max_gd, particle_factor = NA, particles = NA, 
-                               min_particles = 50, max_particles = 500, 
-                               min_factor = 25, max_factor = 100,
-                               percent_up = 10, percent_down = 5){
+adaptive_particles <- function(particle_factor = NA, particles = NA, verbose,
+                               min_particles = 50, max_particles = 1000, 
+                               min_factor = 25, max_factor = 500,
+                               p_up = .1){
   # This function adaptively tunes the particles per participant using broad,
-  # so that we can lower the number of particles if we're closer to gd_criterion,
-  # percent_up and down are relative to the max. Percent up is scaled by sqrt(gd_diff)
-  if (any(is.na(gd_diff))) {
-    if (is.na(particles)) 
-      return(list(particles=100,particle_factor = particle_factor)) else
-        return(list(particles=particles,particle_factor = particle_factor))
-  }
+  # so that we can lower the number of particles if we're closer to gd_criterion
+  message("tough to estimate model, upping the particles")
   if(is.na(particles)){
-    gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_factor
-    gd_diff[gd_diff < 0] <- -(percent_down/100)*max_factor
-    particle_factor <- pmin(pmax(min_factor, particle_factor + gd_diff), max_factor)
+    particle_factor <- pmin(pmax(min_factor, particle_factor + particle_factor*p_up), max_factor)
   } else{
-    gd_diff[gd_diff > 0] <- sqrt(gd_diff[gd_diff > 0])*(percent_up/100)*max_particles
-    gd_diff[gd_diff < 0] <- -(percent_down/100)*min_particles
-    particles <- pmin(pmax(min_particles, particles + gd_diff), max_particles)
+    particles <- pmin(pmax(min_particles, particles + particles*p_up), max_particles)
+  }
+  if(verbose){
+    if(any(is.na(particles))){
+      message(paste0("new particle_factor : ", particle_factor))
+    } else{
+      message(paste0("new particles : ", particle))
+    }
   }
   return(list(particles = round(particles), particle_factor = particle_factor))
 }
