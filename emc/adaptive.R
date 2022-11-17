@@ -144,6 +144,9 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
     
     ## function
     npars[,adapt$stimulus$output_name] <- adapt$stimulus$output_fun(npars[,adapt$stimulus$output_par_names], Q)
+    ## hacky way of preventing errors due to extreme values
+    npars[,'v'] <- pmin(npars[,'v'], 1e3)
+    npars[,'v'] <- pmax(npars[,'v'], 0)
     
     return(npars)
   } else if(adapt$useSMsApproach) {
