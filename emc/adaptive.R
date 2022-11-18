@@ -170,8 +170,15 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
     # with 'learningThing' being predictions(/Q), uncertainty, volatility; possibly also PEs?
     learn <- array(NA, dim=c(nrow(outcomes), ncol(outcomes), length(adapt$stimulus$init_par)))
     dimnames(learn) <- list(NULL, colnames(outcomes), adapt$stimulus$init_par)
-#    learn <- matrix(NA, nrow=nrow(outcomes), ncol=ncol(outcomes), dimnames = dimnames(outcomes))
-    learn[1,,] <- npars[1,adapt$stimulus$init_par]  # initialize
+    
+   # learn <- matrix(NA, nrow=nrow(outcomes), ncol=ncol(outcomes), dimnames = dimnames(outcomes))
+    if(length(npars[1,adapt$stimulus$init_par]) > 1) {
+      learn[1,,] <- matrix(npars[1,adapt$stimulus$init_par], 
+                           ncol=length(npars[1,adapt$stimulus$init_par]), 
+                           nrow=nrow(learn[1,,]), byrow=TRUE) #  # initialize
+    } else {
+      learn[1,,] <- npars[1,adapt$stimulus$init_par]
+    }
     
     # update
     for(trial in 1:nrow(learn)) {
