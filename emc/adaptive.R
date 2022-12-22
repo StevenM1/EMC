@@ -133,7 +133,20 @@ update_pars = function(s,npars,da,rfun=NULL,return_learning=FALSE,mapped_p=FALSE
                                             uncertaintiesStartValues = uncertaintiesStartValues),
                              learningRule='vkf')
       allQs <- updated$adaptedPredictions
+    } else if(adapt$stimulus$adapt_fun_name=='vkfbinary') {
+      volatilityLearningRates <- matrix(npars[1,'alpha'], nrow=nrow(outcomes), ncol=ncol(outcomes))  # TODO make this more flexible
+      predictionsStartValues <- rep(npars[1,'q0'], ncol(outcomes))  # TODO make this more flexible
+      volatilitiesStartValues <- rep(npars[1,'volatility0'], ncol(outcomes))  # TODO make this more flexible
+      uncertaintiesStartValues <- rep(npars[1,'w0'], ncol(outcomes))
+      updated <- adapt.c.emc(feedback=as.matrix(outcomes),
+                             arguments=list(volatilityLearningRates = volatilityLearningRates,
+                                            predictionsStartValues = predictionsStartValues,
+                                            volatilitiesStartValues = volatilitiesStartValues,
+                                            uncertaintiesStartValues = uncertaintiesStartValues),
+                             learningRule='vkf')
+      allQs <- updated$adaptedPredictions
     }
+    
     Q <- allQs[index]
     
     # Advantage framework (2AFC ONLY!!)
